@@ -1000,7 +1000,15 @@ In VSCode Source Control panel (Cmd+Shift+G):
 
 ## Step-by-Step Implementation
 
-### Step 1: App Entry Point
+**✅ Chunk 1 Complete** (App foundation, renderer protocol, error handling)
+**✅ Chunk 2 Complete** (File picker UI, apply workflow, persisted selection auto-apply)
+**✅ Chunk 3 Complete** (Mute + scaling controls wired through UI, settings, manager, and renderer)
+**✅ Post-Chunk 3 Stability Fix** (Security-scoped file access + video playability validation to resolve black-screen playback)
+**✅ Chunk 4A Complete** (Lifecycle coordination: pause/resume, lifecycle state tracking, sleep/wake event observers)
+**✅ Chunk 4B Complete** (Resume fallback recovery: renderer validity checking, auto re-initialization on failure, recovery attempt tracking)
+**✅ Chunk 4C Complete** (Resize handling: display resolution change observers, debounce logic, renderer.resize() coordination)
+
+### Step 1: App Entry Point ✅
 
 Create `PersonalWallpaperEngineApp.swift`:
 
@@ -1427,7 +1435,7 @@ class VideoRenderer: Renderer {
 }
 ```
 
-### Step 5: SettingsStore Implementation
+### Step 5: SettingsStore Implementation ✅
 
 Create `SettingsStore.swift`:
 
@@ -1538,7 +1546,7 @@ enum WallpaperError: LocalizedError, Equatable {
 }
 ```
 
-### Step 7: UI Configuration (ContentView)
+### Step 7: UI Configuration (ContentView) ✅
 
 Create `ContentView.swift`:
 

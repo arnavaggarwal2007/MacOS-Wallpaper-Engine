@@ -1,0 +1,12 @@
+{
+  "/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/AppViewModel.swift" : {
+    "abi-baseline-json" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal_Wallpaper_Engine.abi.json",
+    "const-values" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal Wallpaper Engine-primary.swiftconstvalues",
+    "dependencies" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal Wallpaper Engine-primary.d",
+    "diagnostics" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal Wallpaper Engine-primary.dia",
+    "objc-header" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal_Wallpaper_Engine-Swift.h",
+    "swiftdoc" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal_Wallpaper_Engine.swiftdoc",
+    "swiftmodule" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal_Wallpaper_Engine.swiftmodule",
+    "swiftsourceinfo" : "/Users/arnev/Desktop/Personal Wallpaper Engine/build/Personal Wallpaper Engine.build/Release/Personal Wallpaper Engine.build/Objects-normal/x86_64/Personal_Wallpaper_Engine.swiftsourceinfo"
+  }
+}
