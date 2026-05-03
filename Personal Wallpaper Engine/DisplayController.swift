@@ -65,11 +65,14 @@ final class DisplayController {
         }
         
         // Write a diagnostic entry so external checks can verify runtime behavior
-        let diag = "\(Date()): Window created for display \(self.displayID) frame=\(frame)\n"
-        if let data = diag.data(using: .utf8) {
-            let path = "/tmp/pwe_display.log"
-            if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil, attributes: nil) }
-            if let handle = FileHandle(forWritingAtPath: path) { handle.seekToEndOfFile(); handle.write(data); try? handle.close() }
+        // MARK: - Conditional Diagnostics (Chunk 4E)
+        if SettingsStore.shared.debugDiagnosticsEnabled {
+            let diag = "\(Date()): Window created for display \(self.displayID) frame=\(frame)\n"
+            if let data = diag.data(using: .utf8) {
+                let path = "/tmp/pwe_display.log"
+                if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil, attributes: nil) }
+                if let handle = FileHandle(forWritingAtPath: path) { handle.seekToEndOfFile(); handle.write(data); try? handle.close() }
+            }
         }
     }
 
@@ -252,6 +255,122 @@ final class DisplayController {
 
     func orderToBack() async {
         window?.orderBack(nil)
+    }
+
+    // MARK: - State Reconciliation and Self-Healing (Chunk 4D)
+    enum ReconciliationResult {
+        case valid
+        case healed(reason: String)
+        case failed(reason: String)
+    }
+    
+    /// Verify and repair controller/renderer/window consistency
+    func reconcileState(
+        expectedLifecycleState: WallpaperManager.LifecycleState,
+        expectedVideoURL: URL?,
+        expectedMuted: Bool,
+        expectedScalingMode: VideoScalingMode
+    ) async -> ReconciliationResult {
+        // Check 1: Window exists and is visible
+        guard let window = window else {
+            return .failed(reason: "window is nil")
+        }
+        
+        // Check 2: Content view exists and is in window
+        guard let contentView = contentView, window.contentView == contentView else {
+            return .failed(reason: "content view missing or not in window")
+        }
+        
+        // Check 3: Window is at correct level
+        let expectedLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
+        if window.level != expectedLevel {
+            logger.warning("Window level mismatch for display \(self.displayID), correcting...")
+            window.level = expectedLevel
+            return .healed(reason: "window level restored")
+        }
+        
+        // Check 4: Renderer exists and is valid
+        guard let renderer = renderer, renderer.isValid() else {
+            // Renderer is missing or invalid, but we need it
+            if expectedLifecycleState == .playing && expectedVideoURL != nil {
+                return .failed(reason: "renderer invalid while should be playing")
+            } else {
+                // Not supposed to be playing anyway
+                return .valid
+            }
+        }
+        
+        // Check 5: Verify settings parity
+        let mutedMatches = (await renderer.isMuted()) == expectedMuted
+        let scalingMatches = (await renderer.scalingMode()) == expectedScalingMode
+        
+        if !mutedMatches {
+            logger.debug("Muted setting mismatch for display \(self.displayID), reapplying...")
+            await renderer.setMuted(expectedMuted)
+            lastMutedState = expectedMuted
+        }
+        
+        if !scalingMatches {
+            logger.debug("Scaling mode mismatch for display \(self.displayID), reapplying...")
+            await renderer.setScalingMode(expectedScalingMode)
+            lastScalingMode = expectedScalingMode
+        }
+        
+        // Check 6: Window visibility
+        if window.isVisible {
+            logger.debug("Window should not be visible (desktop window), ordering to back...")
+            window.orderBack(nil)
+            return .healed(reason: "window reordered to back")
+        }
+        
+        // All checks passed
+        if !mutedMatches || !scalingMatches {
+            return .healed(reason: "settings synchronized")
+        }
+        
+        return .valid
+    }
+    
+    /// Fallback recreation of window and/or renderer if reconciliation failed
+    func fallbackRecreate(
+        videoURL: URL?,
+        isMuted: Bool,
+        scalingMode: VideoScalingMode
+    ) async {
+        logger.info("Starting fallback recreation for display \(self.displayID)")
+        
+        // Preserve state before cleanup
+        let savedURL = videoURL ?? lastLoadedVideoURL
+        let savedMuted = isMuted
+        let savedScaling = scalingMode
+        
+        // Stop current playback
+        if let renderer = renderer { await renderer.dispose() }
+        renderer = nil
+        
+        // Rebuild window
+        if let window = window {
+            window.orderOut(nil)
+        }
+        window = nil
+        contentView = nil
+        
+        setupWindow()
+        
+        // Restart playback if we have a video URL
+        if let url = savedURL {
+            let result = await startPlayback(url: url, isMuted: savedMuted, scalingMode: savedScaling)
+            
+            switch result {
+            case .success:
+                logger.info("Fallback recreation succeeded for display \(self.displayID)")
+            case .failure(let error):
+                let errorMsg = error.errorDescription ?? "unknown error"
+                logger.error("Fallback recreation failed for display \(self.displayID): \(errorMsg)")
+            }
+        } else {
+            logger.warning("Fallback recreation: no video URL available for display \(self.displayID)")
+        }
     }
 
     deinit {

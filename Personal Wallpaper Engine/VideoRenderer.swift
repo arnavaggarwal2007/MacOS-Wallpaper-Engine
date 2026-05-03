@@ -97,6 +97,23 @@ final class VideoRenderer: Renderer {
     func pause() async { player?.pause() }
     func resume() async { player?.play() }
     
+    // MARK: - Reconciliation Query Methods (Chunk 4D)
+    func isMuted() async -> Bool {
+        player?.isMuted ?? true
+    }
+    
+    func scalingMode() async -> VideoScalingMode {
+        let currentGravity = playerLayer?.videoGravity ?? .resizeAspectFill
+        switch currentGravity {
+        case .resizeAspect:
+            return .resizeAspect
+        case .resize:
+            return .resizeAspectHeight
+        default:
+            return .resizeAspectFill
+        }
+    }
+    
     // MARK: - Renderer Validity Check (Chunk 4B)
     /// Checks if the renderer is still in a valid state for playback
     func isValid() -> Bool {

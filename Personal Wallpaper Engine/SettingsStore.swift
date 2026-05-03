@@ -9,6 +9,7 @@ final class SettingsStore {
         static let videoBookmark = "videoBookmark"
         static let isMuted = "isMuted"
         static let scalingMode = "scalingMode"
+        static let debugDiagnostics = "debugDiagnostics"  // Chunk 4E: Debug flag
     }
 
     private init() {
@@ -16,6 +17,7 @@ final class SettingsStore {
         videoBookmarkData = UserDefaults.standard.data(forKey: Keys.videoBookmark)
         isMuted = UserDefaults.standard.bool(forKey: Keys.isMuted)
         scalingMode = VideoScalingMode(rawValue: UserDefaults.standard.string(forKey: Keys.scalingMode) ?? VideoScalingMode.resizeAspectFill.rawValue) ?? .resizeAspectFill
+        debugDiagnosticsEnabled = UserDefaults.standard.bool(forKey: Keys.debugDiagnostics)  // Chunk 4E
     }
 
     var videoFilePath: String {
@@ -32,6 +34,10 @@ final class SettingsStore {
 
     var scalingMode: VideoScalingMode {
         didSet { UserDefaults.standard.set(scalingMode.rawValue, forKey: Keys.scalingMode) }
+    }
+    
+    var debugDiagnosticsEnabled: Bool {  // Chunk 4E: Debug diagnostics flag
+        didSet { UserDefaults.standard.set(debugDiagnosticsEnabled, forKey: Keys.debugDiagnostics) }
     }
 }
 

@@ -12,4 +12,11 @@ protocol Renderer: AnyObject {
     
     // MARK: - Chunk 4B: Renderer Validity Check
     /// Check if the renderer is still valid for playback (for recovery fallback logic)
-    func isValid() -> Bool}
+    func isValid() -> Bool
+    
+    // MARK: - Chunk 4D: Reconciliation Query Methods
+    /// Get current muted state for reconciliation
+    func isMuted() async -> Bool
+    /// Get current scaling mode for reconciliation
+    func scalingMode() async -> VideoScalingMode
+}

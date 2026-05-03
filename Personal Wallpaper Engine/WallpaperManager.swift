@@ -27,6 +27,17 @@ final class WallpaperManager {
     private var wakeObserver: NSObjectProtocol?
 
     private(set) var lifecycleState: LifecycleState = .idle
+    
+    // MARK: - State Reconciliation (Chunk 4D)
+    private var reconciliationTask: Task<Void, Never>?
+    private let reconciliationDebounceInterval: UInt64 = 200_000_000  // 0.2 seconds
+    private var reconciliationRetryCount: [CGDirectDisplayID: Int] = [:]
+    private let maxReconciliationRetries: Int = 2
+    
+    // MARK: - System Health Tracking (Chunk 4E)
+    private(set) var failureCount: Int = 0
+    private(set) var lastFailureReason: String = ""
+    private let maxFailureThreshold: Int = 5  // Threshold for degraded status
 
     @MainActor
     func startMonitoring() async {
@@ -102,12 +113,18 @@ final class WallpaperManager {
                 }
             }
         }
+        
+        // MARK: - Reconciliation After Screen Change (Chunk 4D)
+        scheduleReconciliation(reason: "screen change")
     }
 
     @MainActor
     func handleSpaceChange() async {
         logger.debug("Active space changed")
         for controller in displayControllers.values { await controller.orderToBack() }
+        
+        // MARK: - Reconciliation After Space Change (Chunk 4D)
+        scheduleReconciliation(reason: "space change")
     }
 
     @MainActor
@@ -182,6 +199,84 @@ final class WallpaperManager {
         for controller in displayControllers.values {
             await controller.resume()
         }
+        
+        // MARK: - Reconciliation After Resume (Chunk 4D)
+        scheduleReconciliation(reason: "resume event")
+    }
+
+    // MARK: - State Reconciliation and Self-Healing (Chunk 4D)
+    @MainActor
+    private func scheduleReconciliation(reason: String) {
+        // Cancel pending reconciliation to coalesce rapid events
+        reconciliationTask?.cancel()
+        
+        reconciliationTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: reconciliationDebounceInterval)
+                
+                if !Task.isCancelled {
+                    await reconcileDisplayState(reason: reason)
+                }
+            } catch {
+                logger.debug("Reconciliation task cancelled")
+            }
+        }
+    }
+    
+    /// Verify controller/renderer/window consistency and self-heal mismatches
+    @MainActor
+    private func reconcileDisplayState(reason: String) async {
+        logger.info("Starting display state reconciliation (triggered by: \(reason))")
+        
+        var healed: [CGDirectDisplayID] = []
+        
+        for (displayID, controller) in displayControllers {
+            let healResult = await controller.reconcileState(
+                expectedLifecycleState: lifecycleState,
+                expectedVideoURL: currentWallpaperURL,
+                expectedMuted: isMuted,
+                expectedScalingMode: scalingMode
+            )
+            
+            if case .healed(let reason) = healResult {
+                healed.append(displayID)
+                logger.info("Display \(displayID) healed: \(reason)")
+            } else if case .valid = healResult {
+                // No action needed
+                logger.debug("Display \(displayID) state valid")
+            } else if case .failed(let error) = healResult {
+                logger.warning("Display \(displayID) reconciliation failed: \(error)")
+                
+                // MARK: - Track Failure (Chunk 4E)
+                failureCount += 1
+                lastFailureReason = "Display \(displayID): \(error)"
+                
+                // Track retry count and potentially recreate display
+                let retryCount = reconciliationRetryCount[displayID] ?? 0
+                if retryCount < self.maxReconciliationRetries {
+                    reconciliationRetryCount[displayID] = retryCount + 1
+                    logger.info("Queuing display \(displayID) for fallback recreation (attempt \(retryCount + 1)/\(self.maxReconciliationRetries))")
+                    
+                    // Schedule async recreation
+                    Task {
+                        await controller.fallbackRecreate(
+                            videoURL: currentWallpaperURL,
+                            isMuted: isMuted,
+                            scalingMode: scalingMode
+                        )
+                    }
+                } else {
+                    logger.error("Display \(displayID) exceeded max reconciliation retries, giving up")
+                    reconciliationRetryCount[displayID] = 0
+                }
+            }
+        }
+        
+        if !healed.isEmpty {
+            logger.info("Reconciliation complete: healed \(healed.count) display(s)")
+        } else {
+            logger.debug("Reconciliation complete: no repairs needed")
+        }
     }
 
     @MainActor
@@ -190,6 +285,11 @@ final class WallpaperManager {
         if let obs = spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs); spaceObserver = nil }
         if let obs = sleepObserver { NotificationCenter.default.removeObserver(obs); sleepObserver = nil }
         if let obs = wakeObserver { NotificationCenter.default.removeObserver(obs); wakeObserver = nil }
+        
+        // MARK: - Cancel Reconciliation Task (Chunk 4D)
+        reconciliationTask?.cancel()
+        reconciliationTask = nil
+        
         for controller in displayControllers.values { await controller.stop() }
         displayControllers.removeAll()
         currentWallpaperURL = nil
@@ -200,6 +300,9 @@ final class WallpaperManager {
 
 // Simple diagnostic writer
 fileprivate func addDiagnostic(_ message: String) throws {
+    // MARK: - Conditional Diagnostics (Chunk 4E)
+    guard SettingsStore.shared.debugDiagnosticsEnabled else { return }
+    
     let fm = FileManager.default
     let path = "/tmp/pwe_manager.log"
     let text = "\(Date()): \(message)\n"
