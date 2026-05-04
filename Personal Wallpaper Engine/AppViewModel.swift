@@ -5,6 +5,8 @@ import Combine
 @MainActor
 final class AppViewModel: ObservableObject {
     @Published var selectedVideoPath: String
+    @Published var rendererMode: WallpaperRendererMode
+    @Published var webURLString: String
     @Published var isMuted: Bool
     @Published var scalingMode: VideoScalingMode
     @Published var isApplyingWallpaper = false
@@ -26,6 +28,8 @@ final class AppViewModel: ObservableObject {
         self.wallpaperManager = WallpaperManager()
         self.settings = SettingsStore.shared
         self.selectedVideoPath = settings.videoFilePath
+        self.rendererMode = settings.rendererMode
+        self.webURLString = settings.webURLString
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
     }
@@ -37,8 +41,28 @@ final class AppViewModel: ObservableObject {
         self.wallpaperManager = wallpaperManager ?? WallpaperManager()
         self.settings = settings
         self.selectedVideoPath = settings.videoFilePath
+        self.rendererMode = settings.rendererMode
+        self.webURLString = settings.webURLString
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
+    }
+
+    // MARK: - Per-display helpers (Phase 5E)
+    func perDisplaySource(for displayID: CGDirectDisplayID) -> String {
+        return settings.perDisplaySources[String(displayID)] ?? ""
+    }
+
+    func updatePerDisplaySource(_ displayID: CGDirectDisplayID, _ urlString: String) {
+        settings.perDisplaySources[String(displayID)] = urlString
+
+        // Apply immediately if possible
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed) else { return }
+
+        let mode: WallpaperRendererMode = url.isFileURL ? .video : .web
+        Task { @MainActor in
+            _ = await wallpaperManager.setPerDisplayWallpaper(displayID: displayID, url: url, rendererMode: mode)
+        }
     }
 
     func start() async {
@@ -47,20 +71,30 @@ final class AppViewModel: ObservableObject {
 
         await wallpaperManager.setMuted(isMuted)
         await wallpaperManager.setScalingMode(scalingMode)
+        await wallpaperManager.setRendererMode(rendererMode)
         await wallpaperManager.startMonitoring()
 
-        if restoreSelectedVideoReference() != nil {
+        if rendererMode == .video, restoreSelectedVideoReference() != nil {
             await applyWallpaperFromSavedPath()
-        } else if !selectedVideoPath.isEmpty {
+        } else if rendererMode == .video, !selectedVideoPath.isEmpty {
             let details = lastVideoRestoreFailure.map { " (\($0))" } ?? ""
             errorMessage = "Saved video access expired. Please reselect the video file.\(details)"
             statusMessage = nil
+        } else if rendererMode == .web {
+            statusMessage = "Web wallpaper mode is ready"
+            errorMessage = nil
+            // Attempt to restore web selection across relaunch
+            if !webURLString.isEmpty {
+                Task { await applyWallpaperFromSavedWebURL() }
+            }
         }
     }
 
     func selectVideo(at url: URL) {
         endAccessingSelectedVideoURL()
         beginAccessingSelectedVideoURL(url)
+        rendererMode = .video
+        settings.rendererMode = .video
         selectedVideoURL = url
         selectedVideoPath = url.path
         settings.videoFilePath = url.path
@@ -79,18 +113,59 @@ final class AppViewModel: ObservableObject {
         errorMessage = nil
     }
 
+    func updateWebURL(_ urlString: String) {
+        webURLString = urlString
+        settings.webURLString = urlString
+    }
+
+    func updateRendererMode(_ mode: WallpaperRendererMode) {
+        rendererMode = mode
+        settings.rendererMode = mode
+
+        Task {
+            await wallpaperManager.setRendererMode(mode)
+        }
+
+        if mode == .web {
+            statusMessage = "Web wallpapers are planned for the next chunk."
+            errorMessage = nil
+        }
+    }
+
     func applyWallpaperFromSelection() async {
-        guard let url = restoreSelectedVideoReference() else {
-            if selectedVideoPath.isEmpty {
-                errorMessage = "Please select a video file first."
-            } else {
-                let details = lastVideoRestoreFailure.map { " (\($0))" } ?? ""
-                errorMessage = "Saved video access expired. Please reselect the video file.\(details)"
+        if rendererMode == .video {
+            guard let url = restoreSelectedVideoReference() else {
+                if selectedVideoPath.isEmpty {
+                    errorMessage = "Please select a video file first."
+                } else {
+                    let details = lastVideoRestoreFailure.map { " (\($0))" } ?? ""
+                    errorMessage = "Saved video access expired. Please reselect the video file.\(details)"
+                }
+                statusMessage = nil
+                return
             }
-            statusMessage = nil
+
+            await applyWallpaper(url: url)
             return
         }
 
+        if rendererMode == .web {
+            guard !webURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  let url = URL(string: webURLString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                errorMessage = "Please enter a valid web URL."
+                statusMessage = nil
+                return
+            }
+
+            await applyWallpaper(url: url)
+            return
+        }
+    }
+
+    private func applyWallpaperFromSavedWebURL() async {
+        guard rendererMode == .web else { return }
+        let trimmed = settings.webURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed) else { return }
         await applyWallpaper(url: url)
     }
 
@@ -119,6 +194,7 @@ final class AppViewModel: ObservableObject {
     }
 
     private func applyWallpaperFromSavedPath() async {
+        guard rendererMode == .video else { return }
         guard let url = restoreSelectedVideoReference() else { return }
         await applyWallpaper(url: url)
     }

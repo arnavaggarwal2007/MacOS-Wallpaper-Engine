@@ -15,6 +15,7 @@
 9. [Production Testing Checklist](#production-testing-checklist)
 10. [Troubleshooting & Performance](#troubleshooting--performance)
 11. [References](#references)
+12. [Phase 5 Roadmap](#phase-5-roadmap)
 
 ---
 
@@ -1611,6 +1612,65 @@ struct ContentView: View {
 ```
 
 ---
+
+## Phase 5 Roadmap
+
+Phase 5 focuses on product expansion while preserving the now-stable Phase 4 persistence and lifecycle behavior. The sequence below is intentionally incremental so each feature layer can be validated before the next one lands.
+
+### **Phase 5A Complete** (Scope framing, guardrails, and acceptance criteria)
+
+**Goal:** define the Phase 5 boundaries and the regression gates that every later chunk must preserve.
+
+**Checklist:**
+- [x] Confirm the documented Phase 5 scope: WebRenderer/WKWebView support, renderer mode selection, per-display source configuration, menu bar controls, and launch-on-login.
+- [x] Capture non-goals for this phase: cloud sync, App Store distribution, AI recommendations, and broader network streaming beyond direct web wallpaper rendering.
+- [x] Establish the dependency order for the remaining chunks so the implementation stays incremental and testable.
+- [x] Preserve Phase 4 stability as a hard regression gate, including quit/relaunch persistence, clean rebuild persistence, sleep/wake handling, screen/space reconciliation, and resize behavior.
+- [x] Define the verification shape for each future chunk before coding begins.
+
+**Success Criteria:**
+- Phase 5 has clear scope boundaries and does not expand opportunistically while coding.
+- Every subsequent chunk has a prerequisite, a minimal implementation surface, and a concrete verification step.
+- No Phase 4 behavior is allowed to regress while Phase 5 lands.
+- The roadmap now reflects the Phase 5 execution order so implementation can continue chunk by chunk.
+
+### **Phase 5B Complete** (Renderer mode foundation)
+- [x] Add renderer mode plumbing for Video vs Web backends.
+- [x] Keep VideoRenderer as the default and fallback path.
+- [x] Verify the existing wallpaper apply flow still works unchanged for video sources.
+
+### **Phase 5C Planned** (WebRenderer core)
+### **Phase 5C Complete** (WebRenderer core)
+- [x] Implement WKWebView-backed `WebRenderer`.
+- [x] Support lifecycle methods required by the `Renderer` protocol.
+- [x] Validate basic web URL loading and teardown without leaks.
+
+Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configuration avoids iOS-only APIs and provides best-effort mute/scale controls via JavaScript. Build verified locally.
+
+### **Phase 5D Complete** (UI and persistence)
+- [x] Add web source selection controls to the UI.
+- [x] Persist renderer mode and web URL in `SettingsStore`.
+- [x] Restore web selections across relaunch using the same persistence discipline as video bookmarks.
+
+### **Phase 5E Complete** (Per-display source configuration)
+- [x] Introduce per-display source settings (persisted in `SettingsStore`).
+- [x] Preserve global fallback behavior for users who do not configure displays individually.
+- [x] Validate display connect/disconnect recovery with per-display state intact.
+
+### **Phase 5F Planned** (Menu bar controls)
+- [ ] Add menu bar access for core wallpaper controls.
+- [ ] Keep the menu and main window state synchronized through `AppViewModel`.
+- [ ] Verify menu actions do not interfere with existing window behavior.
+
+### **Phase 5G Planned** (Launch-on-login)
+- [ ] Add login item registration and removal controls.
+- [ ] Surface clear errors if the OS denies registration.
+- [ ] Validate boot-time restore after a restart.
+
+### **Phase 5H Planned** (Stabilization and release gate)
+- [ ] Run the full Phase 5 regression matrix.
+- [ ] Confirm Phase 4 features remain stable under the new code paths.
+- [ ] Update the production testing checklist for the new feature set.
 
 ## Production Testing Checklist
 

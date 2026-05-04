@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 import UniformTypeIdentifiers
 
 struct ContentView: View {
@@ -28,6 +29,47 @@ struct ContentView: View {
                     .lineLimit(2)
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Renderer Mode")
+                    .font(.headline)
+
+                Picker(
+                    "Renderer Mode",
+                    selection: Binding(
+                        get: { appModel.rendererMode },
+                        set: { appModel.updateRendererMode($0) }
+                    )
+                ) {
+                    ForEach(WallpaperRendererMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if appModel.rendererMode == .web {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Web Source URL")
+                            .font(.subheadline)
+
+                        HStack {
+                            TextField("https://example.com/animated-background", text: Binding(
+                                get: { appModel.webURLString },
+                                set: { appModel.updateWebURL($0) }
+                            ))
+                            .textFieldStyle(.roundedBorder)
+
+                            Button("Apply Web") {
+                                Task { await appModel.applyWallpaperFromSelection() }
+                            }
+                            .disabled(appModel.webURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isApplyingWallpaper)
+                        }
+                        Text("Enter a public HTTP(S) URL or a local file URL to render as wallpaper.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             HStack(spacing: 12) {
                 Button("Choose Video") {
                     isFileImporterPresented = true
@@ -38,7 +80,7 @@ struct ContentView: View {
                         await appModel.applyWallpaperFromSelection()
                     }
                 }
-                .disabled(appModel.selectedVideoPath.isEmpty || appModel.isApplyingWallpaper)
+                .disabled(appModel.selectedVideoPath.isEmpty || appModel.isApplyingWallpaper || appModel.rendererMode == .web)
             }
 
             Divider()
@@ -67,6 +109,32 @@ struct ContentView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Per-Display Sources")
+                    .font(.headline)
+
+                ForEach(NSScreen.screens, id: \.displayID) { screen in
+                    let id = screen.displayID
+                    HStack {
+                        Text("Display \(id)")
+                            .frame(width: 120, alignment: .leading)
+
+                        TextField("http://... or file:///...", text: Binding(
+                            get: { appModel.perDisplaySource(for: id) },
+                            set: { appModel.updatePerDisplaySource(id, $0) }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+
+                        Button("Apply") {
+                            Task { await appModel.updatePerDisplaySource(id, appModel.perDisplaySource(for: id)) }
+                        }
+                        .disabled(appModel.perDisplaySource(for: id).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
             }
 
             if appModel.isApplyingWallpaper {

@@ -13,6 +13,7 @@ final class WallpaperManager {
 
     private var displayControllers: [CGDirectDisplayID: DisplayController] = [:]
     private var currentWallpaperURL: URL?
+    private var currentRendererMode: WallpaperRendererMode = .video
     private var isMuted = true
     private var scalingMode: VideoScalingMode = .resizeAspectFill
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "WallpaperManager")
@@ -100,11 +101,12 @@ final class WallpaperManager {
                 logger.debug("Added display \(id)")
                 do { try addDiagnostic("Added display \(id) frame=\(screen.frame)") } catch { logger.error("diag write failed: \(error.localizedDescription)") }
 
-                if let currentWallpaperURL {
+                    if let currentWallpaperURL {
                     let result = await controller.startPlayback(
                         url: currentWallpaperURL,
                         isMuted: isMuted,
-                        scalingMode: scalingMode
+                        scalingMode: scalingMode,
+                        rendererMode: currentRendererMode
                     )
 
                     if case .failure(let error) = result {
@@ -133,12 +135,39 @@ final class WallpaperManager {
         return .success(controller)
     }
 
+    /// Apply a wallpaper to a single display by display ID. Used for per-display overrides.
+    @MainActor
+    func setPerDisplayWallpaper(displayID: CGDirectDisplayID, url: URL, rendererMode: WallpaperRendererMode) async -> Result<Void, WallpaperError> {
+        guard let controller = displayControllers[displayID] else {
+            logger.error("Display controller not found for id: \(displayID)")
+            return .failure(.screenNotFound(id: displayID))
+        }
+
+        let result = await controller.startPlayback(url: url, isMuted: isMuted, scalingMode: scalingMode, rendererMode: rendererMode)
+        switch result {
+        case .success:
+            logger.info("Per-display wallpaper applied to \(displayID)")
+            return .success(())
+        case .failure(let error):
+            logger.error("Failed to apply per-display wallpaper to \(displayID): \(error.errorDescription ?? "unknown")")
+            return .failure(error)
+        }
+    }
+
     @MainActor
     func setWallpaper(url: URL) async -> Result<Void, WallpaperError> {
-        // Validate file exists
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            logger.error("Video file not found: \(url.path)")
-            return .failure(.videoFileNotFound(path: url.path))
+        // Validate: if local file URL, ensure it exists; remote URLs are allowed for WebRenderer
+        if url.isFileURL {
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                logger.error("Video file not found: \(url.path)")
+                return .failure(.videoFileNotFound(path: url.path))
+            }
+        } else {
+            // For non-file URLs accept http/https; otherwise reject
+            if let scheme = url.scheme?.lowercased(), !(scheme == "http" || scheme == "https") {
+                logger.error("Unsupported URL scheme for wallpaper: \(url.scheme ?? "nil")")
+                return .failure(.internalError(description: "Unsupported URL scheme: \(url.scheme ?? "unknown")"))
+            }
         }
 
         logger.info("Setting wallpaper: \(url.lastPathComponent)")
@@ -150,7 +179,8 @@ final class WallpaperManager {
             let result = await controller.startPlayback(
                 url: url,
                 isMuted: isMuted,
-                scalingMode: scalingMode
+                scalingMode: scalingMode,
+                rendererMode: currentRendererMode
             )
             switch result {
             case .success:
@@ -162,6 +192,12 @@ final class WallpaperManager {
         }
 
         return .success(())
+    }
+
+    @MainActor
+    func setRendererMode(_ mode: WallpaperRendererMode) async {
+        currentRendererMode = mode
+        logger.debug("Renderer mode updated to \(mode.rawValue, privacy: .public)")
     }
 
     @MainActor
@@ -262,7 +298,8 @@ final class WallpaperManager {
                         await controller.fallbackRecreate(
                             videoURL: currentWallpaperURL,
                             isMuted: isMuted,
-                            scalingMode: scalingMode
+                            scalingMode: scalingMode,
+                            rendererMode: currentRendererMode
                         )
                     }
                 } else {

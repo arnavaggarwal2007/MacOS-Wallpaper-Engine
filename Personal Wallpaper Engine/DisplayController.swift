@@ -14,6 +14,7 @@ final class DisplayController {
     private var recoveryCount: Int = 0
     private let maxRecoveryAttempts: Int = 3
     private var lastLoadedVideoURL: URL?
+    private var lastRendererMode: WallpaperRendererMode = .video
     private var lastMutedState: Bool = true
     private var lastScalingMode: VideoScalingMode = .resizeAspectFill
 
@@ -79,44 +80,74 @@ final class DisplayController {
     func startPlayback(
         url: URL,
         isMuted: Bool,
-        scalingMode: VideoScalingMode
+        scalingMode: VideoScalingMode,
+        rendererMode: WallpaperRendererMode
     ) async -> Result<Void, WallpaperError> {
         guard let contentView = contentView else {
             logger.error("Content view not available for playback")
             return .failure(.windowCreationFailed(reason: "No content view"))
         }
+        // Instantiate the appropriate renderer based on mode or URL scheme
+        if rendererMode == .web || (url.scheme?.lowercased().hasPrefix("http") == true) {
+            let web = WebRenderer()
+            let initResult = await web.start(in: contentView)
+            guard case .success = initResult else {
+                logger.error("Failed to initialize WebRenderer")
+                return initResult
+            }
 
-        // Step 1: Create and initialize renderer
-        let renderer = VideoRenderer()
-        let initResult = await renderer.start(in: contentView)
+            await web.setMuted(isMuted)
+            await web.setScalingMode(scalingMode)
 
-        // Check initialization succeeded
-        guard case .success = initResult else {
-            logger.error("Failed to initialize VideoRenderer")
-            return initResult
+            let loadResult = await web.load(url: url)
+            guard case .success = loadResult else {
+                logger.error("Failed to load web content: \(url.absoluteString)")
+                await web.dispose()
+                return loadResult
+            }
+
+            self.renderer = web
+            self.lastLoadedVideoURL = url
+            self.lastMutedState = isMuted
+            self.lastScalingMode = scalingMode
+            self.lastRendererMode = .web
+            self.recoveryCount = 0
+            logger.info("Web playback started for display \(self.displayID)")
+            return .success(())
+        } else {
+            // Video path (local file)
+            let renderer = VideoRenderer()
+            let initResult = await renderer.start(in: contentView)
+
+            // Check initialization succeeded
+            guard case .success = initResult else {
+                logger.error("Failed to initialize VideoRenderer")
+                return initResult
+            }
+
+            await renderer.setMuted(isMuted)
+            await renderer.setScalingMode(scalingMode)
+
+            // Load video into the initialized renderer
+            let videoResult = await renderer.loadVideo(url: url)
+
+            // If video loading failed, dispose renderer and return error
+            guard case .success = videoResult else {
+                logger.error("Failed to load video: \(url.lastPathComponent)")
+                await renderer.dispose()
+                return videoResult
+            }
+
+            // Keep renderer alive for this display
+            self.renderer = renderer
+            self.lastLoadedVideoURL = url
+            self.lastMutedState = isMuted
+            self.lastScalingMode = scalingMode
+            self.lastRendererMode = .video
+            self.recoveryCount = 0
+            logger.info("Playback started for display \(self.displayID)")
+            return .success(())
         }
-
-        await renderer.setMuted(isMuted)
-        await renderer.setScalingMode(scalingMode)
-
-        // Step 2: Load video into the initialized renderer
-        let videoResult = await renderer.loadVideo(url: url)
-
-        // If video loading failed, dispose renderer and return error
-        guard case .success = videoResult else {
-            logger.error("Failed to load video: \(url.lastPathComponent)")
-            await renderer.dispose()
-            return videoResult
-        }
-
-        // Step 3: Keep renderer alive for this display
-        self.renderer = renderer
-        self.lastLoadedVideoURL = url
-        self.lastMutedState = isMuted
-        self.lastScalingMode = scalingMode
-        self.recoveryCount = 0
-        logger.info("Playback started for display \(self.displayID)")
-        return .success(())
     }
 
     func setMuted(_ isMuted: Bool) async {
@@ -176,7 +207,8 @@ final class DisplayController {
         let result = await startPlayback(
             url: videoURL,
             isMuted: lastMutedState,
-            scalingMode: lastScalingMode
+            scalingMode: lastScalingMode,
+            rendererMode: lastRendererMode
         )
         
         switch result {
@@ -335,7 +367,8 @@ final class DisplayController {
     func fallbackRecreate(
         videoURL: URL?,
         isMuted: Bool,
-        scalingMode: VideoScalingMode
+        scalingMode: VideoScalingMode,
+        rendererMode: WallpaperRendererMode
     ) async {
         logger.info("Starting fallback recreation for display \(self.displayID)")
         
@@ -359,7 +392,7 @@ final class DisplayController {
         
         // Restart playback if we have a video URL
         if let url = savedURL {
-            let result = await startPlayback(url: url, isMuted: savedMuted, scalingMode: savedScaling)
+            let result = await startPlayback(url: url, isMuted: savedMuted, scalingMode: savedScaling, rendererMode: rendererMode)
             
             switch result {
             case .success:

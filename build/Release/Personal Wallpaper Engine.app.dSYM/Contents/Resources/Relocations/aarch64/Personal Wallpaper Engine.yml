@@ -1,5 +1,0 @@
----
-triple:          'arm64-apple-darwin'
-binary-path:     '/Users/arnev/Desktop/Personal Wallpaper Engine/build/Release/Personal Wallpaper Engine.app/Contents/MacOS/Personal Wallpaper Engine'
-relocations:     []
-...

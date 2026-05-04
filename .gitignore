@@ -1,0 +1,73 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserdatad/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# App files
+*.app
+*.ipa
+*.xcarchive
+*.dSYM
+
+# Swift modules / compiled
+*.swiftmodule
+*.swiftdoc
+*.o
+*.obj
+*.linkfilelist
+*.hmap
+*.sdk
+
+# Derived data variants used in local builds
+.derivedData*
+*.deriveddata
+
+# Xcode build outputs
+build/
+/**/*.build/
+
+# IDEs
+.vscode/
+.idea/
+
+# Temporary
+tmp/
+*.tmp
+
+# Logs
+*.log
+
+# Prevent accidentally adding large binary caches
+*.pcm
+
+# Custom derived-data used in this project
+.derivedDataPhase*
+
+# Ignore user session files
+*.xcscmblueprint
+
+# End of .gitignore
