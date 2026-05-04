@@ -1,6 +1,6 @@
 # VSCode-based Development Roadmap for macOS Wallpaper Engine Core
 
-**Last Updated:** May 3, 2026 | **Status:** Phase 5H Complete (Stabilization and release gate) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
+**Last Updated:** May 3, 2026 | **Status:** Phase 5I Complete (UI Modernization) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
 
 ## Table of Contents
 
@@ -1706,6 +1706,78 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 - ✅ Code review completed: Launch-on-login feature properly integrates with existing architecture
 - ✅ No regressions detected: Phase 4 wallpaper engine functionality untouched and stable
 - ⚠️ Manual testing recommended: See Production Testing Checklist below for comprehensive user validation
+
+---
+
+### **Phase 5I Complete** (UI Modernization and per-display scaling modes)
+
+**Goal:** Enhance user experience with modern UI design, per-display scaling mode controls, and real-time wallpaper preview.
+
+**User Stories Fulfilled:**
+- ✅ Add per-display scaling modes (Fill/Fit/Stretch) per display for fine-grained control
+- ✅ Modernize ContentView with sleek, contemporary aesthetic
+- ✅ Show preview of currently configured wallpapers
+
+**Implementation Completed:**
+
+1. **Per-Display Scaling Mode Infrastructure**
+   - Added `perDisplayScalingModes` dictionary key to SettingsStore.Keys enum
+   - Added JSON-encoded persistence in SettingsStore.init() and @Published property with didSet
+   - Added `perDisplayScalingMode(for:)` and `updatePerDisplayScalingMode(_:_:)` methods to AppViewModel
+   - Added `setScalingModeForDisplay(displayID:mode:)` method to WallpaperManager for per-display application
+   - All methods follow established per-display sources pattern for consistency
+
+2. **UI Modernization in ContentView**
+   - Reorganized layout into logical sections: Preview, Global Settings, Main Source, Per-Display, System Settings
+   - Added ScrollView for better window resizing and content overflow handling
+   - Implemented modern card-based design with `.controlBackgroundColor` containers and `cornerRadius(8)`
+   - Added semantic system icons using Label components with SF Symbols (waveform.circle, aspectratio, etc.)
+   - Improved typography hierarchy with fontWeight(.bold), .headline, .subheadline levels
+   - Enhanced visual feedback with segmented pickers, colored toggles, and button labels
+   - Increased minimum window size to 580×380 to accommodate expanded layout
+
+3. **Wallpaper Preview Section**
+   - Added dedicated preview section at top of form showing current configuration
+   - Main display preview shows selected video/URL, scaling mode, and audio status
+   - Per-display preview only shows configurations with sources set (not empty)
+   - Uses card styling with blue accent color for readability
+   - Provides real-time visibility into settings without applying changes
+
+4. **Per-Display Scaling Controls**
+   - Added scaling mode picker for each display in Per-Display Settings section
+   - Only visible when 2+ displays are connected (NSScreen.screens.count > 1)
+   - Each display picker binds to `appModel.perDisplayScalingMode(for:)` getter/setter
+   - Segmented picker style matches global scaling mode control for UI consistency
+   - Changes apply immediately via `updatePerDisplayScalingMode()` call
+
+5. **Status Message Enhancement**
+   - Refactored all status/error messages into card-style blocks with system icons
+   - Use Color.green.opacity(0.1) for success, Color.red.opacity(0.1) for errors, Color.blue.opacity(0.1) for progress
+   - Improved visual hierarchy and scanability
+
+**Build Verification:**
+- ✅ Clean build succeeded: `xcodebuild clean build -scheme "Personal Wallpaper Engine" -derivedDataPath .derivedDataUIEnhancements`
+- ✅ All 13+ Swift files compiled without errors
+- ✅ Minor warnings (4 unused variables) not related to new code
+- ✅ Generated app bundle: `.derivedDataUIEnhancements/Build/Products/Debug/Personal Wallpaper Engine.app`
+
+**Git Commit:**
+- Commit: d352d05 (main)
+- Message: "feat: add per-display scaling modes and modernize UI"
+- Files modified: 4 (AppViewModel.swift, ContentView.swift, SettingsStore.swift, WallpaperManager.swift)
+- Changes: 402 insertions, 149 deletions
+
+**Architecture Notes:**
+- Per-display scaling modes follow established pattern: displayID → string mapping in SettingsStore with JSON persistence
+- AppViewModel bridges UI state to WallpaperManager display-specific operations
+- All new code maintains @MainActor isolation and async/await concurrency patterns
+- No breaking changes to existing Phase 4/5A-5H features
+- PreviewProvider includes new modern styling in development preview
+
+**Status: Phase 5 Complete with UI Enhancements**
+- All planned Phase 5 features now complete: Phases 5A through 5I
+- Release candidate ready for manual user validation
+- Architecture integrity maintained across all phases
 
 ---
 
