@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @EnvironmentObject private var appModel: AppViewModel
     @State private var isFileImporterPresented = false
+    @State private var selectedDisplayForPicker: CGDirectDisplayID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -117,23 +118,33 @@ struct ContentView: View {
                 Text("Per-Display Sources")
                     .font(.headline)
 
-                ForEach(NSScreen.screens, id: \.displayID) { screen in
+                ForEach(Array(NSScreen.screens.enumerated()), id: \.element.displayID) { index, screen in
+                    let displayIndex = index + 1
                     let id = screen.displayID
-                    HStack {
-                        Text("Display \(id)")
-                            .frame(width: 120, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Display \(displayIndex)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        
+                        HStack {
+                            TextField("http://... or file:///...", text: Binding(
+                                get: { appModel.perDisplaySource(for: id) },
+                                set: { appModel.updatePerDisplaySource(id, $0) }
+                            ))
+                            .textFieldStyle(.roundedBorder)
 
-                        TextField("http://... or file:///...", text: Binding(
-                            get: { appModel.perDisplaySource(for: id) },
-                            set: { appModel.updatePerDisplaySource(id, $0) }
-                        ))
-                        .textFieldStyle(.roundedBorder)
+                            Button("Browse") {
+                                selectedDisplayForPicker = id
+                                isFileImporterPresented = true
+                            }
 
-                        Button("Apply") {
-                            Task { await appModel.updatePerDisplaySource(id, appModel.perDisplaySource(for: id)) }
+                            Button("Apply") {
+                                Task { await appModel.updatePerDisplaySource(id, appModel.perDisplaySource(for: id)) }
+                            }
+                            .disabled(appModel.perDisplaySource(for: id).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
-                        .disabled(appModel.perDisplaySource(for: id).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
+                    .padding(.bottom, 4)
                 }
             }
 
@@ -165,7 +176,15 @@ struct ContentView: View {
             switch result {
             case .success(let urls):
                 guard let firstURL = urls.first else { return }
-                appModel.selectVideo(at: firstURL)
+                
+                // If a display was selected for per-display picker, use that
+                if let displayID = selectedDisplayForPicker {
+                    appModel.updatePerDisplaySource(displayID, firstURL.absoluteString)
+                    selectedDisplayForPicker = nil
+                } else {
+                    // Otherwise, use the main video picker
+                    appModel.selectVideo(at: firstURL)
+                }
             case .failure(let error):
                 appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
                 appModel.statusMessage = nil

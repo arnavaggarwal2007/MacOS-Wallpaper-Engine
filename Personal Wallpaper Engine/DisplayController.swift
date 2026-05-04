@@ -87,6 +87,14 @@ final class DisplayController {
             logger.error("Content view not available for playback")
             return .failure(.windowCreationFailed(reason: "No content view"))
         }
+        
+        // Dispose old renderer before starting new playback
+        if let oldRenderer = renderer {
+            logger.debug("Disposing old renderer before starting new playback on display \(self.displayID)")
+            await oldRenderer.dispose()
+            self.renderer = nil
+        }
+        
         // Instantiate the appropriate renderer based on mode or URL scheme
         if rendererMode == .web || (url.scheme?.lowercased().hasPrefix("http") == true) {
             let web = WebRenderer()
