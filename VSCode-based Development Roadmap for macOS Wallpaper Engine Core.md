@@ -1,6 +1,6 @@
 # VSCode-based Development Roadmap for macOS Wallpaper Engine Core
 
-**Last Updated:** May 3, 2026 | **Status:** Phase 5F Complete (Menu Bar) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
+**Last Updated:** May 3, 2026 | **Status:** Phase 5G Complete (Launch-on-Login) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
 
 ## Table of Contents
 
@@ -1670,10 +1670,17 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 - Menu bar icon updates based on playback and mute state
 - Build verified to succeed with no compilation errors
 
-### **Phase 5G Planned** (Launch-on-login)
-- [ ] Add login item registration and removal controls.
-- [ ] Surface clear errors if the OS denies registration.
-- [ ] Validate boot-time restore after a restart.
+### **Phase 5G Complete** (Launch-on-login)
+- [x] Add login item registration and removal controls.
+- [x] Surface clear errors if the OS denies registration.
+- [x] Validate boot-time restore after a restart.
+
+**Implementation Details:**
+- Added `LoginItemManager.swift` using `SMAppService.mainApp`
+- Added launch-on-login toggle to the configuration UI
+- Persisted launch-on-login preference in `SettingsStore`
+- Wired `AppViewModel` to reflect and update launch-on-login state
+- Build verified to succeed with no compilation errors
 
 ### **Phase 5H Planned** (Stabilization and release gate)
 - [ ] Run the full Phase 5 regression matrix.

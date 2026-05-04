@@ -21,6 +21,10 @@ struct Personal_Wallpaper_EngineApp: App {
                     menuBarController.setup(with: appModel)
                     await appModel.start()
                 }
+                .onAppear {
+                    // Initialize launch-on-login status from system
+                    appModel.updateLaunchOnLoginStatus()
+                }
                 .onDisappear {
                     Task {
                         await appModel.stop()

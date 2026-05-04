@@ -160,6 +160,31 @@ struct ContentView: View {
                     .foregroundStyle(.red)
             }
 
+            Divider()
+
+            Toggle(
+                "Launch on Login",
+                isOn: Binding(
+                    get: { appModel.isLaunchOnLoginEnabled },
+                    set: { _ in
+                        Task { await appModel.toggleLaunchOnLogin() }
+                    }
+                )
+            )
+            .help("Automatically start the wallpaper engine when you log in")
+
+            if let message = appModel.launchOnLoginStatusMessage {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.green)
+            }
+
+            if let error = appModel.launchOnLoginErrorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+
             Spacer()
         }
         .padding(20)

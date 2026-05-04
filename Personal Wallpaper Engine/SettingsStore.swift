@@ -13,6 +13,7 @@ final class SettingsStore {
         static let isMuted = "isMuted"
         static let scalingMode = "scalingMode"
         static let debugDiagnostics = "debugDiagnostics"  // Chunk 4E: Debug flag
+        static let launchOnLogin = "launchOnLogin"  // Phase 5G: Launch-on-login flag
     }
 
     private init() {
@@ -33,6 +34,7 @@ final class SettingsStore {
         isMuted = UserDefaults.standard.bool(forKey: Keys.isMuted)
         scalingMode = VideoScalingMode(rawValue: UserDefaults.standard.string(forKey: Keys.scalingMode) ?? VideoScalingMode.resizeAspectFill.rawValue) ?? .resizeAspectFill
         debugDiagnosticsEnabled = UserDefaults.standard.bool(forKey: Keys.debugDiagnostics)  // Chunk 4E
+        launchOnLoginEnabled = UserDefaults.standard.bool(forKey: Keys.launchOnLogin)  // Phase 5G
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -72,6 +74,10 @@ final class SettingsStore {
     
     var debugDiagnosticsEnabled: Bool {  // Chunk 4E: Debug diagnostics flag
         didSet { UserDefaults.standard.set(debugDiagnosticsEnabled, forKey: Keys.debugDiagnostics) }
+    }
+
+    var launchOnLoginEnabled: Bool {  // Phase 5G: Launch-on-login preference
+        didSet { UserDefaults.standard.set(launchOnLoginEnabled, forKey: Keys.launchOnLogin) }
     }
 }
 

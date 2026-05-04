@@ -13,6 +13,9 @@ final class AppViewModel: ObservableObject {
     @Published var statusMessage: String?
     @Published var errorMessage: String?
     @Published var isPlaying: Bool = true
+    @Published var isLaunchOnLoginEnabled: Bool = false  // Phase 5G
+    @Published var launchOnLoginStatusMessage: String?
+    @Published var launchOnLoginErrorMessage: String?
     
     // MARK: - System Health Tracking (Chunk 4E)
     @Published var systemHealthStatus: SystemHealthStatus = .healthy
@@ -20,6 +23,7 @@ final class AppViewModel: ObservableObject {
 
     private let wallpaperManager: WallpaperManager
     private let settings: SettingsStore
+    private let loginItemManager = LoginItemManager()  // Phase 5G
     private var hasStarted = false
     private var selectedVideoURL: URL?
     private var activeSecurityScopedVideoURL: URL?
@@ -33,6 +37,7 @@ final class AppViewModel: ObservableObject {
         self.webURLString = settings.webURLString
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
+        self.isLaunchOnLoginEnabled = settings.launchOnLoginEnabled
     }
 
     init(
@@ -46,6 +51,7 @@ final class AppViewModel: ObservableObject {
         self.webURLString = settings.webURLString
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
+        self.isLaunchOnLoginEnabled = settings.launchOnLoginEnabled
     }
 
     // MARK: - Per-display helpers (Phase 5E)
@@ -344,6 +350,19 @@ final class AppViewModel: ObservableObject {
         // Show preferences window or switch to preferences view
         // For now, this can be expanded to show a preferences window
         statusMessage = "Preferences window would open here (Phase 5F+)"
+    }
+    // MARK: - Launch-on-Login (Phase 5G)
+    func updateLaunchOnLoginStatus() {
+        isLaunchOnLoginEnabled = loginItemManager.isLaunchOnLoginEnabled
+        settings.launchOnLoginEnabled = isLaunchOnLoginEnabled
+        launchOnLoginStatusMessage = loginItemManager.statusMessage
+        launchOnLoginErrorMessage = loginItemManager.errorMessage
+    }
+    
+    func toggleLaunchOnLogin() async {
+        loginItemManager.toggleLaunchOnLogin()
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        updateLaunchOnLoginStatus()
     }
 }
 
