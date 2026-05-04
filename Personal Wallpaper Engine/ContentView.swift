@@ -121,8 +121,9 @@ struct ContentView: View {
                 ForEach(Array(NSScreen.screens.enumerated()), id: \.element.displayID) { index, screen in
                     let displayIndex = index + 1
                     let id = screen.displayID
+                    let displayName = screen.localizedName
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Display \(displayIndex)")
+                        Text("Display \(displayIndex): \(displayName)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                         
@@ -137,11 +138,6 @@ struct ContentView: View {
                                 selectedDisplayForPicker = id
                                 isFileImporterPresented = true
                             }
-
-                            Button("Apply") {
-                                Task { await appModel.updatePerDisplaySource(id, appModel.perDisplaySource(for: id)) }
-                            }
-                            .disabled(appModel.perDisplaySource(for: id).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                     }
                     .padding(.bottom, 4)
