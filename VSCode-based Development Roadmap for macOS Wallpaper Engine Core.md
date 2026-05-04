@@ -1,6 +1,6 @@
 # VSCode-based Development Roadmap for macOS Wallpaper Engine Core
 
-**Last Updated:** May 3, 2026 | **Status:** Phase 4 Complete | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
+**Last Updated:** May 3, 2026 | **Status:** Phase 5F Complete (Menu Bar) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
 
 ## Table of Contents
 
@@ -1657,10 +1657,18 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 - [x] Preserve global fallback behavior for users who do not configure displays individually.
 - [x] Validate display connect/disconnect recovery with per-display state intact.
 
-### **Phase 5F Planned** (Menu bar controls)
-- [ ] Add menu bar access for core wallpaper controls.
-- [ ] Keep the menu and main window state synchronized through `AppViewModel`.
-- [ ] Verify menu actions do not interfere with existing window behavior.
+### **Phase 5F Complete** (Menu bar controls)
+- [x] Add menu bar access for core wallpaper controls.
+- [x] Keep the menu and main window state synchronized through `AppViewModel`.
+- [x] Verify menu actions do not interfere with existing window behavior.
+
+**Implementation Details:**
+- Created `MenuBarController.swift` with NSStatusBar/NSStatusItem integration
+- Added menu items: Play/Pause, Mute/Unmute, Preferences, Quit
+- Menu state synchronized via `AppViewModel` observer pattern (Combine)
+- Added `togglePlayback()`, `toggleMute()`, `openPreferences()` to AppViewModel
+- Menu bar icon updates based on playback and mute state
+- Build verified to succeed with no compilation errors
 
 ### **Phase 5G Planned** (Launch-on-login)
 - [ ] Add login item registration and removal controls.

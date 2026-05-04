@@ -12,6 +12,7 @@ final class AppViewModel: ObservableObject {
     @Published var isApplyingWallpaper = false
     @Published var statusMessage: String?
     @Published var errorMessage: String?
+    @Published var isPlaying: Bool = true
     
     // MARK: - System Health Tracking (Chunk 4E)
     @Published var systemHealthStatus: SystemHealthStatus = .healthy
@@ -321,6 +322,28 @@ final class AppViewModel: ObservableObject {
             errorMessage = error.errorDescription ?? "Unable to apply wallpaper."
             statusMessage = nil
         }
+    }
+    
+    // MARK: - Menu Bar Actions (Phase 5F)
+    
+    func togglePlayback() async {
+        isPlaying.toggle()
+        if isPlaying {
+            await applyWallpaperFromSelection()
+        } else {
+            await wallpaperManager.stop()
+        }
+    }
+    
+    func toggleMute() async {
+        updateMuted(!isMuted)
+    }
+    
+    @MainActor
+    func openPreferences() async {
+        // Show preferences window or switch to preferences view
+        // For now, this can be expanded to show a preferences window
+        statusMessage = "Preferences window would open here (Phase 5F+)"
     }
 }
 
