@@ -79,6 +79,7 @@ final class WallpaperManager {
     func handleScreenChange() async {
         logger.debug("Handling screen change")
         let screens = NSScreen.screens
+        logger.debug("Found screens: \(screens.map { $0.displayID })")
         // Diagnostic log to /tmp for runtime verification
         do { try addDiagnostic("handleScreenChange: found screens: \(screens.count)") } catch { logger.error("Failed writing diagnostic: \(error.localizedDescription)") }
         let currentIDs = Set(screens.map { $0.displayID })
@@ -98,7 +99,7 @@ final class WallpaperManager {
             if !existingIDs.contains(id) {
                 let controller = DisplayController(screen: screen, manager: self)
                 displayControllers[id] = controller
-                logger.debug("Added display \(id)")
+                logger.debug("Added display \(id) -> controller.displayID=\(controller.displayID)")
                 do { try addDiagnostic("Added display \(id) frame=\(screen.frame)") } catch { logger.error("diag write failed: \(error.localizedDescription)") }
 
                     if let currentWallpaperURL {
@@ -115,6 +116,8 @@ final class WallpaperManager {
                 }
             }
         }
+        // Log current mapping for diagnostics
+        logger.debug("Current displayControllers keys: \(self.displayControllers.keys)")
         
         // MARK: - Reconciliation After Screen Change (Chunk 4D)
         scheduleReconciliation(reason: "screen change")
@@ -137,13 +140,19 @@ final class WallpaperManager {
 
     /// Apply a wallpaper to a single display by display ID. Used for per-display overrides.
     @MainActor
-    func setPerDisplayWallpaper(displayID: CGDirectDisplayID, url: URL, rendererMode: WallpaperRendererMode) async -> Result<Void, WallpaperError> {
-        guard let controller = displayControllers[displayID] else {
+    func setPerDisplayWallpaper(displayID: CGDirectDisplayID, url: URL, rendererMode: WallpaperRendererMode, scalingMode: VideoScalingMode) async -> Result<Void, WallpaperError> {
+        var controller = displayControllers[displayID]
+        if controller == nil {
+            // Fallback: try finding a controller with matching displayID (handle any key-type or mapping mismatches)
+            controller = displayControllers.values.first(where: { $0.displayID == displayID })
+        }
+
+        guard let found = controller else {
             logger.error("Display controller not found for id: \(displayID)")
             return .failure(.screenNotFound(id: displayID))
         }
 
-        let result = await controller.startPlayback(url: url, isMuted: isMuted, scalingMode: scalingMode, rendererMode: rendererMode)
+        let result = await found.startPlayback(url: url, isMuted: isMuted, scalingMode: scalingMode, rendererMode: rendererMode)
         switch result {
         case .success:
             logger.info("Per-display wallpaper applied to \(displayID)")
@@ -218,11 +227,18 @@ final class WallpaperManager {
 
     @MainActor
     func setScalingModeForDisplay(displayID: CGDirectDisplayID, mode: VideoScalingMode) async {
-        guard let controller = displayControllers[displayID] else {
+        logger.debug("setScalingModeForDisplay called for \(displayID) -> \(mode.rawValue)")
+        var controller = displayControllers[displayID]
+        if controller == nil {
+            controller = displayControllers.values.first(where: { $0.displayID == displayID })
+        }
+
+        guard let found = controller else {
             logger.warning("Display controller not found for scaling mode update: \(displayID)")
             return
         }
-        await controller.setScalingMode(mode)
+
+        await found.setScalingMode(mode)
     }
 
     // MARK: - Lifecycle Control (Chunk 4A)
@@ -272,15 +288,23 @@ final class WallpaperManager {
     @MainActor
     private func reconcileDisplayState(reason: String) async {
         logger.info("Starting display state reconciliation (triggered by: \(reason))")
+        let usePerDisplay = SettingsStore.shared.usePerDisplay
         
         var healed: [CGDirectDisplayID] = []
         
         for (displayID, controller) in displayControllers {
+            let expectedVideoURL: URL? = usePerDisplay
+                ? expectedPerDisplayURL(for: displayID) ?? currentWallpaperURL
+                : currentWallpaperURL
+            let expectedScalingMode = usePerDisplay
+                ? expectedPerDisplayScalingMode(for: displayID)
+                : scalingMode
+
             let healResult = await controller.reconcileState(
                 expectedLifecycleState: lifecycleState,
-                expectedVideoURL: currentWallpaperURL,
+                expectedVideoURL: expectedVideoURL,
                 expectedMuted: isMuted,
-                expectedScalingMode: scalingMode
+                expectedScalingMode: expectedScalingMode
             )
             
             if case .healed(let reason) = healResult {
@@ -305,9 +329,9 @@ final class WallpaperManager {
                     // Schedule async recreation
                     Task {
                         await controller.fallbackRecreate(
-                            videoURL: currentWallpaperURL,
+                            videoURL: expectedVideoURL,
                             isMuted: isMuted,
-                            scalingMode: scalingMode,
+                            scalingMode: expectedScalingMode,
                             rendererMode: currentRendererMode
                         )
                     }
@@ -323,6 +347,48 @@ final class WallpaperManager {
         } else {
             logger.debug("Reconciliation complete: no repairs needed")
         }
+    }
+
+    private func expectedPerDisplayScalingMode(for displayID: CGDirectDisplayID) -> VideoScalingMode {
+        guard let rawValue = SettingsStore.shared.perDisplayScalingModes[String(displayID)],
+              let mode = VideoScalingMode(rawValue: rawValue) else {
+            return scalingMode
+        }
+        return mode
+    }
+
+    private func expectedPerDisplayURL(for displayID: CGDirectDisplayID) -> URL? {
+        let key = String(displayID)
+
+        // Prefer bookmark-resolved file URL when available for long-term sandbox reliability.
+        if let bookmarkData = SettingsStore.shared.perDisplayBookmarks[key] {
+            var isStale = false
+            if let resolvedURL = try? URL(
+                resolvingBookmarkData: bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) {
+                return resolvedURL
+            }
+        }
+
+        guard let source = SettingsStore.shared.perDisplaySources[String(displayID)],
+              !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("/") {
+            return URL(fileURLWithPath: trimmed)
+        }
+
+        guard let url = URL(string: trimmed) else { return nil }
+        if url.scheme == nil, url.path.hasPrefix("/") {
+            return URL(fileURLWithPath: url.path)
+        }
+
+        return url
     }
 
     @MainActor

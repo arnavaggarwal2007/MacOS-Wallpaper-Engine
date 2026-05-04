@@ -1,6 +1,6 @@
 # VSCode-based Development Roadmap for macOS Wallpaper Engine Core
 
-**Last Updated:** May 3, 2026 | **Status:** Phase 5I Complete (UI Modernization) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
+**Last Updated:** May 4, 2026 | **Status:** Phase 5 Complete (UI & Collections Planning) | **Next Phase:** Phase 6A—Wallpaper Collections | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
 
 ## Table of Contents
 
@@ -14,8 +14,9 @@
 8. [Code Examples & Patterns](#code-examples--patterns)
 9. [Production Testing Checklist](#production-testing-checklist)
 10. [Troubleshooting & Performance](#troubleshooting--performance)
-11. [References](#references)
-12. [Phase 5 Roadmap](#phase-5-roadmap)
+11. [Phase 5 Roadmap](#phase-5-roadmap)
+12. [Phase 6 Roadmap](#phase-6-roadmap)
+13. [References](#references)
 
 ---
 
@@ -1792,6 +1793,7 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 - 5F: Menu bar controls (Play/Pause, Mute/Unmute, Preferences, Quit)
 - 5G: Launch-on-login support (macOS 13.2+) via SMAppService
 - 5H: Stabilization and release gate review
+- **5I:** UI Modernization (per-display scaling modes, card-based design, wallpaper preview)
 
 **Architecture Integrity:**
 - All features are isolated behind the existing `WallpaperManager` actor
@@ -1800,11 +1802,337 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 - Persistence layer (`SettingsStore`) centralized for all preferences
 - No changes to core wallpaper rendering or display controller logic
 
-**Next Steps:**
-1. **Manual Testing:** Use the Production Testing Checklist below to validate across single display, multi-display, Spaces, and performance scenarios
-2. **Documentation:** Update README with launch-on-login feature and macOS 13.2 requirement
-3. **Release Preparation:** Code signing, notarization, and App Store submission (if desired)
-4. **Future Phases:** Keyboard shortcuts, advanced effects, cloud sync, or other features
+**Phase 5 Status: ✅ COMPLETE AND STABLE**
+
+---
+
+## Phase 6 Roadmap: Collections and Desktop Setups
+
+Phase 6 introduces **Wallpaper Collections** (Phase 6A) and **Desktop Setups** (Phase 6B)—two complementary features that enable users to organize, save, and restore complex wallpaper configurations.
+
+### **Design Goals**
+
+1. **Wallpaper Collections:** Group multiple wallpapers into named collections (e.g., "Summer", "Work", "Gaming")
+   - Simple collections: List of sources applied individually to displays
+   - Display-bound collections: Each source pre-assigned to a specific display for one-click mass-apply
+   
+2. **Desktop Setups:** Save complete application state snapshots (Phase 6B)
+   - Capture wallpaper sources, renderer modes, scaling modes, and mute status
+   - Restore full state with one click
+   - Handle display count changes gracefully
+
+3. **User Value:** Reduce friction for users with multiple wallpaper preferences or multi-display scenarios
+   - Quick switching between "work mode" and "gaming mode" wallpapers
+   - Preconfigured setups for different contexts (morning, evening, meetings)
+   - Share wallpaper themes with friends without manual configuration
+
+---
+
+### **Phase 6A: Wallpaper Collections** (Estimated 4–5 days)
+
+#### **Scope & Architecture**
+
+**Two Collection Types:**
+
+1. **Simple Collection**
+   - User-provided list of sources (file paths or URLs)
+   - Applied sequentially to available displays (source 1 → display 1, source 2 → display 2, etc.)
+   - No pre-assigned display mapping
+   - Use case: Quick theme switching with sensible defaults
+
+2. **Display-Bound Collection**
+   - Each source tagged with a display identifier (display ID or label)
+   - Applied only to matching displays when restored
+   - Handles display disconnects gracefully (skip unmapped displays)
+   - Use case: Permanent multi-display setup (e.g., always apply wallpaper X to "LG 4K", wallpaper Y to "MacBook Retina")
+
+**Data Model (Codable):**
+
+```swift
+// WallpaperCollection.swift (new file)
+
+struct WallpaperCollection: Codable, Identifiable {
+    let id: String           // UUID for unique identification
+    let name: String
+    let description: String
+    let createdAt: Date
+    let updatedAt: Date
+    let collectionType: CollectionType
+    let sources: [CollectionSource]
+    
+    enum CollectionType: String, Codable {
+        case simple
+        case displayBound
+    }
+}
+
+struct CollectionSource: Codable, Identifiable {
+    let id: String           // UUID
+    let url: String          // File path or HTTP/HTTPS URL
+    let displayLabel: String? // For display-bound: "Built-in Retina", "LG 4K", etc.
+    let displayIDFallback: Int? // Numeric fallback if label matching fails
+    let scalingMode: String? // Persisted scaling mode (.rawValue)
+    let order: Int          // Sequence in collection
+}
+```
+
+**Persistence Pattern:**
+
+```swift
+// In SettingsStore.swift
+
+@Published var savedCollections: [String: WallpaperCollection] = [:] {
+    didSet {
+        if let encoded = try? JSONEncoder().encode(savedCollections) {
+            UserDefaults.standard.set(encoded, forKey: Keys.savedCollections)
+        }
+    }
+}
+
+@Published var displayBoundCollections: [String: DisplayBoundCollection] = [:] {
+    didSet {
+        if let encoded = try? JSONEncoder().encode(displayBoundCollections) {
+            UserDefaults.standard.set(encoded, forKey: Keys.displayBoundCollections)
+        }
+    }
+}
+
+@Published var lastUsedCollectionName: String? = nil {
+    didSet {
+        UserDefaults.standard.set(lastUsedCollectionName, forKey: Keys.lastUsedCollectionName)
+    }
+}
+```
+
+Follows existing JSON encoding pattern established for `perDisplaySources`, `perDisplayBookmarks`, etc.
+
+#### **Implementation Steps**
+
+**Step 1: Define Collection Data Models** (Day 1)
+- Create `Personal Wallpaper Engine/Models/WallpaperCollection.swift`
+- Define `WallpaperCollection`, `DisplayBoundCollection`, and `CollectionSource` structs
+- Add Codable conformance for JSON serialization
+- Add helper methods: UUID generation, validation, display ID matching
+
+**Step 2: Extend SettingsStore** (Day 1)
+- Add `savedCollections` and `displayBoundCollections` properties with JSON persistence
+- Add `lastUsedCollectionName` to track recent collection
+- Add helper methods:
+  - `allCollectionNames() -> [String]` — list all available collection names
+  - `saveCollection(_: WallpaperCollection) -> Result<Void, WallpaperError>` — create or update
+  - `deleteCollection(name: String) -> Result<Void, WallpaperError>` — remove collection
+  - `loadCollection(name: String) -> WallpaperCollection?` — retrieve by name
+  - `updateCollection(_: WallpaperCollection) -> Result<Void, WallpaperError>` — modify existing
+
+**Step 3: Create Collection Manager in AppViewModel** (Day 2)
+- Add `@Published var allCollections: [String]` — updated via `allCollectionNames()`
+- Add `@Published var selectedCollection: String?` — selected for preview/apply
+- Add async methods:
+  - `createCollection(name: String, type: WallpaperCollection.CollectionType, sources: [CollectionSource])` — new collection
+  - `applySimpleCollection(_ collection: WallpaperCollection)` — apply sources sequentially
+  - `applyDisplayBoundCollection(_ collection: DisplayBoundCollection)` — match displays and apply
+  - `deleteCollection(_ name: String)` — remove collection
+  - `updateCollection(_ collection: WallpaperCollection)` — modify collection
+
+**Step 4: Create Collection Editor UI** (Day 2–3)
+- New SwiftUI view: `Personal Wallpaper Engine/UI/CollectionEditorView.swift`
+  - Modal sheet for creating and editing collections
+  - Name text field (validation: non-empty, unique)
+  - Segmented picker: Simple vs Display-Bound
+  - Source input section:
+    - For Simple: Dynamic list of source TextFields with browse buttons
+    - For Display-Bound: Picker for display + source pairs with add/remove
+  - Save and Cancel buttons
+  - Calls `AppViewModel.createCollection()` on save
+- Reusable component: `Personal Wallpaper Engine/UI/CollectionSourceInput.swift`
+  - Source text field with placeholder and browse button
+  - Opens file picker on browse (routes to AppViewModel)
+  - Validates URL format and file existence
+
+**Step 5: Integrate Collections into ContentView** (Day 3)
+- Add "Saved Collections" section below global settings
+- Collection controls:
+  - Dropdown/picker of available collection names (sorted alphabetically)
+  - "Load Collection" button — previews without applying
+  - "Apply Collection" button — applies full collection state
+  - "New Collection" button — opens CollectionEditorView modal
+  - Delete button with confirmation — removes selected collection
+- Preview area:
+  - Shows collection metadata (name, type, source count, created date)
+  - For simple collections: shows source→display mapping (e.g., "video1.mp4 → Display 1")
+  - For display-bound: shows all source→display mappings with display labels
+- Empty state: "No collections saved yet. Create one to get started."
+
+**Step 6: Implement Collection Application Logic in WallpaperManager** (Day 3–4)
+- `applySimpleCollection(_ collection: WallpaperCollection)` async method
+  - Iterate collection sources in order
+  - Assign each source to next available display
+  - If fewer sources than displays: fill available, leave others unchanged
+  - If more sources than displays: warn user, apply to available only
+  - Respect unified vs per-display mode: if unified, apply only first source
+- `applyDisplayBoundCollection(_ collection: DisplayBoundCollection)` async method
+  - For each source in collection: match display ID or label to current display
+  - If match found: apply source to that display
+  - If no match: skip with warning (display likely disconnected)
+  - Graceful handling when collection has fewer displays than current system
+
+**Step 7: Error Handling & Validation** (Day 4)
+- Collection name validation: non-empty, unique, max 255 chars, no special chars (/, \, *)
+- Source validation: bookmark resolution, URL format, file existence
+- Display ID matching: warn if saved display doesn't exist
+- Error types added to `WallpaperError` enum:
+  - `collectionNotFound(name: String)`
+  - `invalidCollectionName(reason: String)`
+  - `invalidCollectionSource(reason: String)`
+  - `displayMismatchWarning(saved: String, current: [String])`
+- UI error handling: Toast/alert messages with recovery suggestions
+- Debug logging: Log collection operations to `/tmp/pwe_collections.log` when diagnostics enabled
+
+**Step 8: UI Polish & Edge Cases** (Day 4–5)
+- Empty state messaging when no collections exist
+- Disabled "Apply" button if collection invalid or has no sources
+- Confirmation alert before deleting collection ("Are you sure?")
+- Success toast after save/apply: "Collection 'MySetup' saved successfully"
+- Duplicate name prevention: "Collection 'X' already exists. Rename to 'X copy'?" on conflict
+- Collection metadata display:
+  - Created date formatted as "Created 3 days ago"
+  - Source count: "3 sources"
+  - Collection type badge: "Simple" or "Display-Bound"
+- Scrollable collection list if many collections (max reasonable count)
+
+**Step 9: Test & Verification** (Day 5)
+- **Unit tests:**
+  - Collection data model serialization/deserialization (Codable)
+  - Name validation (empty, duplicates, special chars)
+  - Display ID matching logic
+- **Manual tests:**
+  - Create simple collection with 2 MP4 sources, apply to 3-display system → verify 2 displays updated, 1 unchanged
+  - Create display-bound collection mapping sources to specific displays → apply → verify correct assignment
+  - Switch mode (unified ↔ per-display) with active collection → verify state consistency
+  - Relaunch app → verify collections persist in UserDefaults and can be loaded
+  - Delete collection → verify it's removed from both UI and UserDefaults
+  - Collection with invalid/stale bookmarks → apply → verify fallback URL parsing
+  - Disconnect a display that's referenced in display-bound collection → verify graceful warning
+- **Regression tests:**
+  - Phase 5 features: menu bar, login-on-login, per-display mode, preview → all still work
+  - Phase 4 features: basic wallpaper apply, persist/relaunch, Space handling → unchanged
+- **Build verification:**
+  - Clean build: `xcodebuild clean build -scheme "Personal Wallpaper Engine" -derivedDataPath .derivedDataPhase6A`
+  - No errors, no new warnings
+  - App runs without crashes
+
+#### **Relevant Files (Phase 6A)**
+
+- **New:** `Personal Wallpaper Engine/Models/WallpaperCollection.swift` — Collection data models
+- **New:** `Personal Wallpaper Engine/UI/CollectionEditorView.swift` — Create/edit modal
+- **New:** `Personal Wallpaper Engine/UI/CollectionSourceInput.swift` — Reusable source input
+- **Modified:** `Personal Wallpaper Engine/AppViewModel.swift` — Collection manager and async methods
+- **Modified:** `Personal Wallpaper Engine/SettingsStore.swift` — Collection persistence
+- **Modified:** `Personal Wallpaper Engine/WallpaperManager.swift` — Collection apply orchestration
+- **Modified:** `Personal Wallpaper Engine/ContentView.swift` — Integrate Collections UI section
+
+#### **Verification Checklist (Phase 6A)**
+
+- [ ] Collections persist to UserDefaults and reload on app relaunch
+- [ ] Simple collection with 3 sources applies sequentially to 3+ displays
+- [ ] Display-bound collection applies only to matching displays
+- [ ] Display count mismatch handled gracefully (warn user, apply available)
+- [ ] Mode switch (unified ↔ per-display) preserves collection state
+- [ ] Collection names unique, validated (no empty, no special chars)
+- [ ] Stale bookmarks in collection fallback to URL parsing without crash
+- [ ] UI complete: create, apply, delete workflows functional
+- [ ] Empty state displays when no collections
+- [ ] All buttons responsive, all workflows tested
+- [ ] Phase 5 features unchanged: menu bar, login-on-login, per-display, preview
+- [ ] Build clean: no errors, no new warnings
+
+#### **Success Criteria (Phase 6A)**
+
+✅ Users can create and save simple wallpaper collections (groups of sources)
+✅ Users can create and save display-bound collections (sources pre-assigned to displays)
+✅ Collections persist across app relaunch
+✅ Applying a collection updates displays without requiring manual source entry
+✅ No regression in Phase 5/4 functionality
+✅ Clean build with comprehensive test coverage
+
+---
+
+### **Phase 6B: Desktop Setups** (Estimated 3–4 days, planned for after 6A)
+
+#### **Scope & Architecture**
+
+**Purpose:** Save and restore complete application state snapshots, not just wallpaper sources.
+
+**What Gets Captured in a Setup:**
+
+```swift
+struct SavedSetup: Codable, Identifiable {
+    let id: String               // UUID
+    let name: String
+    let description: String
+    let createdAt: Date
+    let updatedAt: Date
+    
+    // State snapshot
+    let rendererMode: String     // WallpaperRendererMode.rawValue (.video or .web)
+    let isMuted: Bool
+    let scalingMode: String      // VideoScalingMode.rawValue
+    let usePerDisplay: Bool
+    
+    // Wallpaper sources
+    let unifiedSource: String?   // File path or URL (if unified mode)
+    let perDisplaySources: [String: String]  // displayID → source mapping
+    let perDisplayScalingModes: [String: String]  // displayID → scaling mode
+    
+    // Bookmarks (serialized as base64 for JSON compatibility)
+    let unifiedBookmarkBase64: String?
+    let perDisplayBookmarksBase64: [String: String]
+}
+```
+
+**Design Decisions:**
+- **What's Included:** Wallpaper sources, renderer mode, mute status, scaling modes, per-display mappings
+- **What's Excluded:** Launch-on-login settings (app-wide, not setup-specific)
+- **Display Matching:** Use displayID when available; fallback to display label for stability
+- **Multi-Display Handling:** If saved setup has 2 displays but 4 are connected, apply only to matching displays; skip others gracefully
+
+#### **Implementation Plan (Phase 6B)**
+
+1. **Define SavedSetup Data Model** — Codable struct capturing full state snapshot
+2. **Extend SettingsStore** — Add `savedSetups: [String: SavedSetup]` persistence, `currentSetupName` tracking
+3. **Create Setup Manager in AppViewModel** — Async methods for save/restore/delete
+4. **Create Setup UI Components** — Modal for managing setups, state preview
+5. **Integrate into ContentView** — "Setups" section with save/load/delete
+6. **Implement State Restoration in WallpaperManager** — Apply full setup with error recovery
+7. **Error Handling** — Stale bookmarks, display mismatches, invalid state
+8. **Test & Verify** — Persistence, mode switching, display changes, regression
+
+#### **Estimated Timeline:** 3–4 days after Phase 6A completes
+
+#### **Success Criteria (Phase 6B)**
+
+✅ Users can save current app state as a named "Setup"
+✅ Setups capture renderer mode, mute status, wallpaper sources, scaling modes
+✅ Restoring a setup replicates exact state (or gracefully adapts to current display config)
+✅ Display count changes handled gracefully
+✅ Setups persist across relaunch
+✅ No regression in Phase 6A Collections or earlier phases
+
+---
+
+### **Phase 6 Summary & Milestones**
+
+| Phase | Scope | Duration | Depends On |
+|-------|-------|----------|-----------|
+| **6A** | Wallpaper Collections (simple + display-bound) | 4–5 days | Phase 5 Complete |
+| **6B** | Desktop Setups (full state snapshots) | 3–4 days | Phase 6A Complete |
+
+**Phase 6 Benefits:**
+- Users reduce time switching between wallpaper configurations
+- Support for complex multi-display scenarios with saved presets
+- Foundation for future features: scheduled setup changes, setup sharing, collections marketplace
+
+---
 
 ## Production Testing Checklist
 

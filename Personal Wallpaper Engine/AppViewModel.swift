@@ -1,4 +1,5 @@
 import Foundation
+import os
 import SwiftUI
 import Combine
 
@@ -16,6 +17,7 @@ final class AppViewModel: ObservableObject {
     @Published var isLaunchOnLoginEnabled: Bool = false  // Phase 5G
     @Published var launchOnLoginStatusMessage: String?
     @Published var launchOnLoginErrorMessage: String?
+    @Published var usePerDisplay: Bool
     
     // MARK: - System Health Tracking (Chunk 4E)
     @Published var systemHealthStatus: SystemHealthStatus = .healthy
@@ -24,6 +26,7 @@ final class AppViewModel: ObservableObject {
     private let wallpaperManager: WallpaperManager
     private let settings: SettingsStore
     private let loginItemManager = LoginItemManager()  // Phase 5G
+    private let logger = Logger(subsystem: "com.local.wallpaper", category: "AppViewModel")
     private var hasStarted = false
     private var selectedVideoURL: URL?
     private var activeSecurityScopedVideoURL: URL?
@@ -38,6 +41,7 @@ final class AppViewModel: ObservableObject {
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
         self.isLaunchOnLoginEnabled = settings.launchOnLoginEnabled
+        self.usePerDisplay = settings.usePerDisplay
     }
 
     init(
@@ -52,6 +56,22 @@ final class AppViewModel: ObservableObject {
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
         self.isLaunchOnLoginEnabled = settings.launchOnLoginEnabled
+        self.usePerDisplay = settings.usePerDisplay
+    }
+
+    func toggleUsePerDisplay(_ enabled: Bool) {
+        usePerDisplay = enabled
+        settings.usePerDisplay = enabled
+        // If switching to unified and we have a selected video/URL, apply it globally
+        if !enabled {
+            Task { @MainActor in
+                if rendererMode == .video {
+                    await applyWallpaperFromSelection()
+                } else if rendererMode == .web {
+                    await applyWallpaperFromSelection()
+                }
+            }
+        }
     }
 
     // MARK: - Per-display helpers (Phase 5E)
@@ -61,15 +81,139 @@ final class AppViewModel: ObservableObject {
 
     func updatePerDisplaySource(_ displayID: CGDirectDisplayID, _ urlString: String) {
         settings.perDisplaySources[String(displayID)] = urlString
+    }
 
-        // Apply immediately if possible
-        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let url = URL(string: trimmed) else { return }
+    func perDisplayResolvedURL(for displayID: CGDirectDisplayID) -> URL? {
+        if let bookmarkData = settings.perDisplayBookmarks[String(displayID)] {
+            var isStale = false
+            do {
+                let resolvedURL = try URL(
+                    resolvingBookmarkData: bookmarkData,
+                    options: [.withSecurityScope],
+                    relativeTo: nil,
+                    bookmarkDataIsStale: &isStale
+                )
 
-        let mode: WallpaperRendererMode = url.isFileURL ? .video : .web
-        Task { @MainActor in
-            _ = await wallpaperManager.setPerDisplayWallpaper(displayID: displayID, url: url, rendererMode: mode)
+                if isStale {
+                    do {
+                        settings.perDisplayBookmarks[String(displayID)] = try resolvedURL.bookmarkData(
+                            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                            includingResourceValuesForKeys: nil,
+                            relativeTo: nil
+                        )
+                    } catch {
+                        logger.warning("Failed to refresh stale per-display bookmark for display \(displayID): \(error.localizedDescription)")
+                    }
+                }
+
+                return resolvedURL
+            } catch {
+                logger.warning("Failed to resolve per-display bookmark for display \(displayID): \(error.localizedDescription)")
+            }
         }
+
+        guard let source = settings.perDisplaySources[String(displayID)],
+              let url = resolvedSourceURL(from: source) else {
+            return nil
+        }
+        return url
+    }
+
+    func applyPerDisplayWallpaper(displayID: CGDirectDisplayID, sourceString: String) async {
+        let trimmed = sourceString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let sourceURL = resolvedSourceURL(from: trimmed) else {
+            errorMessage = "Please choose a wallpaper source for display \(displayID)."
+            statusMessage = nil
+            return
+        }
+
+        let key = String(displayID)
+        let previousSource = settings.perDisplaySources[key]
+        let previousURL = previousSource.flatMap { resolvedSourceURL(from: $0) }
+        let isChangingSource = previousURL?.absoluteString != sourceURL.absoluteString
+
+        settings.perDisplaySources[key] = sourceURL.absoluteString
+        var candidateURLs: [URL] = []
+
+        if sourceURL.isFileURL {
+            // When user changes source, always try the newly selected source first.
+            candidateURLs.append(sourceURL)
+
+            // Only use old bookmark as fallback when source is unchanged.
+            if !isChangingSource, let bookmarkedURL = perDisplayResolvedURL(for: displayID) {
+                candidateURLs.append(bookmarkedURL)
+            }
+
+            do {
+                settings.perDisplayBookmarks[key] = try sourceURL.bookmarkData(
+                    options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                    includingResourceValuesForKeys: nil,
+                    relativeTo: nil
+                )
+                // Add freshly written bookmark URL as an additional fallback.
+                if let refreshedURL = perDisplayResolvedURL(for: displayID) {
+                    candidateURLs.append(refreshedURL)
+                }
+            } catch {
+                logger.warning("Failed to save per-display bookmark for display \(displayID): \(error.localizedDescription)")
+            }
+        } else {
+            candidateURLs = [sourceURL]
+        }
+
+        let scaling = perDisplayScalingMode(for: displayID)
+
+        isApplyingWallpaper = true
+        defer { isApplyingWallpaper = false }
+
+        var lastError: WallpaperError?
+        var attempted = Set<String>()
+
+        for url in candidateURLs {
+            // De-duplicate candidates that may resolve to the same absolute string
+            let marker = url.absoluteString
+            if attempted.contains(marker) { continue }
+            attempted.insert(marker)
+
+            let rendererMode: WallpaperRendererMode = url.isFileURL ? .video : .web
+            switch await wallpaperManager.setPerDisplayWallpaper(displayID: displayID, url: url, rendererMode: rendererMode, scalingMode: scaling) {
+            case .success:
+                statusMessage = "Applied to display \(displayID): \(url.lastPathComponent)"
+                errorMessage = nil
+                return
+            case .failure(let error):
+                lastError = error
+                let errorText = error.errorDescription ?? "unknown"
+                logger.warning("Per-display apply attempt failed for display \(displayID) using \(url.absoluteString): \(errorText)")
+            }
+        }
+
+        // If all candidates fail for a file URL, clear stale bookmark so next manual selection seeds a fresh one.
+        if sourceURL.isFileURL {
+            var bookmarks = settings.perDisplayBookmarks
+            bookmarks.removeValue(forKey: key)
+            settings.perDisplayBookmarks = bookmarks
+        }
+
+        errorMessage = lastError?.errorDescription ?? "Unable to apply wallpaper for display \(displayID)."
+        statusMessage = nil
+    }
+
+    private func resolvedSourceURL(from source: String) -> URL? {
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if trimmed.hasPrefix("/") {
+            return URL(fileURLWithPath: trimmed)
+        }
+
+        guard let url = URL(string: trimmed) else { return nil }
+
+        if url.scheme == nil, url.path.hasPrefix("/") {
+            return URL(fileURLWithPath: url.path)
+        }
+
+        return url
     }
 
     // MARK: - Per-display scaling modes
@@ -86,6 +230,7 @@ final class AppViewModel: ObservableObject {
         
         // Apply to display if it exists
         Task { @MainActor in
+            logger.debug("Requesting scaling update for display \(displayID): \(mode.rawValue)")
             await wallpaperManager.setScalingModeForDisplay(displayID: displayID, mode: mode)
         }
     }
@@ -158,6 +303,12 @@ final class AppViewModel: ObservableObject {
     }
 
     func applyWallpaperFromSelection() async {
+        if usePerDisplay {
+            errorMessage = "Unified wallpaper apply is disabled while per-display mode is enabled."
+            statusMessage = nil
+            return
+        }
+
         if rendererMode == .video {
             guard let url = restoreSelectedVideoReference() else {
                 if selectedVideoPath.isEmpty {

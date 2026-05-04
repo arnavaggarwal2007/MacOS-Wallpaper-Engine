@@ -15,6 +15,8 @@ final class SettingsStore {
         static let debugDiagnostics = "debugDiagnostics"  // Chunk 4E: Debug flag
         static let launchOnLogin = "launchOnLogin"  // Phase 5G: Launch-on-login flag
         static let perDisplayScalingModes = "perDisplayScalingModes"  // Per-display scaling modes
+        static let usePerDisplay = "usePerDisplay" // Bool: whether to use per-display wallpapers
+        static let perDisplayBookmarks = "perDisplayBookmarks" // Per-display security-scoped bookmarks
     }
 
     private init() {
@@ -45,6 +47,16 @@ final class SettingsStore {
             }
         } else {
             perDisplayScalingModes = [:]
+        }
+        usePerDisplay = UserDefaults.standard.bool(forKey: Keys.usePerDisplay)
+        if let data = UserDefaults.standard.data(forKey: Keys.perDisplayBookmarks) {
+            if let decoded = try? JSONDecoder().decode([String: Data].self, from: data) {
+                perDisplayBookmarks = decoded
+            } else {
+                perDisplayBookmarks = [:]
+            }
+        } else {
+            perDisplayBookmarks = [:]
         }
     }
 
@@ -100,6 +112,22 @@ final class SettingsStore {
                 UserDefaults.standard.removeObject(forKey: Keys.perDisplayScalingModes)
             }
         }
+    }
+
+    // Per-display mapping: displayID (as string) -> security-scoped bookmark data
+    var perDisplayBookmarks: [String: Data] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(perDisplayBookmarks) {
+                UserDefaults.standard.set(encoded, forKey: Keys.perDisplayBookmarks)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.perDisplayBookmarks)
+            }
+        }
+    }
+
+    // Whether the app should use per-display wallpapers (true) or a single unified wallpaper (false)
+    var usePerDisplay: Bool {
+        didSet { UserDefaults.standard.set(usePerDisplay, forKey: Keys.usePerDisplay) }
     }
 }
 

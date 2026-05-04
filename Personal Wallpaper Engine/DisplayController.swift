@@ -165,7 +165,12 @@ final class DisplayController {
 
     func setScalingMode(_ mode: VideoScalingMode) async {
         lastScalingMode = mode
-        await renderer?.setScalingMode(mode)
+        if let renderer = renderer {
+            await renderer.setScalingMode(mode)
+            logger.debug("Applied scaling mode \(mode.rawValue) to renderer on display \(self.displayID)")
+        } else {
+            logger.warning("No renderer present when attempting to set scaling mode \(mode.rawValue) on display \(self.displayID)")
+        }
     }
 
     // MARK: - Lifecycle Control (Chunk 4A)

@@ -7,12 +7,14 @@
 
 import SwiftUI
 import AppKit
+import AVFoundation
 import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject private var appModel: AppViewModel
     @State private var isFileImporterPresented = false
     @State private var selectedDisplayForPicker: CGDirectDisplayID?
+    @State private var perDisplayDraftSources: [String: String] = [:]
 
     var body: some View {
         ScrollView {
@@ -28,6 +30,20 @@ struct ContentView: View {
                 }
 
                 // MARK: - Preview Section
+                // Mode selector: Unified vs Per-Display
+                HStack {
+                    Text("Mode")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+
+                    Toggle(isOn: Binding(get: { appModel.usePerDisplay }, set: { appModel.toggleUsePerDisplay($0) })) {
+                        Text("Use Per-Display Wallpapers")
+                            .font(.subheadline)
+                    }
+                    .toggleStyle(.switch)
+                    Spacer()
+                }
+
                 previewSection
 
                 // MARK: - Global Settings Section
@@ -98,125 +114,146 @@ struct ContentView: View {
                     .cornerRadius(8)
                 }
 
-                // MARK: - Video Source Section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Main Wallpaper Source")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                // MARK: - Video Source Section (Unified Mode Only)
+                if !appModel.usePerDisplay {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Main Wallpaper Source")
+                            .font(.headline)
+                            .fontWeight(.semibold)
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(appModel.selectedVideoPath.isEmpty ? "No video selected" : appModel.selectedVideoPath)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                    .padding(12)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(8)
-
-                    if appModel.rendererMode == .web {
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("Web Source URL", systemImage: "globe")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-
-                            HStack {
-                                TextField("https://example.com/animated-background", text: Binding(
-                                    get: { appModel.webURLString },
-                                    set: { appModel.updateWebURL($0) }
-                                ))
-                                .textFieldStyle(.roundedBorder)
-
-                                Button(action: {
-                                    Task { await appModel.applyWallpaperFromSelection() }
-                                }) {
-                                    Label("Apply", systemImage: "checkmark.circle.fill")
-                                        .labelStyle(.titleAndIcon)
-                                }
-                                .disabled(appModel.webURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isApplyingWallpaper)
-                            }
-                            Text("Enter a public HTTP(S) URL to render as animated wallpaper.")
-                                .font(.footnote)
+                            Text(appModel.selectedVideoPath.isEmpty ? "No video selected" : appModel.selectedVideoPath)
+                                .font(.callout)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
                         .padding(12)
                         .background(Color(.controlBackgroundColor))
                         .cornerRadius(8)
-                    } else {
-                        HStack(spacing: 12) {
-                            Button(action: { isFileImporterPresented = true }) {
-                                Label("Choose Video", systemImage: "folder.badge.plus")
-                            }
 
-                            Button(action: { Task { await appModel.applyWallpaperFromSelection() } }) {
-                                Label("Apply", systemImage: "checkmark.circle.fill")
+                        if appModel.rendererMode == .web {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("Web Source URL", systemImage: "globe")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+
+                                HStack {
+                                    TextField("https://example.com/animated-background", text: Binding(
+                                        get: { appModel.webURLString },
+                                        set: { appModel.updateWebURL($0) }
+                                    ))
+                                    .textFieldStyle(.roundedBorder)
+
+                                    Button(action: {
+                                        Task { await appModel.applyWallpaperFromSelection() }
+                                    }) {
+                                        Label("Apply", systemImage: "checkmark.circle.fill")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .disabled(appModel.webURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isApplyingWallpaper)
+                                }
+                                Text("Enter a public HTTP(S) URL to render as animated wallpaper.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
-                            .disabled(appModel.selectedVideoPath.isEmpty || appModel.isApplyingWallpaper)
+                            .padding(12)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(8)
+                        } else {
+                            HStack(spacing: 12) {
+                                Button(action: { isFileImporterPresented = true }) {
+                                    Label("Choose Video", systemImage: "folder.badge.plus")
+                                }
+
+                                Button(action: { Task { await appModel.applyWallpaperFromSelection() } }) {
+                                    Label("Apply", systemImage: "checkmark.circle.fill")
+                                }
+                                .disabled(appModel.selectedVideoPath.isEmpty || appModel.isApplyingWallpaper)
+                            }
                         }
                     }
                 }
 
                 // MARK: - Per-Display Settings
-                if NSScreen.screens.count > 1 {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Per-Display Settings")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                if appModel.usePerDisplay {
+                    if NSScreen.screens.count > 1 {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Per-Display Settings")
+                                .font(.headline)
+                                .fontWeight(.semibold)
 
-                        ForEach(Array(NSScreen.screens.enumerated()), id: \.element.displayID) { index, screen in
-                            let displayIndex = index + 1
-                            let id = screen.displayID
-                            let displayName = screen.localizedName
+                            ForEach(Array(NSScreen.screens.enumerated()), id: \.element.displayID) { index, screen in
+                                let displayIndex = index + 1
+                                let id = screen.displayID
+                                let displayName = screen.localizedName
 
-                            VStack(alignment: .leading, spacing: 10) {
-                                Label("Display \(displayIndex): \(displayName)", systemImage: "display")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.blue)
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Label("Display \(displayIndex): \(displayName)", systemImage: "display")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.blue)
 
-                                // URL/Source Input
-                                HStack {
-                                    TextField("http://... or file:///...", text: Binding(
-                                        get: { appModel.perDisplaySource(for: id) },
-                                        set: { appModel.updatePerDisplaySource(id, $0) }
-                                    ))
-                                    .textFieldStyle(.roundedBorder)
+                                    // URL/Source Input
+                                    HStack {
+                                        let displayKey = String(id)
+                                        TextField("http://... or file:///...", text: Binding(
+                                            get: { perDisplayDraftSources[displayKey] ?? appModel.perDisplaySource(for: id) },
+                                            set: { perDisplayDraftSources[displayKey] = $0 }
+                                        ))
+                                        .textFieldStyle(.roundedBorder)
 
-                                    Button(action: {
-                                        selectedDisplayForPicker = id
-                                        isFileImporterPresented = true
-                                    }) {
-                                        Label("Browse", systemImage: "folder")
-                                            .labelStyle(.titleAndIcon)
-                                    }
-                                }
+                                        Button(action: {
+                                            selectedDisplayForPicker = id
+                                            isFileImporterPresented = true
+                                        }) {
+                                            Label("Browse", systemImage: "folder")
+                                                .labelStyle(.titleAndIcon)
+                                        }
 
-                                // Per-Display Scaling Mode
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Label("Scaling", systemImage: "aspectratio.fill")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.secondary)
-
-                                    Picker(
-                                        "Scaling",
-                                        selection: Binding(
-                                            get: { appModel.perDisplayScalingMode(for: id) },
-                                            set: { appModel.updatePerDisplayScalingMode(id, $0) }
-                                        )
-                                    ) {
-                                        ForEach(VideoScalingMode.allCases, id: \.self) { mode in
-                                            Text(mode.displayName).tag(mode)
+                                        Button(action: {
+                                            Task {
+                                                await appModel.applyPerDisplayWallpaper(
+                                                    displayID: id,
+                                                    sourceString: perDisplayDraftSources[displayKey] ?? appModel.perDisplaySource(for: id)
+                                                )
+                                            }
+                                        }) {
+                                            Label("Apply Wallpaper", systemImage: "checkmark.circle.fill")
+                                                .labelStyle(.titleAndIcon)
                                         }
                                     }
-                                    .pickerStyle(.segmented)
-                                    .font(.caption)
+
+                                    // Per-Display Scaling Mode
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Label("Scaling", systemImage: "aspectratio.fill")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(.secondary)
+
+                                        Picker(
+                                            "Scaling",
+                                            selection: Binding(
+                                                get: { appModel.perDisplayScalingMode(for: id) },
+                                                set: { appModel.updatePerDisplayScalingMode(id, $0) }
+                                            )
+                                        ) {
+                                            ForEach(VideoScalingMode.allCases, id: \.self) { mode in
+                                                Text(mode.displayName).tag(mode)
+                                            }
+                                        }
+                                        .pickerStyle(.segmented)
+                                        .font(.caption)
+                                    }
                                 }
+                                .padding(12)
+                                .background(Color(.controlBackgroundColor))
+                                .cornerRadius(8)
                             }
-                            .padding(12)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(8)
                         }
+                    } else {
+                        Text("Per-display mode requires multiple displays connected.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -324,11 +361,16 @@ struct ContentView: View {
 
                 // If a display was selected for per-display picker, use that
                 if let displayID = selectedDisplayForPicker {
-                    appModel.updatePerDisplaySource(displayID, firstURL.absoluteString)
+                    perDisplayDraftSources[String(displayID)] = firstURL.absoluteString
                     selectedDisplayForPicker = nil
                 } else {
-                    // Otherwise, use the main video picker
-                    appModel.selectVideo(at: firstURL)
+                    // Otherwise, use the main video picker only when unified mode is enabled.
+                    if !appModel.usePerDisplay {
+                        appModel.selectVideo(at: firstURL)
+                    } else {
+                        appModel.errorMessage = "Main wallpaper selection is disabled while per-display mode is enabled."
+                        appModel.statusMessage = nil
+                    }
                 }
             case .failure(let error):
                 appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
@@ -346,8 +388,17 @@ struct ContentView: View {
                 .fontWeight(.semibold)
 
             VStack(spacing: 12) {
-                // Main wallpaper info
-                HStack(spacing: 12) {
+                if !appModel.usePerDisplay {
+                    // Main wallpaper info with icon (unified mode)
+                    HStack(spacing: 12) {
+                    let iconImage = previewIcon(forURL: URL(fileURLWithPath: appModel.selectedVideoPath), fallbackIsWeb: appModel.rendererMode == .web)
+
+                    Image(nsImage: iconImage)
+                        .resizable()
+                        .renderingMode(.original)
+                        .frame(width: 36, height: 36)
+                        .cornerRadius(6)
+
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Main Display", systemImage: "display")
                             .font(.caption)
@@ -364,7 +415,9 @@ struct ContentView: View {
                                 .lineLimit(1)
                         }
                     }
+
                     Spacer()
+
                     VStack(alignment: .trailing, spacing: 4) {
                         Label(appModel.scalingMode.displayName, systemImage: "aspectratio.fill")
                             .font(.caption)
@@ -373,13 +426,27 @@ struct ContentView: View {
                             .font(.caption)
                     }
                     .foregroundStyle(.blue)
+                    }
+                    .padding(12)
+                    .background(Color(.controlBackgroundColor))
+                    .cornerRadius(8)
+                } else {
+                    // Indicate that unified main wallpaper is disabled when using per-display
+                    HStack {
+                        Image(systemName: "rectangle.on.rectangle")
+                            .foregroundStyle(.secondary)
+                        Text("Per-display mode enabled — main unified wallpaper is disabled")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(10)
+                    .background(Color(.controlBackgroundColor))
+                    .cornerRadius(8)
                 }
-                .padding(12)
-                .background(Color(.controlBackgroundColor))
-                .cornerRadius(8)
 
-                // Per-display preview if multi-display
-                if NSScreen.screens.count > 1 {
+                // Per-display preview if multi-display and per-display mode enabled
+                if appModel.usePerDisplay && NSScreen.screens.count > 1 {
                     ForEach(Array(NSScreen.screens.enumerated()), id: \.element.displayID) { index, screen in
                         let displayIndex = index + 1
                         let id = screen.displayID
@@ -388,13 +455,21 @@ struct ContentView: View {
 
                         if !source.isEmpty {
                             HStack(spacing: 12) {
+                                // Per-display icon
+                                let perIcon = previewIcon(forURL: appModel.perDisplayResolvedURL(for: id) ?? URL(fileURLWithPath: source), fallbackIsWeb: true)
+
+                                Image(nsImage: perIcon)
+                                    .resizable()
+                                    .frame(width: 28, height: 28)
+                                    .cornerRadius(6)
+
                                 VStack(alignment: .leading, spacing: 4) {
                                     Label("Display \(displayIndex)", systemImage: "display.2")
                                         .font(.caption)
                                         .fontWeight(.medium)
                                         .foregroundStyle(.secondary)
 
-                                    Text(URL(string: source)?.lastPathComponent ?? source)
+                                    Text((appModel.perDisplayResolvedURL(for: id)?.lastPathComponent).flatMap { $0.isEmpty ? nil : $0 } ?? URL(fileURLWithPath: source).lastPathComponent)
                                         .font(.callout)
                                         .lineLimit(1)
                                 }
@@ -419,6 +494,39 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
+    }
+
+    private func previewIcon(forURL url: URL, fallbackIsWeb: Bool) -> NSImage {
+        if url.isFileURL {
+            if let thumbnail = thumbnailForLocalFile(at: url) {
+                return thumbnail
+            }
+            if let image = NSImage(contentsOf: url), image.size != .zero {
+                return image
+            }
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+
+        return fallbackIsWeb ? NSWorkspace.shared.icon(forFileType: "webloc") : NSWorkspace.shared.icon(forFileType: "public.movie")
+    }
+
+    private func thumbnailForLocalFile(at url: URL) -> NSImage? {
+        let fileExtension = url.pathExtension.lowercased()
+        if ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"].contains(fileExtension), let image = NSImage(contentsOf: url), image.size != .zero {
+            return image
+        }
+
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 96, height: 96)
+
+        do {
+            let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+            return NSImage(cgImage: cgImage, size: .zero)
+        } catch {
+            return nil
+        }
     }
 }
 
