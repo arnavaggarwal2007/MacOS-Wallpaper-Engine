@@ -173,6 +173,10 @@ struct ContentView: View {
             )
             .help("Automatically start the wallpaper engine when you log in")
 
+            Text("Launch on Login requires macOS 13.2 or later.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
             if let message = appModel.launchOnLoginStatusMessage {
                 Text(message)
                     .font(.footnote)

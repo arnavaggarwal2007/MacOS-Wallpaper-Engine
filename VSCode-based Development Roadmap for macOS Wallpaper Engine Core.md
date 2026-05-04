@@ -1,6 +1,6 @@
 # VSCode-based Development Roadmap for macOS Wallpaper Engine Core
 
-**Last Updated:** May 3, 2026 | **Status:** Phase 5G Complete (Launch-on-Login) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
+**Last Updated:** May 3, 2026 | **Status:** Phase 5H In Progress (Stabilization and release gate) | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
 
 ## Table of Contents
 
@@ -1682,10 +1682,17 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 - Wired `AppViewModel` to reflect and update launch-on-login state
 - Build verified to succeed with no compilation errors
 
-### **Phase 5H Planned** (Stabilization and release gate)
+### **Phase 5H In Progress** (Stabilization and release gate)
+- [x] Add a launch-on-login UI note clarifying the macOS 13.2 requirement.
+- [x] Update the roadmap so Phase 5H work is visible and tracked.
 - [ ] Run the full Phase 5 regression matrix.
 - [ ] Confirm Phase 4 features remain stable under the new code paths.
-- [ ] Update the production testing checklist for the new feature set.
+- [ ] Complete the release gate review before starting the next feature phase.
+
+**Implementation Details:**
+- Added a small UI note below the launch-on-login toggle stating that macOS 13.2 or later is required
+- Marked the stabilization workstream as in progress so the remaining verification is explicit
+- Kept the testing checklist available below as the Phase 5 release gate
 
 ## Production Testing Checklist
 
