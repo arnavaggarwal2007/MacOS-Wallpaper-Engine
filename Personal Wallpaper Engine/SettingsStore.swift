@@ -14,6 +14,7 @@ final class SettingsStore {
         static let scalingMode = "scalingMode"
         static let debugDiagnostics = "debugDiagnostics"  // Chunk 4E: Debug flag
         static let launchOnLogin = "launchOnLogin"  // Phase 5G: Launch-on-login flag
+        static let perDisplayScalingModes = "perDisplayScalingModes"  // Per-display scaling modes
     }
 
     private init() {
@@ -35,6 +36,16 @@ final class SettingsStore {
         scalingMode = VideoScalingMode(rawValue: UserDefaults.standard.string(forKey: Keys.scalingMode) ?? VideoScalingMode.resizeAspectFill.rawValue) ?? .resizeAspectFill
         debugDiagnosticsEnabled = UserDefaults.standard.bool(forKey: Keys.debugDiagnostics)  // Chunk 4E
         launchOnLoginEnabled = UserDefaults.standard.bool(forKey: Keys.launchOnLogin)  // Phase 5G
+        // Load per-display scaling modes (JSON encoded dictionary)
+        if let data = UserDefaults.standard.data(forKey: Keys.perDisplayScalingModes) {
+            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+                perDisplayScalingModes = decoded
+            } else {
+                perDisplayScalingModes = [:]
+            }
+        } else {
+            perDisplayScalingModes = [:]
+        }
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -78,6 +89,17 @@ final class SettingsStore {
 
     var launchOnLoginEnabled: Bool {  // Phase 5G: Launch-on-login preference
         didSet { UserDefaults.standard.set(launchOnLoginEnabled, forKey: Keys.launchOnLogin) }
+    }
+
+    // Per-display mapping: displayID (as string) -> scaling mode
+    var perDisplayScalingModes: [String: String] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(perDisplayScalingModes) {
+                UserDefaults.standard.set(encoded, forKey: Keys.perDisplayScalingModes)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.perDisplayScalingModes)
+            }
+        }
     }
 }
 

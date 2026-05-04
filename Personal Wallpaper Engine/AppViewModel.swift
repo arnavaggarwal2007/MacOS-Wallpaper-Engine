@@ -72,6 +72,24 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Per-display scaling modes
+    func perDisplayScalingMode(for displayID: CGDirectDisplayID) -> VideoScalingMode {
+        guard let modeString = settings.perDisplayScalingModes[String(displayID)],
+              let mode = VideoScalingMode(rawValue: modeString) else {
+            return scalingMode  // Default to global scaling mode
+        }
+        return mode
+    }
+
+    func updatePerDisplayScalingMode(_ displayID: CGDirectDisplayID, _ mode: VideoScalingMode) {
+        settings.perDisplayScalingModes[String(displayID)] = mode.rawValue
+        
+        // Apply to display if it exists
+        Task { @MainActor in
+            await wallpaperManager.setScalingModeForDisplay(displayID: displayID, mode: mode)
+        }
+    }
+
     func start() async {
         guard !hasStarted else { return }
         hasStarted = true

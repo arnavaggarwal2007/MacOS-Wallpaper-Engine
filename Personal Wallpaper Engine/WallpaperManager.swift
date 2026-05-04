@@ -216,6 +216,15 @@ final class WallpaperManager {
         }
     }
 
+    @MainActor
+    func setScalingModeForDisplay(displayID: CGDirectDisplayID, mode: VideoScalingMode) async {
+        guard let controller = displayControllers[displayID] else {
+            logger.warning("Display controller not found for scaling mode update: \(displayID)")
+            return
+        }
+        await controller.setScalingMode(mode)
+    }
+
     // MARK: - Lifecycle Control (Chunk 4A)
     @MainActor
     func pause() async {
