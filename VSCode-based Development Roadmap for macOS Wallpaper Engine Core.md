@@ -1685,6 +1685,8 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 ### **Phase 5H In Progress** (Stabilization and release gate)
 - [x] Add a launch-on-login UI note clarifying the macOS 13.2 requirement.
 - [x] Update the roadmap so Phase 5H work is visible and tracked.
+- [x] Run a focused regression build after the stabilization updates.
+- [x] Review the launch-on-login flow across `ContentView`, `AppViewModel`, and `LoginItemManager`.
 - [ ] Run the full Phase 5 regression matrix.
 - [ ] Confirm Phase 4 features remain stable under the new code paths.
 - [ ] Complete the release gate review before starting the next feature phase.
@@ -1692,6 +1694,7 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 **Implementation Details:**
 - Added a small UI note below the launch-on-login toggle stating that macOS 13.2 or later is required
 - Marked the stabilization workstream as in progress so the remaining verification is explicit
+- Confirmed the app still builds cleanly after the launch-on-login UI note was added
 - Kept the testing checklist available below as the Phase 5 release gate
 
 ## Production Testing Checklist
