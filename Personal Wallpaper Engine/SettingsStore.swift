@@ -17,6 +17,8 @@ final class SettingsStore {
         static let perDisplayScalingModes = "perDisplayScalingModes"  // Per-display scaling modes
         static let usePerDisplay = "usePerDisplay" // Bool: whether to use per-display wallpapers
         static let perDisplayBookmarks = "perDisplayBookmarks" // Per-display security-scoped bookmarks
+        static let savedCollections = "savedCollections"  // Phase 6A: Saved wallpaper collections
+        static let lastUsedCollectionName = "lastUsedCollectionName"  // Phase 6A: Most recently used collection
     }
 
     private init() {
@@ -58,6 +60,17 @@ final class SettingsStore {
         } else {
             perDisplayBookmarks = [:]
         }
+        // Load saved collections (Phase 6A): JSON encoded dictionary of collections keyed by name
+        if let data = UserDefaults.standard.data(forKey: Keys.savedCollections) {
+            if let decoded = try? JSONDecoder().decode([String: WallpaperCollection].self, from: data) {
+                savedCollections = decoded
+            } else {
+                savedCollections = [:]
+            }
+        } else {
+            savedCollections = [:]
+        }
+        lastUsedCollectionName = UserDefaults.standard.string(forKey: Keys.lastUsedCollectionName)
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -128,6 +141,120 @@ final class SettingsStore {
     // Whether the app should use per-display wallpapers (true) or a single unified wallpaper (false)
     var usePerDisplay: Bool {
         didSet { UserDefaults.standard.set(usePerDisplay, forKey: Keys.usePerDisplay) }
+    }
+
+    // Saved collections: keyed by collection name (unique identifier for user)
+    var savedCollections: [String: WallpaperCollection] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(savedCollections) {
+                UserDefaults.standard.set(encoded, forKey: Keys.savedCollections)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.savedCollections)
+            }
+        }
+    }
+
+    // Most recently used collection name (for convenience in UI)
+    var lastUsedCollectionName: String? {
+        didSet {
+            if let name = lastUsedCollectionName {
+                UserDefaults.standard.set(name, forKey: Keys.lastUsedCollectionName)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.lastUsedCollectionName)
+            }
+        }
+    }
+
+    // MARK: - Collection CRUD Helpers
+
+    /// Returns sorted list of all saved collection names.
+    func allCollectionNames() -> [String] {
+        savedCollections.keys.sorted()
+    }
+
+    /// Creates and persists a new collection with given parameters.
+    func saveCollection(
+        name: String,
+        description: String = "",
+        collectionType: WallpaperCollection.CollectionType = .simple,
+        sources: [CollectionSource] = []
+    ) -> Result<WallpaperCollection, WallpaperError> {
+        do {
+            let collection = try WallpaperCollection(
+                name: name,
+                description: description,
+                collectionType: collectionType,
+                sources: sources
+            )
+            savedCollections[name] = collection
+            return .success(collection)
+        } catch let error as WallpaperError {
+            return .failure(error)
+        } catch {
+            return .failure(.internalError(description: "Failed to create collection: \(error.localizedDescription)"))
+        }
+    }
+
+    /// Loads an existing collection by name.
+    func loadCollection(name: String) -> Result<WallpaperCollection, WallpaperError> {
+        guard let collection = savedCollections[name] else {
+            return .failure(.collectionNotFound(name: name))
+        }
+        return .success(collection)
+    }
+
+    /// Updates an existing collection with new values.
+    func updateCollection(
+        name: String,
+        newName: String? = nil,
+        description: String? = nil,
+        collectionType: WallpaperCollection.CollectionType? = nil,
+        sources: [CollectionSource]? = nil
+    ) -> Result<WallpaperCollection, WallpaperError> {
+        guard let collection = savedCollections[name] else {
+            return .failure(.collectionNotFound(name: name))
+        }
+
+        do {
+            let updated = try collection.updated(
+                name: newName,
+                description: description,
+                collectionType: collectionType,
+                sources: sources
+            )
+            
+            // If name changed, remove old entry and add with new name
+            if let newName = newName, newName != name {
+                savedCollections.removeValue(forKey: name)
+                savedCollections[newName] = updated
+                // Update lastUsedCollectionName if it was this collection
+                if lastUsedCollectionName == name {
+                    lastUsedCollectionName = newName
+                }
+            } else {
+                savedCollections[name] = updated
+            }
+            
+            return .success(updated)
+        } catch let error as WallpaperError {
+            return .failure(error)
+        } catch {
+            return .failure(.internalError(description: "Failed to update collection: \(error.localizedDescription)"))
+        }
+    }
+
+    /// Deletes a collection by name.
+    func deleteCollection(name: String) -> Result<Void, WallpaperError> {
+        guard savedCollections.removeValue(forKey: name) != nil else {
+            return .failure(.collectionNotFound(name: name))
+        }
+        
+        // Clear lastUsedCollectionName if it was this collection
+        if lastUsedCollectionName == name {
+            lastUsedCollectionName = nil
+        }
+        
+        return .success(())
     }
 }
 

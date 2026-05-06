@@ -70,4 +70,9 @@ tmp/
 # Ignore user session files
 *.xcscmblueprint
 
+# Ignore unimportant documentation
+guidelines.md
+best_coding_practices.md
+update_KB_guidelines.md
+
 # End of .gitignore
