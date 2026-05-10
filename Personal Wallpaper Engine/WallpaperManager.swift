@@ -11,7 +11,7 @@ final class WallpaperManager {
         case recovering
     }
 
-    private var displayControllers: [CGDirectDisplayID: DisplayController] = [:]
+    private(set) var displayControllers: [CGDirectDisplayID: DisplayController] = [:]
     private var currentWallpaperURL: URL?
     private var currentRendererMode: WallpaperRendererMode = .video
     private var isMuted = true

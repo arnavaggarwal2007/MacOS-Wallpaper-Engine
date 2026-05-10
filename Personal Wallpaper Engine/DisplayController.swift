@@ -25,6 +25,9 @@ final class DisplayController {
     private var lastFrameSize: CGSize = .zero
 
     var displayID: CGDirectDisplayID { screen.displayID }
+    
+    /// Computed property exposing the screen's localizedName for matching collection sources
+    var displayName: String? { screen.localizedName }
 
     init(screen: NSScreen, manager: WallpaperManager?) {
         self.screen = screen

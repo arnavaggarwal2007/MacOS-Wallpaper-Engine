@@ -19,6 +19,11 @@ final class AppViewModel: ObservableObject {
     @Published var launchOnLoginErrorMessage: String?
     @Published var usePerDisplay: Bool
     
+    // MARK: - Phase 6A Collection State
+    @Published var savedCollections: [String: WallpaperCollection] = [:]
+    @Published var lastUsedCollectionName: String?
+    @Published var selectedCollectionName: String?
+    
     // MARK: - System Health Tracking (Chunk 4E)
     @Published var systemHealthStatus: SystemHealthStatus = .healthy
     @Published var failureCount: Int = 0
@@ -533,7 +538,157 @@ final class AppViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 500_000_000)
         updateLaunchOnLoginStatus()
     }
+    
+    // MARK: - Phase 6A Collection Methods
+    
+    /// Load saved collections from settings on init/start
+    func loadSavedCollections() async {
+        // Load from SettingsStore directly (persists automatically via didSet)
+        self.savedCollections = SettingsStore.shared.savedCollections
+        self.lastUsedCollectionName = SettingsStore.shared.lastUsedCollectionName
+    }
+    
+    /// Select a collection for preview or apply
+    func selectCollection(name: String) {
+        selectedCollectionName = name
+    }
+    
+    /// Create new collection (opens editor modal, captures result from save action)
+    func createNewCollection() async {
+        statusMessage = "Creating new collection..."
+    }
+    
+    /// Load selected collection for preview
+    func loadSelectedCollection() async -> Result<WallpaperCollection, WallpaperError> {
+        guard let name = selectedCollectionName else { return .failure(.collectionNotFound(name: "")) }
+        return settings.loadCollection(name: name)
+    }
+    
+    /// Delete selected collection
+    func deleteCollection(name: String) async -> Result<Void, WallpaperError> {
+        return settings.deleteCollection(name: name)
+    }
+    
+    // MARK: - Phase 6A Collection Apply
+    
+    @MainActor
+    func applyCollection(
+        name: String,
+        useUnified: Bool = false
+    ) async -> Result<Void, WallpaperError> {
+        let collection = try? await loadSelectedCollection()
+        guard case .success(let collection) = collection else { 
+            return .failure(.collectionNotFound(name: name)) 
+        }
+        
+        switch collection.collectionType {
+        case .simple:
+            return await applySimpleCollection(collection, useUnified: useUnified)
+        case .displayBound:
+            return await applyDisplayBoundCollection(collection)
+        }
+    }
+    
+    @MainActor
+    private func applySimpleCollection(_ collection: WallpaperCollection, useUnified: Bool) async -> Result<Void, WallpaperError> {
+        guard !usePerDisplay else {
+            errorMessage = "Unified wallpaper apply is disabled while per-display mode is enabled."
+            return .failure(.internalError(description: "Cannot apply simple collection in unified mode"))
+        }
+        
+        var displayIndex = 0
+        
+        if useUnified {
+            guard let firstSource = collection.sources.first else {
+                return .success(())
+            }
+            
+            for (displayID, controller) in wallpaperManager.displayControllers {
+                do {
+                    try await wallpaperManager.setWallpaper(url: URL(string: firstSource.url)!)
+                } catch {
+                    logger.error("Failed to apply unified wallpaper: \(error)")
+                }
+            }
+            return .success(())
+        }
+        
+        for source in collection.sources {
+            guard displayIndex < wallpaperManager.displayControllers.count else { break }
+            
+            let url = URL(string: source.url) ?? nil
+            if let url = url {
+                await wallpaperManager.setWallpaper(url: url)
+            }
+            
+            displayIndex += 1
+        }
+        
+        lastUsedCollectionName = selectedCollectionName
+        return .success(())
+    }
+    
+    @MainActor
+    private func applyDisplayBoundCollection(_ collection: WallpaperCollection) async -> Result<Void, WallpaperError> {
+        var unmatchedWarnings: [String] = []
+        
+        for source in collection.sources {
+            let matchedDisplayID = resolveDisplayForSource(source: source)
+            
+            if let displayID = matchedDisplayID {
+                let url = URL(string: source.url) ?? nil
+                if let url = url {
+                    await wallpaperManager.setPerDisplayWallpaper(
+                        displayID: displayID,
+                        url: url,
+                        rendererMode: .video,
+                        scalingMode: source.scalingMode.flatMap { VideoScalingMode(rawValue: $0) } ?? settings.scalingMode
+                    )
+                }
+            } else {
+                // Convert Int? to String for displayInfo fallback chain
+                let displayInfo = source.displayLabel ?? String(describing: source.displayIDFallback) ?? "?"
+                let message = "Display \(displayInfo) not found"
+                unmatchedWarnings.append(message)
+                logger.warning("Display-bound collection skip: \(message)")
+            }
+        }
+        
+        guard !unmatchedWarnings.isEmpty else { return .success(()) }
+        
+        let warningText = unmatchedWarnings.joined(separator: ", ")
+        statusMessage = "Applied to matched displays. Warnings:\n\(warningText)"
+        return .success(())
+    }
+    
+    private func resolveDisplayForSource(source: CollectionSource) -> CGDirectDisplayID? {
+        // First attempt: ID match
+        if let displayIDFallback = source.displayIDFallback,
+           let controller = wallpaperManager.displayControllers.values.first(where: { $0.displayID == displayIDFallback }) {
+            return controller.displayID
+        }
+        
+        // Fallback: label match (case-insensitive partial or exact)
+        if let label = source.displayLabel {
+            for controller in wallpaperManager.displayControllers.values {
+                let screenName = controller.displayName ?? ""
+                // Exact match first
+                if screenName == label {
+                    return controller.displayID
+                }
+                // Fuzzy match: label appears anywhere in screen name
+                if screenName.contains(label) || label.contains(screenName) {
+                    logger.debug("Display-bound label fallback: '\(label)' matched '\(screenName)'")
+                    return controller.displayID
+                }
+            }
+        }
+        
+        return nil
+    }
 }
+
+// MARK: - System Health Status (Chunk 4E)
 
 // MARK: - System Health Status (Chunk 4E)
 enum SystemHealthStatus {
