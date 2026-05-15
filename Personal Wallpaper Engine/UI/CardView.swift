@@ -23,7 +23,7 @@ struct CardView<Content: View>: View {
         .padding(DesignTokens.Spacing.medium)
         .background(DesignTokens.Colors.cardBackground)
         .cornerRadius(DesignTokens.Corner.radius)
-        .shadow(color: DesignTokens.Colors.primary.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.04), radius: isHovered ? 6 : 1, x: 0, y: isHovered ? 3 : 1)
+        .shadow(color: Color.black.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.04), radius: isHovered ? DesignTokens.Elevation.cardShadowRadius : 1, x: 0, y: isHovered ? 3 : 1)
         .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
         .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
         .onHover { isHovered = $0 }

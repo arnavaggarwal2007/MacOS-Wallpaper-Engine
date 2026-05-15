@@ -59,6 +59,9 @@ struct WallpaperPreviewCard: View {
             RoundedRectangle(cornerRadius: isHero ? DesignTokens.Corner.heroRadius : DesignTokens.Corner.radius)
                 .stroke(Color.gray.opacity(isHero ? 0.12 : 0.2), lineWidth: isHero ? 1 : 1)
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityHint(isHero ? "Large preview of current wallpaper with quick controls" : "Preview")
     }
 }
 

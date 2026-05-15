@@ -11,14 +11,20 @@ struct TopUtilityBar: View {
                 Task { await appModel.togglePlayback() }
             }) {
                 Image(systemName: appModel.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 14, weight: .semibold))
             }
+            .help(appModel.isPlaying ? "Pause wallpaper" : "Play wallpaper")
+            .accessibilityLabel(appModel.isPlaying ? "Pause wallpaper" : "Play wallpaper")
 
             // Mute toggle
             Button(action: {
                 Task { await appModel.toggleMute() }
             }) {
                 Image(systemName: appModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .font(.system(size: 14, weight: .regular))
             }
+            .help(appModel.isMuted ? "Unmute audio" : "Mute audio")
+            .accessibilityLabel(appModel.isMuted ? "Unmute audio" : "Mute audio")
 
             // Scaling menu
             Menu {
@@ -29,6 +35,7 @@ struct TopUtilityBar: View {
                 }
             } label: {
                 Label("Scaling", systemImage: "aspectratio")
+                    .help("Set global scaling mode")
             }
 
             // Quick apply
@@ -38,6 +45,8 @@ struct TopUtilityBar: View {
                 Label("Apply Now", systemImage: "bolt.fill")
             }
             .disabled(appModel.isApplyingWallpaper || appModel.usePerDisplay)
+            .opacity((appModel.isApplyingWallpaper || appModel.usePerDisplay) ? 0.5 : 1.0)
+            .help("Apply the current selection as wallpaper")
 
             Spacer()
 
@@ -47,6 +56,8 @@ struct TopUtilityBar: View {
             }) {
                 Image(systemName: "star")
             }
+            .help("Add wallpaper to favorites")
+            .accessibilityLabel("Add to favorites")
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
