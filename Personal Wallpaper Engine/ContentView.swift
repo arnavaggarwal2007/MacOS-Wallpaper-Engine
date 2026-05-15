@@ -120,8 +120,19 @@ struct ContentView: View {
                         }
                     }
                     .padding(12)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(DesignTokens.Colors.cardBackground)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                            }
+                    }
                 }
 
                 // MARK: - Video Source Section (Unified Mode Only)
@@ -138,8 +149,19 @@ struct ContentView: View {
                                 .lineLimit(2)
                         }
                         .padding(12)
-                        .background(Color(.controlBackgroundColor))
-                        .cornerRadius(8)
+                        .background {
+                            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                .fill(DesignTokens.Colors.cardBackground)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                                }
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                                }
+                        }
 
                         if appModel.rendererMode == .web {
                             VStack(alignment: .leading, spacing: 8) {
@@ -167,8 +189,19 @@ struct ContentView: View {
                                     .foregroundStyle(.secondary)
                             }
                             .padding(12)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(8)
+                            .background {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(DesignTokens.Colors.cardBackground)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                                    }
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                                    }
+                            }
                         } else {
                             HStack(spacing: 12) {
                                 Button(action: { isFileImporterPresented = true }) {
@@ -256,8 +289,19 @@ struct ContentView: View {
                                     }
                                 }
                                 .padding(12)
-                                .background(Color(.controlBackgroundColor))
-                                .cornerRadius(8)
+                                .background {
+                                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                        .fill(DesignTokens.Colors.cardBackground)
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                                .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                                        }
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                                .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                                        }
+                                }
                             }
                         }
                     } else {
@@ -268,7 +312,7 @@ struct ContentView: View {
                 }
 
                 // MARK: - Saved Collections Section (Phase 6A)
-                CardView(title: "Saved Collections") {
+                CardView(title: "Saved Collections", style: .elevated) {
 
                     let collectionNames = appModel.savedCollections.keys.sorted()
                     let selectedCollection = appModel.selectedCollectionName.flatMap { appModel.savedCollections[$0] }
@@ -323,8 +367,19 @@ struct ContentView: View {
                                 Spacer()
                             }
                             .padding(14)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(DesignTokens.Corner.radius)
+                            .background {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(DesignTokens.Colors.cardBackground)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                                    }
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                                    }
+                            }
                         } else {
                             Picker(
                                 "Collection",
@@ -455,8 +510,19 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(12)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(DesignTokens.Colors.cardBackground)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                            }
+                    }
                 }
 
                 // MARK: - Status Messages
@@ -468,8 +534,14 @@ struct ContentView: View {
                             .font(.footnote)
                     }
                     .padding(12)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(Color.blue.opacity(0.10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(Color.blue.opacity(0.18), lineWidth: 1)
+                            }
+                    }
                 }
 
                 if let message = appModel.statusMessage {
@@ -480,8 +552,14 @@ struct ContentView: View {
                             .font(.footnote)
                     }
                     .padding(12)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(Color.green.opacity(0.10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(Color.green.opacity(0.18), lineWidth: 1)
+                            }
+                    }
                 }
 
                 if let error = appModel.errorMessage {
@@ -492,8 +570,14 @@ struct ContentView: View {
                             .font(.footnote)
                     }
                     .padding(12)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(Color.red.opacity(0.10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(Color.red.opacity(0.18), lineWidth: 1)
+                            }
+                    }
                 }
 
                 if let message = appModel.launchOnLoginStatusMessage {
@@ -504,8 +588,14 @@ struct ContentView: View {
                             .font(.footnote)
                     }
                     .padding(12)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(Color.green.opacity(0.10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(Color.green.opacity(0.18), lineWidth: 1)
+                            }
+                    }
                 }
 
                 if let error = appModel.launchOnLoginErrorMessage {
@@ -516,8 +606,14 @@ struct ContentView: View {
                             .font(.footnote)
                     }
                     .padding(12)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(Color.red.opacity(0.10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(Color.red.opacity(0.18), lineWidth: 1)
+                            }
+                    }
                 }
             }
             .padding(20)
@@ -555,7 +651,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isCollectionEditorPresented) {
             let selectedName = editingCollectionName.flatMap { appModel.savedCollections[$0] }
-            CardView(title: editingCollectionName == nil ? "Create Collection" : "Edit Collection") {
+            CardView(title: editingCollectionName == nil ? "Create Collection" : "Edit Collection", style: .elevated) {
                 CollectionEditorView(
                 initialName: selectedName?.name ?? "",
                 initialDescription: selectedName?.description ?? "",
@@ -640,8 +736,19 @@ struct ContentView: View {
                         Spacer()
                     }
                     .padding(10)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(8)
+                    .background {
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(DesignTokens.Colors.cardBackground)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                            }
+                    }
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .leading)))
                 }
 
@@ -688,12 +795,15 @@ struct ContentView: View {
             }
         }
         .padding(12)
-        .background(Color(.windowBackgroundColor).opacity(0.5))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-        )
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(DesignTokens.Colors.background.opacity(0.72))
+                .background(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                }
+        }
     }
 
     private func previewIcon(forURL url: URL, fallbackIsWeb: Bool) -> NSImage {

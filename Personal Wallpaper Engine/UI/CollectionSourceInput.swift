@@ -46,15 +46,9 @@ struct CollectionSourceInput: View {
                 Button(action: { onDelete() }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
-                        .frame(width: 32, height: 32)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.red.opacity(0.08))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(Color.red.opacity(0.18), lineWidth: 1)
-                        )
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.red.opacity(0.08)))
+                        .overlay(Circle().stroke(Color.red.opacity(0.18), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
@@ -132,16 +126,21 @@ struct CollectionSourceInput: View {
                 }
             }
         }
-        .padding(12)
-        .background(
+        .padding(DesignTokens.Spacing.medium)
+        .background {
             RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                .fill(Color(.controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                .stroke(Color.gray.opacity(isHovered ? 0.18 : 0.12), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(isHovered ? 0.05 : 0.02), radius: isHovered ? 6 : 2, x: 0, y: isHovered ? 2 : 1)
+                .fill(DesignTokens.Colors.cardBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                }
+        }
+        .shadow(color: DesignTokens.Colors.primary.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.0), radius: isHovered ? 4 : 0, x: 0, y: isHovered ? 2 : 0)
         .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.gentleDuration), value: isHovered)
         .onHover { isHovered = $0 }
     }
@@ -163,9 +162,9 @@ struct CollectionSourceInput: View {
 
             Spacer()
         }
-        .padding(8)
+        .padding(10)
         .background(color.opacity(0.10))
-        .cornerRadius(8)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 

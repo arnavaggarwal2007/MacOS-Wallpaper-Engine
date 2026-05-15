@@ -13,18 +13,19 @@ struct PerDisplayCard: View {
     @State private var isHovered = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
+            HStack(spacing: DesignTokens.Spacing.medium) {
                 if let ns = thumbnail {
                     Image(nsImage: ns)
                         .resizable()
+                        .scaledToFill()
                         .frame(width: 72, height: 72)
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else {
                     Rectangle()
                         .fill(DesignTokens.Colors.primary.opacity(0.12))
                         .frame(width: 72, height: 72)
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
                             Text(String(displayName.prefix(1)))
                                 .font(DesignTokens.Typography.title)
@@ -66,10 +67,21 @@ struct PerDisplayCard: View {
                     .foregroundColor(.yellow)
             }
         }
-        .padding(DesignTokens.Spacing.medium)
-        .background(DesignTokens.Colors.cardBackground)
-        .cornerRadius(DesignTokens.Corner.radius)
-        .shadow(color: DesignTokens.Colors.primary.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.06), radius: isHovered ? 8 : 6, x: 0, y: isHovered ? 3 : 2)
+        .padding(DesignTokens.Spacing.large)
+        .background {
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                .fill(DesignTokens.Colors.cardBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                }
+        }
+        .shadow(color: Color.black.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.05), radius: isHovered ? DesignTokens.Elevation.cardShadowRadius : 4, x: 0, y: isHovered ? DesignTokens.Elevation.cardShadowYOffset : 2)
         .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
         .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
         .onHover { isHovered = $0 }

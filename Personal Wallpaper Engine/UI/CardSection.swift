@@ -14,12 +14,12 @@ struct CardSection<Content: View>: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
             if let header = header {
                 Text(header)
-                    .font(DesignTokens.Typography.subtitle)
+                    .font(DesignTokens.Typography.title)
                     .foregroundColor(DesignTokens.Colors.textPrimary)
             }
             content
         }
-        .padding(.vertical, DesignTokens.Spacing.small)
+        .padding(.vertical, DesignTokens.Spacing.medium)
         .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.gentleDuration), value: header)
         .accessibilityElement(children: .contain)
     }
