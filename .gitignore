@@ -78,3 +78,8 @@ update_KB_guidelines.md
 # End of .gitignore
 Logs/console_logs_kb_summary.md
 Logs/console_logs.md
+UI_Overhaul_1.md
+.gitignore
+UI_Overhaul_Checklist.md
+UI_Overhaul_2.md
+.github/workflows/chunk7_regression.yml

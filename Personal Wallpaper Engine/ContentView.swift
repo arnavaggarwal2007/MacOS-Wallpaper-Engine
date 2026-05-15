@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject private var appModel: AppViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isFileImporterPresented = false
     @State private var selectedDisplayForPicker: CGDirectDisplayID?
     @State private var perDisplayDraftSources: [String: String] = [:]
@@ -48,6 +49,8 @@ struct ContentView: View {
                 }
 
                 previewSection
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+                    .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: appModel.usePerDisplay)
 
                 // MARK: - Global Settings Section
                 VStack(alignment: .leading, spacing: 12) {
@@ -261,131 +264,140 @@ struct ContentView: View {
                 }
 
                 // MARK: - Saved Collections Section (Phase 6A)
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Saved Collections")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                CardView(title: "Saved Collections") {
 
                     let collectionNames = appModel.savedCollections.keys.sorted()
+                    let selectedCollection = appModel.selectedCollectionName.flatMap { appModel.savedCollections[$0] }
+                    let lastUsedCollection = appModel.lastUsedCollectionName.flatMap { appModel.savedCollections[$0] }
 
-                    if collectionNames.isEmpty {
-                        Text("No collections saved yet. Create one to get started.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(12)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(8)
-                    } else {
-                        Picker(
-                            "Collection",
-                            selection: Binding(
-                                get: { appModel.selectedCollectionName ?? "" },
-                                set: { newValue in
-                                    if newValue.isEmpty {
-                                        appModel.selectedCollectionName = nil
-                                    } else {
-                                        appModel.selectCollection(name: newValue)
-                                    }
-                                }
-                            )
-                        ) {
-                            Text("Select Collection").tag("")
-                            ForEach(collectionNames, id: \.self) { name in
-                                Text(name).tag(name)
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("\(collectionNames.count) saved collection\(collectionNames.count == 1 ? "" : "s")")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Text(collectionNames.isEmpty ? "Create a collection to capture a wallpaper set." : "Pick a collection to review its summary and actions.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
-                        }
-                        .pickerStyle(.menu)
 
-                        if let selectedName = appModel.selectedCollectionName,
-                           let selectedCollection = appModel.savedCollections[selectedName] {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text(selectedCollection.name)
+                            Spacer()
+
+                            if let lastUsedCollection {
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    Text("Last used")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(lastUsedCollection.name)
                                         .font(.subheadline)
-                                        .fontWeight(.semibold)
-
-                                    Text(selectedCollection.collectionType == .simple ? "Simple" : "Display-Bound")
-                                        .font(.caption)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.blue.opacity(0.15))
-                                        .cornerRadius(4)
-
-                                    Spacer()
-
-                                    Text("\(selectedCollection.sources.count) source(s)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                ForEach(Array(selectedCollection.sources.enumerated()), id: \.offset) { index, source in
-                                    Text(collectionMappingDescription(index: index, source: source, type: selectedCollection.collectionType))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
+                                        .fontWeight(.medium)
                                 }
                             }
-                            .padding(12)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(8)
-                        }
-                    }
-
-                    HStack(spacing: 10) {
-                        Button(action: { isCollectionEditorPresented = true }) {
-                            Label("Create Collection", systemImage: "plus.circle")
-                                .labelStyle(.titleAndIcon)
                         }
 
-                        Button(action: {
-                            guard let selectedName = appModel.selectedCollectionName,
-                                  let selectedCollection = appModel.savedCollections[selectedName] else { return }
-                            editingCollectionName = selectedName
-                            isCollectionEditorPresented = true
-                            appModel.selectCollection(name: selectedCollection.name)
-                        }) {
-                            Label("Edit Collection", systemImage: "pencil")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        .disabled(appModel.selectedCollectionName == nil)
-
-                        Button(action: {
-                            Task {
-                                guard let selectedName = appModel.selectedCollectionName else { return }
-                                let loaded = await appModel.loadSelectedCollection()
-                                switch loaded {
-                                case .success:
-                                    appModel.statusMessage = "Loaded collection '\(selectedName)'."
-                                    appModel.errorMessage = nil
-                                case .failure(let error):
-                                    appModel.errorMessage = error.errorDescription
-                                    appModel.statusMessage = nil
+                        if collectionNames.isEmpty {
+                            Text("No collections saved yet. Create one to get started.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(12)
+                                .background(Color(.controlBackgroundColor))
+                                .cornerRadius(8)
+                        } else {
+                            Picker(
+                                "Collection",
+                                selection: Binding(
+                                    get: { appModel.selectedCollectionName ?? "" },
+                                    set: { newValue in
+                                        if newValue.isEmpty {
+                                            appModel.selectedCollectionName = nil
+                                        } else {
+                                            appModel.selectCollection(name: newValue)
+                                        }
+                                    }
+                                )
+                            ) {
+                                Text("Select Collection").tag("")
+                                ForEach(collectionNames, id: \.self) { name in
+                                    Text(name).tag(name)
                                 }
                             }
-                        }) {
-                            Label("Load Collection", systemImage: "folder")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        .disabled(appModel.selectedCollectionName == nil)
+                            .pickerStyle(.menu)
 
-                        Button(action: {
-                            Task {
-                                guard let selectedName = appModel.selectedCollectionName else { return }
-                                _ = await appModel.applyCollection(name: selectedName)
+                            if let selectedCollection {
+                                CollectionSummaryCard(
+                                    collection: selectedCollection,
+                                    isSelected: true,
+                                    isLastUsed: lastUsedCollection?.name == selectedCollection.name,
+                                    mappingDescriptions: selectedCollection.sources.enumerated().map { index, source in
+                                        collectionMappingDescription(index: index, source: source, type: selectedCollection.collectionType)
+                                    }
+                                )
                             }
-                        }) {
-                            Label("Apply Collection", systemImage: "checkmark.circle.fill")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        .disabled(appModel.selectedCollectionName == nil || appModel.isApplyingWallpaper)
 
-                        Button(role: .destructive, action: {
-                            isDeleteCollectionAlertPresented = true
-                        }) {
-                            Label("Delete Collection", systemImage: "trash")
-                                .labelStyle(.titleAndIcon)
+                            CardSection(header: "Actions") {
+                                HStack(spacing: 10) {
+                                    Button(action: { isCollectionEditorPresented = true }) {
+                                        Label("Create Collection", systemImage: "plus.circle")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .contentShape(Rectangle())
+
+                                    Button(action: {
+                                        guard let selectedName = appModel.selectedCollectionName,
+                                              let selectedCollection = appModel.savedCollections[selectedName] else { return }
+                                        editingCollectionName = selectedName
+                                        isCollectionEditorPresented = true
+                                        appModel.selectCollection(name: selectedCollection.name)
+                                    }) {
+                                        Label("Edit Collection", systemImage: "pencil")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .contentShape(Rectangle())
+                                    .disabled(appModel.selectedCollectionName == nil)
+
+                                    Button(action: {
+                                        Task {
+                                            guard let selectedName = appModel.selectedCollectionName else { return }
+                                            let loaded = await appModel.loadSelectedCollection()
+                                            switch loaded {
+                                            case .success:
+                                                appModel.statusMessage = "Loaded collection '\(selectedName)'."
+                                                appModel.errorMessage = nil
+                                            case .failure(let error):
+                                                appModel.errorMessage = error.errorDescription
+                                                appModel.statusMessage = nil
+                                            }
+                                        }
+                                    }) {
+                                        Label("Load Collection", systemImage: "folder")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .contentShape(Rectangle())
+                                    .disabled(appModel.selectedCollectionName == nil)
+
+                                    Button(action: {
+                                        Task {
+                                            guard let selectedName = appModel.selectedCollectionName else { return }
+                                            _ = await appModel.applyCollection(name: selectedName)
+                                        }
+                                    }) {
+                                        Label("Apply Collection", systemImage: "checkmark.circle.fill")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .contentShape(Rectangle())
+                                    .disabled(appModel.selectedCollectionName == nil || appModel.isApplyingWallpaper)
+
+                                    Button(role: .destructive, action: {
+                                        isDeleteCollectionAlertPresented = true
+                                    }) {
+                                        Label("Delete Collection", systemImage: "trash")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .contentShape(Rectangle())
+                                    .disabled(appModel.selectedCollectionName == nil)
+                                }
+                            }
                         }
-                        .disabled(appModel.selectedCollectionName == nil)
                     }
                 }
 
@@ -514,7 +526,8 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isCollectionEditorPresented) {
             let selectedName = editingCollectionName.flatMap { appModel.savedCollections[$0] }
-            CollectionEditorView(
+            CardView(title: editingCollectionName == nil ? "Create Collection" : "Edit Collection") {
+                CollectionEditorView(
                 initialName: selectedName?.name ?? "",
                 initialDescription: selectedName?.description ?? "",
                 initialType: selectedName?.collectionType ?? .simple,
@@ -547,7 +560,8 @@ struct ContentView: View {
                         isCollectionEditorPresented = false
                     }
                 }
-            )
+                )
+            }
             .frame(minWidth: 640, minHeight: 520)
         }
         .alert("Delete Collection", isPresented: $isDeleteCollectionAlertPresented) {
@@ -574,47 +588,17 @@ struct ContentView: View {
 
             VStack(spacing: 12) {
                 if !appModel.usePerDisplay {
-                    // Main wallpaper info with icon (unified mode)
-                    HStack(spacing: 12) {
+                    // Main wallpaper info with icon (unified mode) — use WallpaperPreviewCard
                     let iconImage = previewIcon(forURL: URL(fileURLWithPath: appModel.selectedVideoPath), fallbackIsWeb: appModel.rendererMode == .web)
 
-                    Image(nsImage: iconImage)
-                        .resizable()
-                        .renderingMode(.original)
-                        .frame(width: 36, height: 36)
-                        .cornerRadius(6)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Main Display", systemImage: "display")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.secondary)
-
-                        if appModel.rendererMode == .web {
-                            Text(appModel.webURLString.isEmpty ? "No URL set" : appModel.webURLString)
-                                .font(.callout)
-                                .lineLimit(1)
-                        } else {
-                            Text(appModel.selectedVideoPath.isEmpty ? "No video selected" : URL(fileURLWithPath: appModel.selectedVideoPath).lastPathComponent)
-                                .font(.callout)
-                                .lineLimit(1)
-                        }
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Label(appModel.scalingMode.displayName, systemImage: "aspectratio.fill")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        Label(appModel.isMuted ? "Muted" : "Audio On", systemImage: appModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.blue)
-                    }
-                    .padding(12)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(8)
+                    WallpaperPreviewCard(
+                        title: "Main Display",
+                        subtitle: appModel.rendererMode == .web ? (appModel.webURLString.isEmpty ? "No URL set" : appModel.webURLString) : (appModel.selectedVideoPath.isEmpty ? "No video selected" : URL(fileURLWithPath: appModel.selectedVideoPath).lastPathComponent),
+                        thumbnail: iconImage,
+                        trailingInfo: appModel.isMuted ? "Muted" : "Audio On"
+                    )
+                    .padding(.bottom, 4)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
                 } else {
                     // Indicate that unified main wallpaper is disabled when using per-display
                     HStack {
@@ -628,6 +612,7 @@ struct ContentView: View {
                     .padding(10)
                     .background(Color(.controlBackgroundColor))
                     .cornerRadius(8)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .leading)))
                 }
 
                 // Per-display preview if multi-display and per-display mode enabled
@@ -639,34 +624,34 @@ struct ContentView: View {
                         let scaling = appModel.perDisplayScalingMode(for: id)
 
                         if !source.isEmpty {
-                            HStack(spacing: 12) {
-                                // Per-display icon
-                                let perIcon = previewIcon(forURL: appModel.perDisplayResolvedURL(for: id) ?? URL(fileURLWithPath: source), fallbackIsWeb: true)
+                            let perIcon = previewIcon(forURL: appModel.perDisplayResolvedURL(for: id) ?? URL(fileURLWithPath: source), fallbackIsWeb: true)
+                            let warningText: String? = appModel.perDisplayResolvedURL(for: id) == nil ? "Using fallback path; bookmark may be missing or stale" : nil
 
-                                Image(nsImage: perIcon)
-                                    .resizable()
-                                    .frame(width: 28, height: 28)
-                                    .cornerRadius(6)
+                            PerDisplayCard(
+                                displayName: "Display \(displayIndex)",
+                                displayIndex: displayIndex,
+                                thumbnail: perIcon,
+                                scalingName: scaling.displayName,
+                                warningText: warningText,
+                                onApply: {
+                                    Task { @MainActor in
+                                        await appModel.applyPerDisplayWallpaper(displayID: id, sourceString: source)
+                                    }
+                                },
+                                onPreview: {
+                                    let previewURL = appModel.perDisplayResolvedURL(for: id)
+                                        ?? URL(string: source)
+                                        ?? URL(fileURLWithPath: source)
 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label("Display \(displayIndex)", systemImage: "display.2")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.secondary)
-
-                                    Text((appModel.perDisplayResolvedURL(for: id)?.lastPathComponent).flatMap { $0.isEmpty ? nil : $0 } ?? URL(fileURLWithPath: source).lastPathComponent)
-                                        .font(.callout)
-                                        .lineLimit(1)
+                                    if previewURL.isFileURL {
+                                        NSWorkspace.shared.activateFileViewerSelecting([previewURL])
+                                    } else {
+                                        NSWorkspace.shared.open(previewURL)
+                                    }
                                 }
-                                Spacer()
-                                Label(scaling.displayName, systemImage: "aspectratio.fill")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.blue)
-                            }
-                            .padding(10)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(8)
+                            )
+                            .padding(.vertical, 4)
+                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .trailing)))
                         }
                     }
                 }
@@ -723,13 +708,13 @@ struct ContentView: View {
 
         if type == .simple {
             if appModel.savedCollections[appModel.selectedCollectionName ?? ""]?.sources.count == 1 {
-                return "\(sourceName) -> All displays"
+                return "\(sourceName) → all displays"
             }
-            return "\(sourceName) -> Screen slot \(index + 1)"
+            return "\(sourceName) → screen slot \(index + 1) in order"
         }
 
         let target = source.displayLabel ?? source.displayIDFallback.map { "Display ID \($0)" } ?? "Auto-detect"
-        return "\(sourceName) -> \(target)"
+        return "\(sourceName) → bound to \(target)"
     }
 }
 

@@ -15,6 +15,8 @@ struct CollectionSourceInput: View {
     @Binding var scalingMode: String?
     @Binding var bookmark: Data?
     @Binding var captureError: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     private var displayOptions: [String] {
         let names = NSScreen.screens.map { $0.localizedName }
@@ -44,7 +46,7 @@ struct CollectionSourceInput: View {
                 Button(action: { onDelete() }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 36, height: 36)
                         .background(
                             Capsule()
                                 .stroke(Color.red.opacity(0.2), lineWidth: 1)
@@ -55,6 +57,8 @@ struct CollectionSourceInput: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
+                .accessibilityLabel("Remove source")
 
                 TextField("Source URL", text: $url)
                     .textFieldStyle(.roundedBorder)
@@ -63,28 +67,25 @@ struct CollectionSourceInput: View {
                     Label("Browse", systemImage: "folder")
                         .labelStyle(.titleAndIcon)
                 }
+                .buttonStyle(.bordered)
+                .contentShape(Rectangle())
+                .accessibilityLabel("Browse for source")
             }
             
             // Bookmark status hint
             if !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 if let captureError = captureError {
-                    Text("Bookmark error: \(captureError)")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                    recoveryStatus(title: "Bookmark error", message: captureError, color: .orange)
                 } else if bookmark == nil {
-                    Text("No bookmark captured — file access may not persist across restarts.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    recoveryStatus(title: "Bookmark missing", message: "File access may not persist across restarts. Re-browse the file to refresh the bookmark.", color: .secondary)
                 } else {
-                    Text("Bookmark captured — persistent access available.")
-                        .font(.caption)
-                        .foregroundColor(.green)
+                    recoveryStatus(title: "Bookmark captured", message: "Persistent access is available for this source.", color: .green)
                 }
             }
             if isDisplayBound {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Display Mapping")
-                        .font(.subheadline)
+                        .font(DesignTokens.Typography.subtitle)
                         .fontWeight(.semibold)
                         .padding(.horizontal, 2)
 
@@ -105,12 +106,16 @@ struct CollectionSourceInput: View {
                         }
                         .pickerStyle(.menu)
                     }
+
+                    Text("Leave display mapping on Auto-detect unless you need a specific monitor; scaling falls back to the collection default when unset.")
+                        .font(DesignTokens.Typography.subtitle)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
                 }
             } else {
                 HStack(spacing: 8) {
                     Text("Simple Source")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(DesignTokens.Typography.subtitle)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Spacer()
@@ -118,11 +123,36 @@ struct CollectionSourceInput: View {
             }
 
             if url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Enter a file path or URL")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("Enter a file path or URL, or use Browse to capture a bookmark automatically.")
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundColor(DesignTokens.Colors.textSecondary)
             }
         }
+        .shadow(color: DesignTokens.Colors.primary.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.0), radius: isHovered ? 4 : 0, x: 0, y: isHovered ? 2 : 0)
+        .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.gentleDuration), value: isHovered)
+        .onHover { isHovered = $0 }
+    }
+
+    private func recoveryStatus(title: String, message: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(color)
+                .font(.caption)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                Text(message)
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundColor(DesignTokens.Colors.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding(8)
+        .background(color.opacity(0.10))
+        .cornerRadius(8)
     }
 }
 

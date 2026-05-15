@@ -2057,6 +2057,108 @@ Follows existing JSON encoding pattern established for `perDisplaySources`, `per
 
 ---
 
+### **UI Overhaul (Interim — Chunk 0: Scope Baseline & Mapping)**
+
+This interim task formally inserts a UI modernization step between Phase 6A and Phase 6B. Chunk 0 establishes scope, mapping, component contracts and a chunked execution plan. Deliverables for Chunk 0 are:
+
+- KB entry describing affected files, acceptance criteria, and next steps (see Features/Feature-UI-Overhaul-Chunk-0-Scope-Baseline)
+- A chunked implementation plan enabling parallel work (Design Tokens → Components → ViewModel adapters → Integration)
+- Minimal API contracts for new UI primitives so implementers can begin work without deep knowledge of `AppViewModel` internals
+
+**Status (2026-05-14):** UI Overhaul implementation completed through Chunk 8. Scaffolding and baseline implementation completed for Chunk 0/Chunk 1 initial UI primitives: `UI/DesignTokens.swift`, `UI/CardView.swift`, `UI/CardSection.swift`, `UI/WallpaperPreviewCard.swift`, `UI/PerDisplayPreviewTile.swift`, and `UI/CollectionPreviewViewModel.swift`. `ContentView` now wraps Saved Collections in `CardView` and presents `CollectionEditorView` in a card-styled sheet.
+
+This UI overhaul must preserve all existing apply semantics (collections and per-display behavior) and prove a migration path that keeps behavior deterministic during incremental rollout.
+
+### **UI Overhaul — Chunked Implementation Plan (Chunk 0 → Chunk 8)**
+
+This plan details a safe, incremental UI modernization approach that sits between Phase 6A and Phase 6B. Each chunk is scoped to be reviewable independently and to preserve runtime behavior until the final rollout.
+
+- Chunk 0: Scope Baseline and Mapping
+    - Map every requested change from UI_Overhaul_1.md and UI_Overhaul_2.md to concrete screens and symbols.
+    - Freeze scope and define acceptance checkpoints before coding.
+    - Capture baseline screenshots and behavior notes for comparison.
+
+- Chunk 1: Design System Foundation
+    - Introduce centralized UI tokens for colors, spacing, typography, radii, shadows, and motion timings.
+    - Add reusable section container and unified state message component.
+    - Replace ad hoc visual constants in overhauled surfaces with tokenized styles.
+
+- Chunk 2: Preview-First ContentView Hierarchy
+    - Promote preview into the primary visual anchor in `Personal Wallpaper Engine/Personal Wallpaper Engine/ContentView.swift`.
+    - Add clearer metadata overlay, source-type indicator, and cleaner preview structure.
+    - Keep preview generation responsive and resilient for unreadable/missing media.
+
+- Chunk 3: Per-Display Card UX (implemented)
+    - Replace row-like per-display controls with explicit display cards in `ContentView`.
+    - Ensure consistent display identity and ordering semantics with current behavior.
+    - Improve non-fatal warning presentation for disconnected/mismatched displays.
+
+- Chunk 4: Collections Section Polish (implemented)
+    - Restructure Saved Collections into overview plus summary card plus action row.
+    - Improve mapping explanations for simple and display-bound collections.
+    - Upgrade empty state and strengthen action hierarchy clarity.
+    - Keep existing create/edit/apply/delete logic intact.
+
+- Chunk 5: Collection Editor and Source Input Refinement (implemented)
+    - Align `UI/CollectionEditorView.swift` and `UI/CollectionSourceInput.swift` with the shared visual system.
+    - Improve inline validation readability and recovery messaging.
+    - Preserve deterministic simple/display-bound transitions and bookmark feedback.
+
+- Chunk 6: Motion and Accessibility Polish (implemented)
+    - Add subtle, consistent transitions for section/state changes with reduced-motion compliance.
+    - Improve keyboard focus flow and hit-target consistency.
+    - Standardize hover/focus feedback and micro-interactions.
+
+- Chunk 7: Integration Hardening and Regression Verification
+    - Run complete regression matrix for unified, per-display, and collections flows.
+    - Verify no regressions in apply mapping, bookmarks, and mode transitions.
+    - Validate single-display and multi-display behavior parity.
+    - Status: completed via local Debug/Release regression builds and smoke checks.
+
+- Chunk 8: KB and Release-Readiness Sync
+    - Update feature, architecture, bugs, and changelog notes to reflect overhaul completion scope.
+    - Record visual changes versus behavior changes.
+    - Finalize implementation handoff checklist and acceptance results.
+    - Status: completed.
+
+### **UI Overhaul Final Polish Pass**
+
+The UI Overhaul is functionally complete, but the interface still needs a dedicated visual polish pass to reach the intended premium, Wallspace-like presentation quality. This pass is presentation-only and must not change wallpaper apply behavior, collection semantics, or WallpaperManager contracts.
+
+**Scope**
+- Reframe the window around a stronger hero preview and top utility bar.
+- Upgrade the shared card, badge, and section presentation system so surfaces feel premium rather than flat.
+- Refine collections and editor surfaces so they feel curated, not like generic settings forms.
+- Add the final motion and feedback layer with reduced-motion support.
+- Finish with a checklist-based acceptance pass and one final smoke/regression run.
+
+**Concrete File Scope**
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/ContentView.swift` — window hierarchy, top utility bar, hero preview ordering, spacing.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/DesignTokens.swift` — premium surface, badge, and utility-bar tokens if needed.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/CardView.swift` — deeper, more differentiated card surfaces.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/CardSection.swift` — section rhythm and header treatment.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/WallpaperPreviewCard.swift` — cinematic hero preview treatment and action overlay.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/PerDisplayCard.swift` — display identity, warnings, and action hierarchy.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/CollectionSummaryCard.swift` — curated collections presentation and mapping summaries.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/CollectionEditorView.swift` — guided editor sheet and validation presentation.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/Personal Wallpaper Engine/UI/CollectionSourceInput.swift` — polished source rows and interaction states.
+- `/Users/arnev/Desktop/Personal Wallpaper Engine/developmental_roadmap.md` — final plan/status tracking.
+- `/Users/arnev/Desktop/Wallpaper Engine KB/30 Features/Feature-UI-Overhaul.md` — feature-level plan and acceptance notes.
+- `/Users/arnev/Desktop/Wallpaper Engine KB/30 Features/Chunk-7-Integration-and-Regression-Verification.md` — retain regression evidence and note visual-only follow-ups.
+
+**Execution Order**
+1. Visual baseline and acceptance mapping against `UI_Overhaul_Checklist.md`.
+2. Hero preview and utility bar hierarchy in `ContentView.swift` and `WallpaperPreviewCard.swift`.
+3. Shared premium surface updates in `CardView.swift`, `CardSection.swift`, and `DesignTokens.swift`.
+4. Collections and editor polish in `CollectionSummaryCard.swift`, `CollectionEditorView.swift`, and `CollectionSourceInput.swift`.
+5. Final motion, feedback, and narrow/wide window acceptance pass.
+6. Documentation sync and regression recheck before closing out the polish pass.
+
+**Acceptance Gate**
+- The plan is complete only when the checklist items are classified pass/partial/defer, residual visual gaps are explicitly recorded, and the smoke/regression run still passes after the polish changes.
+
+Each chunk should be tracked in the KB (Feature pages and per-chunk deliverables) and in the issue tracker to enable parallel work and clear handoffs.
+
 ### **Phase 6B: Desktop Setups** (Estimated 3–4 days, planned for after 6A)
 
 #### **Scope & Architecture**
