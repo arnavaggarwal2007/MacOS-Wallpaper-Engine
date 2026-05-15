@@ -33,6 +33,10 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // Top utility bar (hero controls)
+                TopUtilityBar()
+                    .padding(.vertical, 4)
+
                 // MARK: - Preview Section
                 // Mode selector: Unified vs Per-Display
                 HStack {
@@ -595,7 +599,8 @@ struct ContentView: View {
                         title: "Main Display",
                         subtitle: appModel.rendererMode == .web ? (appModel.webURLString.isEmpty ? "No URL set" : appModel.webURLString) : (appModel.selectedVideoPath.isEmpty ? "No video selected" : URL(fileURLWithPath: appModel.selectedVideoPath).lastPathComponent),
                         thumbnail: iconImage,
-                        trailingInfo: appModel.isMuted ? "Muted" : "Audio On"
+                        trailingInfo: appModel.isMuted ? "Muted" : "Audio On",
+                        isHero: true
                     )
                     .padding(.bottom, 4)
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
