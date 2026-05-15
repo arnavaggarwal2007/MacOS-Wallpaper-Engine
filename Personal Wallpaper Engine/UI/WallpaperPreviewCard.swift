@@ -17,24 +17,12 @@ struct WallpaperPreviewCard: View {
     }
 
     var body: some View {
-        HStack(spacing: isHero ? 16 : 12) {
-            if let ns = thumbnail {
-                Image(nsImage: ns)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: isHero ? 220 : 64, height: isHero ? 120 : 64)
-                    .clipped()
-                    .cornerRadius(isHero ? DesignTokens.Corner.heroRadius : 8)
-            } else {
-                Rectangle()
-                    .fill(DesignTokens.Colors.primary.opacity(isHero ? 0.06 : 0.08))
-                    .frame(width: isHero ? 220 : 64, height: isHero ? 120 : 64)
-                    .cornerRadius(isHero ? DesignTokens.Corner.heroRadius : 8)
-            }
+        HStack(alignment: .center, spacing: isHero ? 18 : 14) {
+            thumbnailView
 
             VStack(alignment: .leading, spacing: isHero ? 8 : 4) {
                 Text(title)
-                    .font(isHero ? DesignTokens.Typography.heroTitle : DesignTokens.Typography.subtitle)
+                    .font(isHero ? DesignTokens.Typography.heroTitle : DesignTokens.Typography.title)
                     .foregroundColor(DesignTokens.Colors.textPrimary)
                 if let s = subtitle {
                     Text(s)
@@ -42,26 +30,60 @@ struct WallpaperPreviewCard: View {
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                         .lineLimit(isHero ? 2 : 1)
                 }
+
+                if let trailing = trailingInfo, isHero {
+                    Text(trailing)
+                        .font(DesignTokens.Typography.body)
+                        .foregroundColor(DesignTokens.Colors.primary)
+                }
             }
 
-            Spacer()
+            Spacer(minLength: isHero ? 12 : 8)
 
-            if let trailing = trailingInfo {
+            if let trailing = trailingInfo, !isHero {
                 Text(trailing)
-                    .font(isHero ? DesignTokens.Typography.body : DesignTokens.Typography.body)
+                    .font(DesignTokens.Typography.body)
                     .foregroundColor(DesignTokens.Colors.textSecondary)
             }
         }
-        .padding(isHero ? DesignTokens.Spacing.medium : DesignTokens.Spacing.small)
-        .background(DesignTokens.Colors.cardBackground)
-        .cornerRadius(isHero ? DesignTokens.Corner.heroRadius : DesignTokens.Corner.radius)
-        .overlay(
-            RoundedRectangle(cornerRadius: isHero ? DesignTokens.Corner.heroRadius : DesignTokens.Corner.radius)
-                .stroke(Color.gray.opacity(isHero ? 0.12 : 0.2), lineWidth: isHero ? 1 : 1)
-        )
+        .padding(isHero ? DesignTokens.Spacing.large : DesignTokens.Spacing.medium)
+        .background {
+            RoundedRectangle(cornerRadius: isHero ? DesignTokens.Corner.heroRadius : DesignTokens.Corner.radius, style: .continuous)
+                .fill(DesignTokens.Colors.cardBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: isHero ? DesignTokens.Corner.heroRadius : DesignTokens.Corner.radius, style: .continuous)
+                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .opacity(isHero ? 1 : DesignTokens.Effects.cardBackdropOpacity)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: isHero ? DesignTokens.Corner.heroRadius : DesignTokens.Corner.radius, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                }
+        }
+        .shadow(color: Color.black.opacity(isHero ? 0.08 : 0.05), radius: isHero ? DesignTokens.Elevation.heroShadowRadius : DesignTokens.Elevation.cardShadowRadius * 0.5, x: 0, y: isHero ? DesignTokens.Elevation.heroShadowYOffset : DesignTokens.Elevation.cardShadowYOffset * 0.5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
         .accessibilityHint(isHero ? "Large preview of current wallpaper with quick controls" : "Preview")
+    }
+
+    private var thumbnailView: some View {
+        Group {
+            if let ns = thumbnail {
+                Image(nsImage: ns)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Rectangle()
+                    .fill(DesignTokens.Colors.primary.opacity(isHero ? 0.12 : 0.08))
+                    .overlay {
+                        Image(systemName: isHero ? "photo.on.rectangle.angled" : "photo")
+                            .font(.system(size: isHero ? 26 : 18, weight: .semibold))
+                            .foregroundColor(DesignTokens.Colors.primary)
+                    }
+            }
+        }
+        .frame(width: isHero ? 220 : 64, height: isHero ? 120 : 64)
+        .clipShape(RoundedRectangle(cornerRadius: isHero ? DesignTokens.Corner.heroRadius : 8, style: .continuous))
     }
 }
 

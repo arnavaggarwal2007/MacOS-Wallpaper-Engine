@@ -59,11 +59,22 @@ struct TopUtilityBar: View {
             .help("Add wallpaper to favorites")
             .accessibilityLabel("Add to favorites")
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
-        .background(DesignTokens.Colors.cardBackground.opacity(0.95))
-        .cornerRadius(8)
-        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background {
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                .fill(DesignTokens.Colors.cardBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                }
+        }
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
         .animation(reduceMotion ? .none : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: appModel.isPlaying)
     }
 }

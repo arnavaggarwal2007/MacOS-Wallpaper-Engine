@@ -72,8 +72,8 @@ struct CollectionEditorView: View {
     private var canAddNew: Bool { sourceDrafts.count < 8 }
 
     var body: some View {
-        CardView(title: originalCollectionName == nil ? "Create Collection" : "Edit Collection") {
-            VStack(alignment: .leading, spacing: 18) {
+        CardView(title: originalCollectionName == nil ? "Create Collection" : "Edit Collection", style: .elevated) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text("Group wallpaper sources into a reusable collection. Collection behavior is unchanged; this view only improves how the inputs are presented and validated.")
                     .font(DesignTokens.Typography.subtitle)
                     .foregroundColor(DesignTokens.Colors.textSecondary)
@@ -155,8 +155,19 @@ struct CollectionEditorView: View {
                                 Spacer()
                             }
                             .padding(12)
-                            .background(Color(.controlBackgroundColor))
-                            .cornerRadius(DesignTokens.Corner.radius)
+                            .background {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(DesignTokens.Colors.cardBackground)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                                    }
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                                    }
+                            }
                         }
 
                         HStack {
@@ -192,11 +203,20 @@ struct CollectionEditorView: View {
                                 .foregroundColor(DesignTokens.Colors.textSecondary)
                         }
                     }
-                    .padding(12)
-                    .background(
+                    .padding(DesignTokens.Spacing.medium)
+                    .background {
                         RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                            .fill(Color(.controlBackgroundColor))
-                    )
+                            .fill(DesignTokens.Colors.cardBackground)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                            }
+                    }
                 }
 
                 if let validationMessage {
@@ -405,11 +425,15 @@ struct CollectionEditorView: View {
 
             Spacer()
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .padding(12)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(color.opacity(0.12))
-        )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(color.opacity(0.22), lineWidth: 1)
+                }
+        }
     }
 }
 

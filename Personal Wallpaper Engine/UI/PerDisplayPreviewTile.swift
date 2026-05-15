@@ -11,7 +11,7 @@ struct PerDisplayPreviewTile: View {
                 Image(nsImage: ns)
                     .resizable()
                     .frame(width: 44, height: 44)
-                    .cornerRadius(6)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             } else {
                 Circle()
                     .fill(DesignTokens.Colors.primary.opacity(0.15))
@@ -27,9 +27,20 @@ struct PerDisplayPreviewTile: View {
 
             Spacer()
         }
-        .padding(DesignTokens.Spacing.small)
-        .background(DesignTokens.Colors.cardBackground)
-        .cornerRadius(DesignTokens.Corner.radius)
+        .padding(DesignTokens.Spacing.medium)
+        .background {
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                .fill(DesignTokens.Colors.cardBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                }
+        }
     }
 }
 
