@@ -15,6 +15,9 @@ struct ContentView: View {
     @State private var isFileImporterPresented = false
     @State private var selectedDisplayForPicker: CGDirectDisplayID?
     @State private var perDisplayDraftSources: [String: String] = [:]
+    @State private var isCollectionEditorPresented = false
+    @State private var isDeleteCollectionAlertPresented = false
+    @State private var editingCollectionName: String?
 
     var body: some View {
         ScrollView {
@@ -257,6 +260,135 @@ struct ContentView: View {
                     }
                 }
 
+                // MARK: - Saved Collections Section (Phase 6A)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Saved Collections")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+
+                    let collectionNames = appModel.savedCollections.keys.sorted()
+
+                    if collectionNames.isEmpty {
+                        Text("No collections saved yet. Create one to get started.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(12)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(8)
+                    } else {
+                        Picker(
+                            "Collection",
+                            selection: Binding(
+                                get: { appModel.selectedCollectionName ?? "" },
+                                set: { newValue in
+                                    if newValue.isEmpty {
+                                        appModel.selectedCollectionName = nil
+                                    } else {
+                                        appModel.selectCollection(name: newValue)
+                                    }
+                                }
+                            )
+                        ) {
+                            Text("Select Collection").tag("")
+                            ForEach(collectionNames, id: \.self) { name in
+                                Text(name).tag(name)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        if let selectedName = appModel.selectedCollectionName,
+                           let selectedCollection = appModel.savedCollections[selectedName] {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(selectedCollection.name)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+
+                                    Text(selectedCollection.collectionType == .simple ? "Simple" : "Display-Bound")
+                                        .font(.caption)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.blue.opacity(0.15))
+                                        .cornerRadius(4)
+
+                                    Spacer()
+
+                                    Text("\(selectedCollection.sources.count) source(s)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                ForEach(Array(selectedCollection.sources.enumerated()), id: \.offset) { index, source in
+                                    Text(collectionMappingDescription(index: index, source: source, type: selectedCollection.collectionType))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(8)
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        Button(action: { isCollectionEditorPresented = true }) {
+                            Label("Create Collection", systemImage: "plus.circle")
+                                .labelStyle(.titleAndIcon)
+                        }
+
+                        Button(action: {
+                            guard let selectedName = appModel.selectedCollectionName,
+                                  let selectedCollection = appModel.savedCollections[selectedName] else { return }
+                            editingCollectionName = selectedName
+                            isCollectionEditorPresented = true
+                            appModel.selectCollection(name: selectedCollection.name)
+                        }) {
+                            Label("Edit Collection", systemImage: "pencil")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(appModel.selectedCollectionName == nil)
+
+                        Button(action: {
+                            Task {
+                                guard let selectedName = appModel.selectedCollectionName else { return }
+                                let loaded = await appModel.loadSelectedCollection()
+                                switch loaded {
+                                case .success:
+                                    appModel.statusMessage = "Loaded collection '\(selectedName)'."
+                                    appModel.errorMessage = nil
+                                case .failure(let error):
+                                    appModel.errorMessage = error.errorDescription
+                                    appModel.statusMessage = nil
+                                }
+                            }
+                        }) {
+                            Label("Load Collection", systemImage: "folder")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(appModel.selectedCollectionName == nil)
+
+                        Button(action: {
+                            Task {
+                                guard let selectedName = appModel.selectedCollectionName else { return }
+                                _ = await appModel.applyCollection(name: selectedName)
+                            }
+                        }) {
+                            Label("Apply Collection", systemImage: "checkmark.circle.fill")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(appModel.selectedCollectionName == nil || appModel.isApplyingWallpaper)
+
+                        Button(role: .destructive, action: {
+                            isDeleteCollectionAlertPresented = true
+                        }) {
+                            Label("Delete Collection", systemImage: "trash")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(appModel.selectedCollectionName == nil)
+                    }
+                }
+
                 // MARK: - System Settings Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("System Settings")
@@ -350,6 +482,9 @@ struct ContentView: View {
             .padding(20)
         }
         .frame(minWidth: 580, minHeight: 380)
+        .task {
+            await appModel.loadSavedCollections()
+        }
         .fileImporter(
             isPresented: $isFileImporterPresented,
             allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
@@ -376,6 +511,56 @@ struct ContentView: View {
                 appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
                 appModel.statusMessage = nil
             }
+        }
+        .sheet(isPresented: $isCollectionEditorPresented) {
+            let selectedName = editingCollectionName.flatMap { appModel.savedCollections[$0] }
+            CollectionEditorView(
+                initialName: selectedName?.name ?? "",
+                initialDescription: selectedName?.description ?? "",
+                initialType: selectedName?.collectionType ?? .simple,
+                initialSources: selectedName?.sources ?? [],
+                initialBookmarks: editingCollectionName.map { appModel.bookmarksForCollection(name: $0) } ?? [:],
+                originalCollectionName: editingCollectionName,
+                existingCollectionNames: Set(appModel.savedCollections.keys),
+                onCancel: { isCollectionEditorPresented = false },
+                onSave: { collection, bookmarks in
+                    Task {
+                        if let editingCollectionName {
+                            _ = await appModel.updateCollection(
+                                existingName: editingCollectionName,
+                                newName: collection.name,
+                                description: collection.description,
+                                collectionType: collection.collectionType,
+                                sources: collection.sources,
+                                bookmarks: bookmarks
+                            )
+                        } else {
+                            _ = await appModel.createCollection(
+                                name: collection.name,
+                                description: collection.description,
+                                collectionType: collection.collectionType,
+                                sources: collection.sources,
+                                bookmarks: bookmarks
+                            )
+                        }
+                        self.editingCollectionName = nil
+                        isCollectionEditorPresented = false
+                    }
+                }
+            )
+            .frame(minWidth: 640, minHeight: 520)
+        }
+        .alert("Delete Collection", isPresented: $isDeleteCollectionAlertPresented) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    guard let selectedName = appModel.selectedCollectionName else { return }
+                    _ = await appModel.deleteCollection(name: selectedName)
+                    editingCollectionName = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete the selected collection?")
         }
     }
 
@@ -527,6 +712,24 @@ struct ContentView: View {
         } catch {
             return nil
         }
+    }
+
+    private func collectionMappingDescription(
+        index: Int,
+        source: CollectionSource,
+        type: WallpaperCollection.CollectionType
+    ) -> String {
+        let sourceName = URL(string: source.url)?.lastPathComponent ?? source.url
+
+        if type == .simple {
+            if appModel.savedCollections[appModel.selectedCollectionName ?? ""]?.sources.count == 1 {
+                return "\(sourceName) -> All displays"
+            }
+            return "\(sourceName) -> Screen slot \(index + 1)"
+        }
+
+        let target = source.displayLabel ?? source.displayIDFallback.map { "Display ID \($0)" } ?? "Auto-detect"
+        return "\(sourceName) -> \(target)"
     }
 }
 

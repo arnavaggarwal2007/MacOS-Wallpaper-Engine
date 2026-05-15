@@ -18,6 +18,7 @@ final class SettingsStore {
         static let usePerDisplay = "usePerDisplay" // Bool: whether to use per-display wallpapers
         static let perDisplayBookmarks = "perDisplayBookmarks" // Per-display security-scoped bookmarks
         static let savedCollections = "savedCollections"  // Phase 6A: Saved wallpaper collections
+        static let collectionBookmarks = "collectionBookmarks"  // Phase 6A: Security-scoped bookmarks for collection sources
         static let lastUsedCollectionName = "lastUsedCollectionName"  // Phase 6A: Most recently used collection
     }
 
@@ -69,6 +70,16 @@ final class SettingsStore {
             }
         } else {
             savedCollections = [:]
+        }
+        // Load collection bookmarks (Phase 6A): JSON encoded dictionary keyed by collection name, then source URL
+        if let data = UserDefaults.standard.data(forKey: Keys.collectionBookmarks) {
+            if let decoded = try? JSONDecoder().decode([String: [String: Data]].self, from: data) {
+                collectionBookmarks = decoded
+            } else {
+                collectionBookmarks = [:]
+            }
+        } else {
+            collectionBookmarks = [:]
         }
         lastUsedCollectionName = UserDefaults.standard.string(forKey: Keys.lastUsedCollectionName)
     }
@@ -150,6 +161,17 @@ final class SettingsStore {
                 UserDefaults.standard.set(encoded, forKey: Keys.savedCollections)
             } else {
                 UserDefaults.standard.removeObject(forKey: Keys.savedCollections)
+            }
+        }
+    }
+
+    // Collection bookmarks: keyed by collection name, then source URL; stores security-scoped bookmark data
+    var collectionBookmarks: [String: [String: Data]] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(collectionBookmarks) {
+                UserDefaults.standard.set(encoded, forKey: Keys.collectionBookmarks)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.collectionBookmarks)
             }
         }
     }

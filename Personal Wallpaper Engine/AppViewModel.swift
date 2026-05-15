@@ -100,12 +100,21 @@ final class AppViewModel: ObservableObject {
                 )
 
                 if isStale {
+                    // When refreshing a stale bookmark, we must access the resource first
+                    guard resolvedURL.startAccessingSecurityScopedResource() else {
+                        logger.warning("Failed to access security-scoped resource while refreshing bookmark for display \(displayID)")
+                        return resolvedURL  // Return the resolved URL anyway, even if we can't refresh the bookmark
+                    }
+                    defer { resolvedURL.stopAccessingSecurityScopedResource() }
+
                     do {
-                        settings.perDisplayBookmarks[String(displayID)] = try resolvedURL.bookmarkData(
+                        let refreshedBookmark = try resolvedURL.bookmarkData(
                             options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
                             includingResourceValuesForKeys: nil,
                             relativeTo: nil
                         )
+                        settings.perDisplayBookmarks[String(displayID)] = refreshedBookmark
+                        logger.debug("Refreshed stale per-display bookmark for display \(displayID)")
                     } catch {
                         logger.warning("Failed to refresh stale per-display bookmark for display \(displayID): \(error.localizedDescription)")
                     }
@@ -126,44 +135,56 @@ final class AppViewModel: ObservableObject {
 
     func applyPerDisplayWallpaper(displayID: CGDirectDisplayID, sourceString: String) async {
         let trimmed = sourceString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let sourceURL = resolvedSourceURL(from: trimmed) else {
+        guard !trimmed.isEmpty else {
             errorMessage = "Please choose a wallpaper source for display \(displayID)."
             statusMessage = nil
             return
         }
 
         let key = String(displayID)
-        let previousSource = settings.perDisplaySources[key]
-        let previousURL = previousSource.flatMap { resolvedSourceURL(from: $0) }
-        let isChangingSource = previousURL?.absoluteString != sourceURL.absoluteString
-
-        settings.perDisplaySources[key] = sourceURL.absoluteString
         var candidateURLs: [URL] = []
 
-        if sourceURL.isFileURL {
-            // When user changes source, always try the newly selected source first.
+        // First, try the saved per-display bookmark (if any)
+        // This ensures we maintain security-scoped access across mode switches
+        if let bookmarkedURL = perDisplayResolvedURL(for: displayID) {
+            logger.debug("Per-display bookmark available for display \(displayID): \(bookmarkedURL.path)")
+            candidateURLs.append(bookmarkedURL)
+        }
+
+        // Then try resolving the source string
+        guard let sourceURL = resolvedSourceURL(from: trimmed) else {
+            errorMessage = "Please choose a wallpaper source for display \(displayID)."
+            statusMessage = nil
+            return
+        }
+
+        // Add the newly resolved URL if not already in candidates
+        if candidateURLs.isEmpty || candidateURLs[0].absoluteString != sourceURL.absoluteString {
             candidateURLs.append(sourceURL)
+        }
 
-            // Only use old bookmark as fallback when source is unchanged.
-            if !isChangingSource, let bookmarkedURL = perDisplayResolvedURL(for: displayID) {
-                candidateURLs.append(bookmarkedURL)
-            }
+        // Always update the source path storage
+        settings.perDisplaySources[key] = sourceURL.absoluteString
 
+        // For file URLs, save/refresh the bookmark
+        if sourceURL.isFileURL {
             do {
-                settings.perDisplayBookmarks[key] = try sourceURL.bookmarkData(
-                    options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
-                    includingResourceValuesForKeys: nil,
-                    relativeTo: nil
-                )
-                // Add freshly written bookmark URL as an additional fallback.
-                if let refreshedURL = perDisplayResolvedURL(for: displayID) {
-                    candidateURLs.append(refreshedURL)
+                if sourceURL.startAccessingSecurityScopedResource() {
+                    defer { sourceURL.stopAccessingSecurityScopedResource() }
+
+                    let bookmark = try sourceURL.bookmarkData(
+                        options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                        includingResourceValuesForKeys: nil,
+                        relativeTo: nil
+                    )
+                    settings.perDisplayBookmarks[key] = bookmark
+                    logger.debug("Saved per-display bookmark for display \(displayID)")
+                } else {
+                    logger.warning("Failed to access security-scoped resource for bookmarking display \(displayID)")
                 }
             } catch {
                 logger.warning("Failed to save per-display bookmark for display \(displayID): \(error.localizedDescription)")
             }
-        } else {
-            candidateURLs = [sourceURL]
         }
 
         let scaling = perDisplayScalingMode(for: displayID)
@@ -193,7 +214,7 @@ final class AppViewModel: ObservableObject {
             }
         }
 
-        // If all candidates fail for a file URL, clear stale bookmark so next manual selection seeds a fresh one.
+        // If all candidates fail for a file URL, clear stale bookmark so next manual selection seeds a fresh one
         if sourceURL.isFileURL {
             var bookmarks = settings.perDisplayBookmarks
             bookmarks.removeValue(forKey: key)
@@ -204,10 +225,60 @@ final class AppViewModel: ObservableObject {
         statusMessage = nil
     }
 
-    private func resolvedSourceURL(from source: String) -> URL? {
+    private func resolvedSourceURL(from source: String, collectionName: String? = nil) -> URL? {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
+        // Attempt bookmark restoration if collection name is provided
+        if let collectionName = collectionName {
+            logger.debug("Resolving collection source: collection=\(collectionName), source=\(trimmed)")
+            if let collectionBookmarks = settings.collectionBookmarks[collectionName] {
+                logger.debug("  Available bookmarks in collection: \(collectionBookmarks.keys.joined(separator: ", "))")
+                if let bookmarkData = collectionBookmarks[trimmed] {
+                    logger.debug("  Found bookmark for source, attempting restoration...")
+                    var isStale = false
+                    do {
+                        let resolvedURL = try URL(
+                            resolvingBookmarkData: bookmarkData,
+                            options: [.withSecurityScope],
+                            relativeTo: nil,
+                            bookmarkDataIsStale: &isStale
+                        )
+                        logger.debug("  Successfully restored bookmark: \(resolvedURL.path), stale=\(isStale)")
+
+                        if isStale {
+                            do {
+                                let refreshedBookmark = try resolvedURL.bookmarkData(
+                                    options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                                    includingResourceValuesForKeys: nil,
+                                    relativeTo: nil
+                                )
+                                var updatedBookmarks = collectionBookmarks
+                                updatedBookmarks[trimmed] = refreshedBookmark
+                                settings.collectionBookmarks[collectionName] = updatedBookmarks
+                                logger.debug("  Refreshed stale bookmark")
+                            } catch {
+                                logger.warning("Failed to refresh stale collection bookmark for \(collectionName): \(error.localizedDescription)")
+                            }
+                        }
+
+                        return resolvedURL
+                    } catch {
+                        logger.warning("Failed to restore collection bookmark for \(collectionName): \(error.localizedDescription)")
+                        // Fall through to URL parsing below
+                    }
+                } else {
+                    let availableKeys = collectionBookmarks.keys.joined(separator: ", ")
+                    logger.warning("No bookmark found for source in collection \(collectionName). Available keys: \(availableKeys), looking for: \(trimmed)")
+                }
+            } else {
+                let availableCollections = settings.collectionBookmarks.keys.joined(separator: ", ")
+                logger.warning("No bookmarks stored for collection: \(collectionName). Available collections: \(availableCollections)")
+            }
+        }
+
+        // Fallback: parse URL string (UNSAFE - no security scope)
+        logger.debug("Using fallback URL parsing (no bookmark - file access may fail): \(trimmed)")
         if trimmed.hasPrefix("/") {
             return URL(fileURLWithPath: trimmed)
         }
@@ -243,6 +314,8 @@ final class AppViewModel: ObservableObject {
     func start() async {
         guard !hasStarted else { return }
         hasStarted = true
+
+        await loadSavedCollections()
 
         await wallpaperManager.setMuted(isMuted)
         await wallpaperManager.setScalingMode(scalingMode)
@@ -543,9 +616,11 @@ final class AppViewModel: ObservableObject {
     
     /// Load saved collections from settings on init/start
     func loadSavedCollections() async {
-        // Load from SettingsStore directly (persists automatically via didSet)
-        self.savedCollections = SettingsStore.shared.savedCollections
-        self.lastUsedCollectionName = SettingsStore.shared.lastUsedCollectionName
+        refreshCollectionState()
+    }
+
+    func bookmarksForCollection(name: String) -> [String: Data] {
+        settings.collectionBookmarks[name] ?? [:]
     }
     
     /// Select a collection for preview or apply
@@ -553,9 +628,85 @@ final class AppViewModel: ObservableObject {
         selectedCollectionName = name
     }
     
-    /// Create new collection (opens editor modal, captures result from save action)
-    func createNewCollection() async {
-        statusMessage = "Creating new collection..."
+    func createCollection(
+        name: String,
+        description: String,
+        collectionType: WallpaperCollection.CollectionType,
+        sources: [CollectionSource],
+        bookmarks: [String: Data] = [:]
+    ) async -> Result<WallpaperCollection, WallpaperError> {
+        if settings.savedCollections[name] != nil {
+            let error = WallpaperError.invalidCollectionName(reason: "Collection '\(name)' already exists.")
+            errorMessage = error.errorDescription
+            statusMessage = nil
+            return .failure(error)
+        }
+
+        let result = settings.saveCollection(
+            name: name,
+            description: description,
+            collectionType: collectionType,
+            sources: sources
+        )
+
+        switch result {
+        case .success(let collection):
+            // Store bookmarks for this collection if provided
+            logger.debug("createCollection: collection=\(collection.name), bookmarks passed: \(!bookmarks.isEmpty), count: \(bookmarks.count)")
+            if !bookmarks.isEmpty {
+                settings.collectionBookmarks[collection.name] = bookmarks
+                logger.debug("  Stored \(bookmarks.count) bookmarks for collection")
+            } else {
+                logger.warning("  No bookmarks provided for collection (first apply may fail on reload)")
+            }
+            refreshCollectionState()
+            selectedCollectionName = collection.name
+            statusMessage = "Collection '\(collection.name)' saved."
+            errorMessage = nil
+            return .success(collection)
+        case .failure(let error):
+            errorMessage = error.errorDescription
+            statusMessage = nil
+            return .failure(error)
+        }
+    }
+
+    func updateCollection(
+        existingName: String,
+        newName: String,
+        description: String,
+        collectionType: WallpaperCollection.CollectionType,
+        sources: [CollectionSource],
+        bookmarks: [String: Data] = [:]
+    ) async -> Result<WallpaperCollection, WallpaperError> {
+        let result = settings.updateCollection(
+            name: existingName,
+            newName: newName,
+            description: description,
+            collectionType: collectionType,
+            sources: sources
+        )
+
+        switch result {
+        case .success(let collection):
+            // Handle bookmarks: if collection was renamed, move bookmarks to new name
+            if existingName != newName, !bookmarks.isEmpty {
+                settings.collectionBookmarks.removeValue(forKey: existingName)
+                settings.collectionBookmarks[collection.name] = bookmarks
+            } else if !bookmarks.isEmpty {
+                settings.collectionBookmarks[collection.name] = bookmarks
+            }
+            
+            refreshCollectionState()
+            selectedCollectionName = collection.name
+            statusMessage = "Collection '\(collection.name)' updated."
+            errorMessage = nil
+            return .success(collection)
+        case .failure(let error):
+            errorMessage = error.errorDescription
+            statusMessage = nil
+            return .failure(error)
+        }
     }
     
     /// Load selected collection for preview
@@ -566,7 +717,25 @@ final class AppViewModel: ObservableObject {
     
     /// Delete selected collection
     func deleteCollection(name: String) async -> Result<Void, WallpaperError> {
-        return settings.deleteCollection(name: name)
+        let result = settings.deleteCollection(name: name)
+
+        switch result {
+        case .success:
+            // Clean up bookmarks for deleted collection
+            settings.collectionBookmarks.removeValue(forKey: name)
+            
+            refreshCollectionState()
+            if selectedCollectionName == name {
+                selectedCollectionName = settings.allCollectionNames().first
+            }
+            statusMessage = "Collection '\(name)' deleted."
+            errorMessage = nil
+            return .success(())
+        case .failure(let error):
+            errorMessage = error.errorDescription
+            statusMessage = nil
+            return .failure(error)
+        }
     }
     
     // MARK: - Phase 6A Collection Apply
@@ -576,56 +745,112 @@ final class AppViewModel: ObservableObject {
         name: String,
         useUnified: Bool = false
     ) async -> Result<Void, WallpaperError> {
-        let collection = try? await loadSelectedCollection()
-        guard case .success(let collection) = collection else { 
-            return .failure(.collectionNotFound(name: name)) 
+        _ = useUnified // Kept for API compatibility; apply behavior is now collection-driven.
+        let loadedCollection = settings.loadCollection(name: name)
+        guard case .success(let collection) = loadedCollection else {
+            let error = WallpaperError.collectionNotFound(name: name)
+            errorMessage = error.errorDescription
+            statusMessage = nil
+            return .failure(error)
         }
+
+        selectedCollectionName = name
         
         switch collection.collectionType {
         case .simple:
-            return await applySimpleCollection(collection, useUnified: useUnified)
+            return await applySimpleCollection(collection)
         case .displayBound:
             return await applyDisplayBoundCollection(collection)
         }
     }
     
     @MainActor
-    private func applySimpleCollection(_ collection: WallpaperCollection, useUnified: Bool) async -> Result<Void, WallpaperError> {
-        guard !usePerDisplay else {
-            errorMessage = "Unified wallpaper apply is disabled while per-display mode is enabled."
-            return .failure(.internalError(description: "Cannot apply simple collection in unified mode"))
-        }
-        
-        var displayIndex = 0
-        
-        if useUnified {
-            guard let firstSource = collection.sources.first else {
-                return .success(())
-            }
-            
-            for (displayID, controller) in wallpaperManager.displayControllers {
-                do {
-                    try await wallpaperManager.setWallpaper(url: URL(string: firstSource.url)!)
-                } catch {
-                    logger.error("Failed to apply unified wallpaper: \(error)")
-                }
-            }
+    private func applySimpleCollection(_ collection: WallpaperCollection) async -> Result<Void, WallpaperError> {
+        guard let firstSource = collection.sources.first else {
+            settings.lastUsedCollectionName = collection.name
+            refreshCollectionState()
+            statusMessage = "Collection '\(collection.name)' has no sources to apply."
+            errorMessage = nil
             return .success(())
         }
-        
-        for source in collection.sources {
-            guard displayIndex < wallpaperManager.displayControllers.count else { break }
-            
-            let url = URL(string: source.url) ?? nil
-            if let url = url {
-                await wallpaperManager.setWallpaper(url: url)
+
+        // A single-source simple collection always applies globally to all displays,
+        // independent of the current UI mode toggle.
+        if collection.sources.count == 1 {
+            guard let firstURL = resolvedSourceURL(from: firstSource.url, collectionName: collection.name) else {
+                let error = WallpaperError.invalidCollectionSource(url: firstSource.url, reason: "Invalid source URL.")
+                errorMessage = error.errorDescription
+                statusMessage = nil
+                return .failure(error)
             }
-            
-            displayIndex += 1
+
+            let result = await wallpaperManager.setWallpaper(url: firstURL)
+            switch result {
+            case .success:
+                settings.lastUsedCollectionName = collection.name
+                refreshCollectionState()
+                statusMessage = "Collection '\(collection.name)' applied to all displays."
+                errorMessage = nil
+                return .success(())
+            case .failure(let error):
+                errorMessage = error.errorDescription
+                statusMessage = nil
+                return .failure(error)
+            }
         }
-        
-        lastUsedCollectionName = selectedCollectionName
+
+        // Multi-source simple collections map in current screen order for consistency with UI.
+        let displayIDs = orderedConnectedDisplayIDs()
+        guard !displayIDs.isEmpty else {
+            let error = WallpaperError.internalError(description: "No displays are currently available.")
+            errorMessage = error.errorDescription
+            statusMessage = nil
+            return .failure(error)
+        }
+
+        var appliedCount = 0
+        for (index, source) in collection.sources.enumerated() {
+            guard index < displayIDs.count else { break }
+            guard let sourceURL = resolvedSourceURL(from: source.url, collectionName: collection.name) else { continue }
+
+            let mode: WallpaperRendererMode = sourceURL.isFileURL ? .video : .web
+            let result = await wallpaperManager.setPerDisplayWallpaper(
+                displayID: displayIDs[index],
+                url: sourceURL,
+                rendererMode: mode,
+                scalingMode: settings.scalingMode
+            )
+
+            if case .success = result {
+                appliedCount += 1
+            }
+        }
+
+        settings.lastUsedCollectionName = collection.name
+        refreshCollectionState()
+        let overflowCount = max(collection.sources.count - displayIDs.count, 0)
+        if overflowCount > 0 {
+            statusMessage = "Applied \(appliedCount) source(s). \(overflowCount) extra source(s) were skipped because fewer displays are available."
+        } else {
+            statusMessage = "Collection '\(collection.name)' applied to \(appliedCount) display(s)."
+        }
+        errorMessage = nil
         return .success(())
+    }
+
+    private func orderedConnectedDisplayIDs() -> [CGDirectDisplayID] {
+        // Use NSScreen order so collection mapping matches the per-display UI ordering.
+        let controllerIDs = Set(wallpaperManager.displayControllers.keys)
+        let inScreenOrder = NSScreen.screens
+            .map { $0.displayID }
+            .filter { controllerIDs.contains($0) }
+
+        if !inScreenOrder.isEmpty {
+            return inScreenOrder
+        }
+
+        // Fallback if screens are temporarily unavailable.
+        return wallpaperManager.displayControllers.keys.sorted()
     }
     
     @MainActor
@@ -636,28 +861,35 @@ final class AppViewModel: ObservableObject {
             let matchedDisplayID = resolveDisplayForSource(source: source)
             
             if let displayID = matchedDisplayID {
-                let url = URL(string: source.url) ?? nil
-                if let url = url {
-                    await wallpaperManager.setPerDisplayWallpaper(
+                if let url = resolvedSourceURL(from: source.url, collectionName: collection.name) {
+                    let rendererMode: WallpaperRendererMode = url.isFileURL ? .video : .web
+                    _ = await wallpaperManager.setPerDisplayWallpaper(
                         displayID: displayID,
                         url: url,
-                        rendererMode: .video,
+                        rendererMode: rendererMode,
                         scalingMode: source.scalingMode.flatMap { VideoScalingMode(rawValue: $0) } ?? settings.scalingMode
                     )
                 }
             } else {
-                // Convert Int? to String for displayInfo fallback chain
-                let displayInfo = source.displayLabel ?? String(describing: source.displayIDFallback) ?? "?"
+                let displayInfo = source.displayLabel ?? source.displayIDFallback.map { String($0) } ?? "?"
                 let message = "Display \(displayInfo) not found"
                 unmatchedWarnings.append(message)
                 logger.warning("Display-bound collection skip: \(message)")
             }
         }
-        
-        guard !unmatchedWarnings.isEmpty else { return .success(()) }
-        
+
+        settings.lastUsedCollectionName = collection.name
+        refreshCollectionState()
+
+        if unmatchedWarnings.isEmpty {
+            statusMessage = "Collection '\(collection.name)' applied to matched displays."
+            errorMessage = nil
+            return .success(())
+        }
+
         let warningText = unmatchedWarnings.joined(separator: ", ")
         statusMessage = "Applied to matched displays. Warnings:\n\(warningText)"
+        errorMessage = nil
         return .success(())
     }
     
@@ -684,7 +916,37 @@ final class AppViewModel: ObservableObject {
             }
         }
         
+        // Auto-detect: both label and ID are nil, so apply to primary (first available) display
+        if source.displayLabel == nil && source.displayIDFallback == nil {
+            let displayIDs = orderedConnectedDisplayIDs()
+            if let primaryDisplayID = displayIDs.first {
+                logger.debug("Display-bound auto-detect: applying to primary display \(primaryDisplayID)")
+                return primaryDisplayID
+            }
+        }
+        
         return nil
+    }
+
+    private func refreshCollectionState() {
+        savedCollections = settings.savedCollections
+        lastUsedCollectionName = settings.lastUsedCollectionName
+
+        // Prefer last used collection if nothing is selected
+        if selectedCollectionName == nil {
+            if let last = lastUsedCollectionName, savedCollections[last] != nil {
+                selectedCollectionName = last
+            } else {
+                selectedCollectionName = settings.allCollectionNames().first
+            }
+            return
+        }
+
+        // If a selected collection no longer exists, fallback to first available
+        if let selectedName = selectedCollectionName,
+           savedCollections[selectedName] == nil {
+            selectedCollectionName = settings.allCollectionNames().first
+        }
     }
 }
 
