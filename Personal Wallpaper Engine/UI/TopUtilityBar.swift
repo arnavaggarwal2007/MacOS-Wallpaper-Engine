@@ -3,11 +3,22 @@ import SwiftUI
 struct TopUtilityBar: View {
     @EnvironmentObject private var appModel: AppViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var buttonHovers: [String: Bool] = [:]
+
+    private func button(key: String, action: @escaping () -> Void, label: @escaping () -> some View) -> some View {
+        Button(action: action) {
+            label()
+        }
+        .scaleEffect(buttonHovers[key] ?? false && !reduceMotion ? 1.05 : 1.0)
+        .opacity((buttonHovers[key] ?? false) ? 1.0 : 0.8)
+        .animation(reduceMotion ? .none : .easeInOut(duration: DesignTokens.Motion.gentleDuration), value: buttonHovers[key] ?? false)
+        .onHover { isHovered in buttonHovers[key] = isHovered }
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             // Play / Pause
-            Button(action: {
+            button(key: "play", action: {
                 Task { await appModel.togglePlayback() }
             }) {
                 Image(systemName: appModel.isPlaying ? "pause.fill" : "play.fill")
@@ -17,7 +28,7 @@ struct TopUtilityBar: View {
             .accessibilityLabel(appModel.isPlaying ? "Pause wallpaper" : "Play wallpaper")
 
             // Mute toggle
-            Button(action: {
+            button(key: "mute", action: {
                 Task { await appModel.toggleMute() }
             }) {
                 Image(systemName: appModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
@@ -39,7 +50,7 @@ struct TopUtilityBar: View {
             }
 
             // Quick apply
-            Button(action: {
+            button(key: "apply", action: {
                 Task { await appModel.applyWallpaperFromSelection() }
             }) {
                 Label("Apply Now", systemImage: "bolt.fill")
@@ -51,7 +62,7 @@ struct TopUtilityBar: View {
             Spacer()
 
             // Favorites (lightweight stub for now)
-            Button(action: {
+            button(key: "favorites", action: {
                 appModel.statusMessage = "Added to favorites"
             }) {
                 Image(systemName: "star")
