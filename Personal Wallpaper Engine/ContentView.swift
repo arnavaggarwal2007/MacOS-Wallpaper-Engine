@@ -33,6 +33,10 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // Top utility bar (hero controls)
+                TopUtilityBar()
+                    .padding(.vertical, 4)
+
                 // MARK: - Preview Section
                 // Mode selector: Unified vs Per-Display
                 HStack {
