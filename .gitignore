@@ -76,6 +76,7 @@ best_coding_practices.md
 update_KB_guidelines.md
 
 # End of .gitignore
+artifacts/
 Logs/console_logs_kb_summary.md
 Logs/console_logs.md
 UI_Overhaul_1.md
