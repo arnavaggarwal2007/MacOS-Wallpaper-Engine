@@ -18,12 +18,15 @@ enum DesignTokens {
 
     enum Corner {
         static let radius: CGFloat = 10
+        static let heroRadius: CGFloat = 14
     }
 
     enum Typography {
         static let title = Font.headline
         static let subtitle = Font.subheadline
         static let body = Font.body
+        static let heroTitle = Font.system(size: 20, weight: .semibold)
+        static let heroSubtitle = Font.system(size: 14, weight: .regular)
     }
 
     enum Motion {
