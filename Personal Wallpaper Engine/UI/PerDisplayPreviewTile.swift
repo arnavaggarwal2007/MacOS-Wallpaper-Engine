@@ -4,6 +4,8 @@ import AppKit
 struct PerDisplayPreviewTile: View {
     var displayName: String = "Display"
     var thumbnail: NSImage?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -41,6 +43,10 @@ struct PerDisplayPreviewTile: View {
                         .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
                 }
         }
+        .shadow(color: Color.black.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.05), radius: isHovered ? DesignTokens.Elevation.cardShadowRadius : 2, x: 0, y: isHovered ? DesignTokens.Elevation.cardShadowYOffset : 1)
+        .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
+        .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
+        .onHover { isHovered = $0 }
     }
 }
 

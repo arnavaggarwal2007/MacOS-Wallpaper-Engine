@@ -7,6 +7,8 @@ struct WallpaperPreviewCard: View {
     let thumbnail: NSImage?
     let trailingInfo: String?
     let isHero: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     init(title: String, subtitle: String? = nil, thumbnail: NSImage? = nil, trailingInfo: String? = nil, isHero: Bool = false) {
         self.title = title
@@ -60,7 +62,10 @@ struct WallpaperPreviewCard: View {
                         .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
                 }
         }
-        .shadow(color: Color.black.opacity(isHero ? 0.08 : 0.05), radius: isHero ? DesignTokens.Elevation.heroShadowRadius : DesignTokens.Elevation.cardShadowRadius * 0.5, x: 0, y: isHero ? DesignTokens.Elevation.heroShadowYOffset : DesignTokens.Elevation.cardShadowYOffset * 0.5)
+        .shadow(color: Color.black.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : (isHero ? 0.08 : 0.05)), radius: isHovered ? (isHero ? DesignTokens.Elevation.heroShadowRadius : DesignTokens.Elevation.cardShadowRadius) : (isHero ? DesignTokens.Elevation.heroShadowRadius : DesignTokens.Elevation.cardShadowRadius * 0.5), x: 0, y: isHovered ? (isHero ? DesignTokens.Elevation.heroShadowYOffset : DesignTokens.Elevation.cardShadowYOffset) : (isHero ? DesignTokens.Elevation.heroShadowYOffset * 0.5 : DesignTokens.Elevation.cardShadowYOffset * 0.5))
+        .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
+        .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
+        .onHover { isHovered = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
         .accessibilityHint(isHero ? "Large preview of current wallpaper with quick controls" : "Preview")

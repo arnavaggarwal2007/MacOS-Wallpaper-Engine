@@ -17,6 +17,7 @@ struct CollectionSourceInput: View {
     @Binding var captureError: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
+    @State private var isDeleteHovered = false
 
     private var displayOptions: [String] {
         let names = NSScreen.screens.map { $0.localizedName }
@@ -47,11 +48,14 @@ struct CollectionSourceInput: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
                         .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.red.opacity(0.08)))
-                        .overlay(Circle().stroke(Color.red.opacity(0.18), lineWidth: 1))
+                        .background(Circle().fill(Color.red.opacity(isDeleteHovered ? 0.15 : 0.08)))
+                        .overlay(Circle().stroke(Color.red.opacity(isDeleteHovered ? 0.25 : 0.18), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
+                .scaleEffect(isDeleteHovered && !reduceMotion ? 1.08 : 1.0)
+                .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.gentleDuration), value: isDeleteHovered)
+                .onHover { isDeleteHovered = $0 }
                 .accessibilityLabel("Remove source")
 
                 VStack(alignment: .leading, spacing: 8) {
