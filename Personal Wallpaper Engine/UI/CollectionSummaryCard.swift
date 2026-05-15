@@ -17,12 +17,19 @@ struct CollectionSummaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
             HStack(alignment: .top, spacing: DesignTokens.Spacing.medium) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(collection.name)
-                        .font(DesignTokens.Typography.title)
-                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(collection.name)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(DesignTokens.Colors.textPrimary)
+
+                        if isSelected {
+                            pill("Selected")
+                        }
+                    }
 
                     if !collection.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(collection.description)
@@ -37,10 +44,6 @@ struct CollectionSummaryCard: View {
                 VStack(alignment: .trailing, spacing: 6) {
                     pill(collectionTypeLabel)
 
-                    if isSelected {
-                        pill("Selected")
-                    }
-
                     if isLastUsed {
                         pill("Last used")
                     }
@@ -51,6 +54,7 @@ struct CollectionSummaryCard: View {
                 infoBadge(label: "Sources", value: sourceCountLabel)
                 infoBadge(label: "Updated", value: collection.updatedAt.formatted(date: .abbreviated, time: .omitted))
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
 
@@ -80,10 +84,12 @@ struct CollectionSummaryCard: View {
             }
         }
         .padding(DesignTokens.Spacing.medium)
-        .background(Color(.controlBackgroundColor))
-        .cornerRadius(DesignTokens.Corner.radius)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                .fill(Color(.controlBackgroundColor))
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius)
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
                 .stroke(Color.gray.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: DesignTokens.Colors.primary.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.04), radius: isHovered ? 6 : 1, x: 0, y: isHovered ? 3 : 1)
@@ -95,10 +101,10 @@ struct CollectionSummaryCard: View {
     private func pill(_ text: String) -> some View {
         Text(text)
             .font(DesignTokens.Typography.subtitle)
-            .foregroundColor(DesignTokens.Colors.textPrimary)
+            .foregroundColor(DesignTokens.Colors.primary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(DesignTokens.Colors.primary.opacity(0.12))
+            .background(DesignTokens.Colors.primary.opacity(0.10))
             .cornerRadius(999)
     }
 
@@ -113,7 +119,10 @@ struct CollectionSummaryCard: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(DesignTokens.Colors.background)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(DesignTokens.Colors.background)
+        )
         .cornerRadius(8)
     }
 }

@@ -270,12 +270,18 @@ struct ContentView: View {
                     let selectedCollection = appModel.selectedCollectionName.flatMap { appModel.savedCollections[$0] }
                     let lastUsedCollection = appModel.lastUsedCollectionName.flatMap { appModel.savedCollections[$0] }
 
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 14) {
                         HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("\(collectionNames.count) saved collection\(collectionNames.count == 1 ? "" : "s")")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "square.stack.3d.up")
+                                        .foregroundStyle(.secondary)
+
+                                    Text("\(collectionNames.count) saved collection\(collectionNames.count == 1 ? "" : "s")")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+
                                 Text(collectionNames.isEmpty ? "Create a collection to capture a wallpaper set." : "Pick a collection to review its summary and actions.")
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
@@ -296,12 +302,25 @@ struct ContentView: View {
                         }
 
                         if collectionNames.isEmpty {
-                            Text("No collections saved yet. Create one to get started.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .padding(12)
-                                .background(Color(.controlBackgroundColor))
-                                .cornerRadius(8)
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "tray")
+                                    .foregroundStyle(.secondary)
+                                    .font(.title3)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("No collections saved yet")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    Text("Create one to get started and save a wallpaper set for later.")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(14)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(DesignTokens.Corner.radius)
                         } else {
                             Picker(
                                 "Collection",
@@ -322,6 +341,7 @@ struct ContentView: View {
                                 }
                             }
                             .pickerStyle(.menu)
+                            .frame(maxWidth: 320, alignment: .leading)
 
                             if let selectedCollection {
                                 CollectionSummaryCard(
@@ -340,6 +360,7 @@ struct ContentView: View {
                                         Label("Create Collection", systemImage: "plus.circle")
                                             .labelStyle(.titleAndIcon)
                                     }
+                                    .buttonStyle(.borderedProminent)
                                     .contentShape(Rectangle())
 
                                     Button(action: {
@@ -352,6 +373,7 @@ struct ContentView: View {
                                         Label("Edit Collection", systemImage: "pencil")
                                             .labelStyle(.titleAndIcon)
                                     }
+                                    .buttonStyle(.bordered)
                                     .contentShape(Rectangle())
                                     .disabled(appModel.selectedCollectionName == nil)
 
@@ -372,6 +394,7 @@ struct ContentView: View {
                                         Label("Load Collection", systemImage: "folder")
                                             .labelStyle(.titleAndIcon)
                                     }
+                                    .buttonStyle(.bordered)
                                     .contentShape(Rectangle())
                                     .disabled(appModel.selectedCollectionName == nil)
 
@@ -384,6 +407,7 @@ struct ContentView: View {
                                         Label("Apply Collection", systemImage: "checkmark.circle.fill")
                                             .labelStyle(.titleAndIcon)
                                     }
+                                    .buttonStyle(.borderedProminent)
                                     .contentShape(Rectangle())
                                     .disabled(appModel.selectedCollectionName == nil || appModel.isApplyingWallpaper)
 
@@ -393,6 +417,7 @@ struct ContentView: View {
                                         Label("Delete Collection", systemImage: "trash")
                                             .labelStyle(.titleAndIcon)
                                     }
+                                    .buttonStyle(.bordered)
                                     .contentShape(Rectangle())
                                     .disabled(appModel.selectedCollectionName == nil)
                                 }

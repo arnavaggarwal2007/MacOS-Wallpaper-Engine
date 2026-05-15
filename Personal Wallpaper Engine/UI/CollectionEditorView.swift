@@ -73,13 +73,13 @@ struct CollectionEditorView: View {
 
     var body: some View {
         CardView(title: originalCollectionName == nil ? "Create Collection" : "Edit Collection") {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 18) {
                 Text("Group wallpaper sources into a reusable collection. Collection behavior is unchanged; this view only improves how the inputs are presented and validated.")
                     .font(DesignTokens.Typography.subtitle)
                     .foregroundColor(DesignTokens.Colors.textSecondary)
 
                 CardSection(header: "Basics") {
-                    HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 12) {
                         VStack(alignment: .leading, spacing: 8) {
                             TextField("Collection Name", text: $collectionName)
                                 .textFieldStyle(.roundedBorder)
@@ -91,12 +91,16 @@ struct CollectionEditorView: View {
                                 .focused($focusedField, equals: .description)
                         }
 
-                        Picker("Type", selection: $collectionType) {
-                            Text("Simple").tag(WallpaperCollection.CollectionType.simple)
-                            Text("Display-Bound").tag(WallpaperCollection.CollectionType.displayBound)
+                        HStack(alignment: .center, spacing: 12) {
+                            Picker("Type", selection: $collectionType) {
+                                Text("Simple").tag(WallpaperCollection.CollectionType.simple)
+                                Text("Display-Bound").tag(WallpaperCollection.CollectionType.displayBound)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: 260)
+
+                            Spacer()
                         }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 220)
                     }
 
                     if let nameValidationMessage {
@@ -105,7 +109,7 @@ struct CollectionEditorView: View {
                 }
 
                 CardSection(header: "Sources") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 12) {
                         if !sourceDrafts.isEmpty {
                             ForEach(sourceDrafts.indices, id: \.self) { index in
                                 CollectionSourceInput(
@@ -142,9 +146,17 @@ struct CollectionEditorView: View {
                                 )
                             }
                         } else {
-                            Text("Add a source to get started.")
-                                .font(DesignTokens.Typography.subtitle)
-                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                            HStack(spacing: 10) {
+                                Image(systemName: "tray.and.arrow.down")
+                                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                                Text("Add a source to get started.")
+                                    .font(DesignTokens.Typography.subtitle)
+                                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(DesignTokens.Corner.radius)
                         }
 
                         HStack {
@@ -165,7 +177,7 @@ struct CollectionEditorView: View {
                 }
 
                 CardSection(header: "Preview") {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Sources: \(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count)")
                             .font(DesignTokens.Typography.subtitle)
                             .foregroundColor(DesignTokens.Colors.textSecondary)
@@ -181,8 +193,10 @@ struct CollectionEditorView: View {
                         }
                     }
                     .padding(12)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(DesignTokens.Corner.radius)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                            .fill(Color(.controlBackgroundColor))
+                    )
                 }
 
                 if let validationMessage {
@@ -193,11 +207,13 @@ struct CollectionEditorView: View {
                     Spacer()
 
                     Button("Cancel", action: onCancel)
+                        .buttonStyle(.bordered)
                         .keyboardShortcut(.cancelAction)
 
                     Button("Save") {
                         saveCollection()
                     }
+                    .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
                 }
@@ -390,8 +406,10 @@ struct CollectionEditorView: View {
             Spacer()
         }
         .padding(10)
-        .background(color.opacity(0.12))
-        .cornerRadius(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(color.opacity(0.12))
+        )
     }
 }
 

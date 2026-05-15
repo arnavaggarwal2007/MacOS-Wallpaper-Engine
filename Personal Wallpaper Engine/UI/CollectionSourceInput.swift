@@ -42,34 +42,44 @@ struct CollectionSourceInput: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
                 Button(action: { onDelete() }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 32, height: 32)
                         .background(
-                            Capsule()
-                                .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.red.opacity(0.08))
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.red.opacity(0.18), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
                 .accessibilityLabel("Remove source")
 
-                TextField("Source URL", text: $url)
-                    .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        TextField("Source URL", text: $url)
+                            .textFieldStyle(.roundedBorder)
 
-                Button(action: onBrowse) {
-                    Label("Browse", systemImage: "folder")
-                        .labelStyle(.titleAndIcon)
+                        Button(action: onBrowse) {
+                            Label("Browse", systemImage: "folder")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .buttonStyle(.bordered)
+                        .contentShape(Rectangle())
+                        .accessibilityLabel("Browse for source")
+                    }
+
+                    if url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Enter a file path or URL, or use Browse to capture a bookmark automatically.")
+                            .font(DesignTokens.Typography.subtitle)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                    }
                 }
-                .buttonStyle(.bordered)
-                .contentShape(Rectangle())
-                .accessibilityLabel("Browse for source")
             }
             
             // Bookmark status hint
@@ -121,14 +131,17 @@ struct CollectionSourceInput: View {
                     Spacer()
                 }
             }
-
-            if url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Enter a file path or URL, or use Browse to capture a bookmark automatically.")
-                    .font(DesignTokens.Typography.subtitle)
-                    .foregroundColor(DesignTokens.Colors.textSecondary)
-            }
         }
-        .shadow(color: DesignTokens.Colors.primary.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.0), radius: isHovered ? 4 : 0, x: 0, y: isHovered ? 2 : 0)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                .fill(Color(.controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                .stroke(Color.gray.opacity(isHovered ? 0.18 : 0.12), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(isHovered ? 0.05 : 0.02), radius: isHovered ? 6 : 2, x: 0, y: isHovered ? 2 : 1)
         .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.gentleDuration), value: isHovered)
         .onHover { isHovered = $0 }
     }
