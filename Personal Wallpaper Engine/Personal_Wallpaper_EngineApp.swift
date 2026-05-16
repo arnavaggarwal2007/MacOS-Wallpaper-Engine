@@ -14,7 +14,7 @@ struct Personal_Wallpaper_EngineApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ModernHomeView()
                 .environmentObject(appModel)
                 .task {
                     // Initialize menu bar with ViewModel

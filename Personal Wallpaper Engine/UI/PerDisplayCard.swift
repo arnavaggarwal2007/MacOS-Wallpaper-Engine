@@ -5,8 +5,11 @@ struct PerDisplayCard: View {
     var displayName: String
     var displayIndex: Int
     var thumbnail: NSImage?
+    var sourceSummary: String? = nil
     var scalingName: String
     var warningText: String?
+    var canApply: Bool = true
+    var onBrowse: (() -> Void)? = nil
     var onApply: (() -> Void)?
     var onPreview: (() -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,13 +21,17 @@ struct PerDisplayCard: View {
                 if let ns = thumbnail {
                     Image(nsImage: ns)
                         .resizable()
-                        .scaledToFill()
-                        .frame(width: 72, height: 72)
+                        .interpolation(.high)
+                        .antialiased(true)
+                        .scaledToFit()
+                        .frame(width: 96, height: 60)
+                        .padding(4)
+                        .background(DesignTokens.Colors.background.opacity(0.42))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else {
                     Rectangle()
                         .fill(DesignTokens.Colors.primary.opacity(0.12))
-                        .frame(width: 72, height: 72)
+                        .frame(width: 96, height: 60)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
                             Text(String(displayName.prefix(1)))
@@ -40,6 +47,12 @@ struct PerDisplayCard: View {
                     Text("Display \(displayIndex)")
                         .font(DesignTokens.Typography.subtitle)
                         .foregroundColor(DesignTokens.Colors.textSecondary)
+                    if let sourceSummary {
+                        Text(sourceSummary)
+                            .font(.caption)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                            .lineLimit(1)
+                    }
                     Text(scalingName)
                         .font(DesignTokens.Typography.subtitle)
                         .foregroundColor(DesignTokens.Colors.primary)
@@ -48,16 +61,24 @@ struct PerDisplayCard: View {
                 Spacer()
 
                 VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button(action: { onBrowse?() }) {
+                            Label("Browse", systemImage: "folder.badge.plus")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button(action: { onPreview?() }) {
+                            Label("Open", systemImage: "eye")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(onPreview == nil)
+                    }
+
                     Button(action: { onApply?() }) {
                         Label("Apply", systemImage: "arrow.down.doc")
                     }
                     .buttonStyle(.borderedProminent)
-
-                    Button(action: { onPreview?() }) {
-                        Label("Preview", systemImage: "play.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(onPreview == nil)
+                    .disabled(!canApply || onApply == nil)
                 }
             }
 

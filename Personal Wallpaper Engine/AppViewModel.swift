@@ -88,6 +88,31 @@ final class AppViewModel: ObservableObject {
         settings.perDisplaySources[String(displayID)] = urlString
     }
 
+    func selectPerDisplaySource(_ displayID: CGDirectDisplayID, at url: URL) {
+        print("AppViewModel.selectPerDisplaySource: called display=\(displayID), url=\(url.absoluteString)")
+        let key = String(displayID)
+        settings.perDisplaySources[key] = url.absoluteString
+
+        if url.isFileURL {
+            do {
+                if url.startAccessingSecurityScopedResource() {
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    let bookmark = try url.bookmarkData(
+                        options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                        includingResourceValuesForKeys: nil,
+                        relativeTo: nil
+                    )
+                    settings.perDisplayBookmarks[key] = bookmark
+                }
+            } catch {
+                logger.warning("Failed to stage per-display bookmark for display \(displayID): \(error.localizedDescription)")
+            }
+        }
+
+        statusMessage = "Selected for display \(displayID): \(url.lastPathComponent)"
+        errorMessage = nil
+    }
+
     func perDisplayResolvedURL(for displayID: CGDirectDisplayID) -> URL? {
         if let bookmarkData = settings.perDisplayBookmarks[String(displayID)] {
             var isStale = false
@@ -143,13 +168,7 @@ final class AppViewModel: ObservableObject {
 
         let key = String(displayID)
         var candidateURLs: [URL] = []
-
-        // First, try the saved per-display bookmark (if any)
-        // This ensures we maintain security-scoped access across mode switches
-        if let bookmarkedURL = perDisplayResolvedURL(for: displayID) {
-            logger.debug("Per-display bookmark available for display \(displayID): \(bookmarkedURL.path)")
-            candidateURLs.append(bookmarkedURL)
-        }
+        let previousBookmarkedURL = perDisplayResolvedURL(for: displayID)
 
         // Then try resolving the source string
         guard let sourceURL = resolvedSourceURL(from: trimmed) else {
@@ -158,9 +177,13 @@ final class AppViewModel: ObservableObject {
             return
         }
 
-        // Add the newly resolved URL if not already in candidates
-        if candidateURLs.isEmpty || candidateURLs[0].absoluteString != sourceURL.absoluteString {
-            candidateURLs.append(sourceURL)
+        // Always try the newly selected source first.
+        candidateURLs.append(sourceURL)
+
+        // Keep the prior bookmark as a fallback in case the new source fails.
+        if let previousBookmarkedURL,
+           previousBookmarkedURL.absoluteString != sourceURL.absoluteString {
+            candidateURLs.append(previousBookmarkedURL)
         }
 
         // Always update the source path storage
@@ -202,6 +225,13 @@ final class AppViewModel: ObservableObject {
             attempted.insert(marker)
 
             let rendererMode: WallpaperRendererMode = url.isFileURL ? .video : .web
+            let didStartScope = url.isFileURL ? url.startAccessingSecurityScopedResource() : false
+            defer {
+                if didStartScope {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
             switch await wallpaperManager.setPerDisplayWallpaper(displayID: displayID, url: url, rendererMode: rendererMode, scalingMode: scaling) {
             case .success:
                 statusMessage = "Applied to display \(displayID): \(url.lastPathComponent)"
@@ -339,6 +369,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func selectVideo(at url: URL) {
+        print("AppViewModel.selectVideo: called with \(url.path)")
         endAccessingSelectedVideoURL()
         beginAccessingSelectedVideoURL(url)
         rendererMode = .video
@@ -360,6 +391,8 @@ final class AppViewModel: ObservableObject {
         statusMessage = "Selected: \(url.lastPathComponent)"
         errorMessage = nil
     }
+
+    
 
     func updateWebURL(_ urlString: String) {
         webURLString = urlString

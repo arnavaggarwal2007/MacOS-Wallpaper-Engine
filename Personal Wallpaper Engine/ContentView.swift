@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var isCollectionEditorPresented = false
     @State private var isDeleteCollectionAlertPresented = false
     @State private var editingCollectionName: String?
+    @State private var isSidebarVisible = true
 
     var body: some View {
         ScrollView {
@@ -34,7 +35,7 @@ struct ContentView: View {
                 }
 
                 // Top utility bar (hero controls)
-                TopUtilityBar()
+                TopUtilityBar(isSidebarVisible: $isSidebarVisible)
                     .padding(.vertical, 4)
 
                 // MARK: - Preview Section

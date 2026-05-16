@@ -4,6 +4,7 @@ struct TopUtilityBar: View {
     @EnvironmentObject private var appModel: AppViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var buttonHovers: [String: Bool] = [:]
+    @Binding var isSidebarVisible: Bool
 
     private func button(key: String, action: @escaping () -> Void, label: @escaping () -> some View) -> some View {
         Button(action: action) {
@@ -61,14 +62,17 @@ struct TopUtilityBar: View {
 
             Spacer()
 
-            // Favorites (lightweight stub for now)
-            button(key: "favorites", action: {
-                appModel.statusMessage = "Added to favorites"
+            // Sidebar toggle
+            button(key: "sidebar", action: {
+                withAnimation(.easeInOut(duration: DesignTokens.Motion.standardDuration)) {
+                    isSidebarVisible.toggle()
+                }
             }) {
-                Image(systemName: "star")
+                Image(systemName: isSidebarVisible ? "sidebar.trailing" : "sidebar.trailing.badge.up")
+                    .font(.system(size: 14, weight: .semibold))
             }
-            .help("Add wallpaper to favorites")
-            .accessibilityLabel("Add to favorites")
+            .help(isSidebarVisible ? "Hide sidebar" : "Show sidebar")
+            .accessibilityLabel(isSidebarVisible ? "Hide sidebar" : "Show sidebar")
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
@@ -91,7 +95,7 @@ struct TopUtilityBar: View {
 }
 
 #Preview("Top Utility Bar") {
-    TopUtilityBar()
+    TopUtilityBar(isSidebarVisible: .constant(true))
         .environmentObject(AppViewModel())
         .padding()
 }
