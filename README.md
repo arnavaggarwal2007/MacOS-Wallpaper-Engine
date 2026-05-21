@@ -25,7 +25,7 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 | Layer | Technologies |
 |-------|--------------|
 | Language | Swift 5.10 |
-| Platform | macOS (Xcode deployment target 26.2; broader 12.0+ compatibility goal in roadmaps) |
+| Platform | macOS 15.0+ (deployment target 15.0; launch-on-login requires 13.2+ at runtime) |
 | UI | SwiftUI, AppKit |
 | Media | AVFoundation, AVPlayer, AVPlayerLayer |
 | Web Rendering | WebKit, WKWebView |

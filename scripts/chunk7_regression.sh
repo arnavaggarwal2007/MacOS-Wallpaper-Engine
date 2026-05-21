@@ -1,8 +1,13 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 set -euo pipefail
+setopt pipefail 2>/dev/null || set -o pipefail
 
 PROJECT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$PROJECT_DIR"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+XCODEBUILD="$SCRIPT_DIR/xcodebuild_ci.sh"
+chmod +x "$XCODEBUILD" 2>/dev/null || true
 
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 ARTIFACT_DIR="$PROJECT_DIR/artifacts/regression-$TIMESTAMP"
@@ -17,28 +22,33 @@ exec > >(tee -a "$LOGFILE") 2>&1
 
 echo "Regression run started: $TIMESTAMP"
 echo "DerivedData: $DERIVED"
+echo "CODE_SIGNING_ALLOWED=${CODE_SIGNING_ALLOWED:-YES}"
 
 # Build variants to run
 CONFIGS=("Debug" "Release")
 
+FIRST_CFG=1
 for cfg in "${CONFIGS[@]}"; do
   echo "\n--- Building configuration: $cfg ---"
   if [ "${CODE_SIGNING_ALLOWED:-YES}" = "NO" ]; then
-    echo "Running build with CODE_SIGNING_ALLOWED=NO"
-    env CODE_SIGNING_ALLOWED=NO TMPDIR="$TMPDIR" xcodebuild clean build -project "Personal Wallpaper Engine.xcodeproj" -scheme "Personal Wallpaper Engine" -configuration "$cfg" -derivedDataPath "$DERIVED" | tee "$ARTIFACT_DIR/build-$cfg.log"
-  else
-    TMPDIR="$TMPDIR" xcodebuild clean build -project "Personal Wallpaper Engine.xcodeproj" -scheme "Personal Wallpaper Engine" -configuration "$cfg" -derivedDataPath "$DERIVED" | tee "$ARTIFACT_DIR/build-$cfg.log"
+    echo "Running build with unsigned CI settings (CODE_SIGN_IDENTITY=-)"
+  fi
+  BUILD_ACTION=build
+  if [ "$FIRST_CFG" -eq 1 ]; then
+    BUILD_ACTION="clean build"
+    FIRST_CFG=0
+  fi
+  if ! TMPDIR="${TMPDIR:-/tmp}" "$XCODEBUILD" $BUILD_ACTION \
+    -project "Personal Wallpaper Engine.xcodeproj" \
+    -scheme "Personal Wallpaper Engine" \
+    -configuration "$cfg" \
+    -derivedDataPath "$DERIVED" \
+    2>&1 | tee "$ARTIFACT_DIR/build-$cfg.log"
+  then
+    echo "ERROR: $cfg build failed (see $ARTIFACT_DIR/build-$cfg.log)" >&2
+    exit 1
   fi
 done
-
-# Run the existing smoke script (it performs additional validations)
-if [ -x ./scripts/chunk7_smoke.sh ]; then
-  echo "\n--- Running chunk7_smoke.sh ---"
-  chmod +x ./scripts/chunk7_smoke.sh
-  ./scripts/chunk7_smoke.sh 2>&1 | tee "$ARTIFACT_DIR/chunk7_smoke.log" || echo "smoke script exited with non-zero status"
-else
-  echo "No chunk7_smoke.sh found or not executable"
-fi
 
 # Codesign check (skip if CI disables signing)
 APP_PATH="$DERIVED/Build/Products/Debug/Personal Wallpaper Engine.app"
@@ -51,7 +61,18 @@ if [ -d "$APP_PATH" ]; then
     codesign --verify --deep --strict --verbose=2 "$APP_PATH" || echo "codesign validation failed"
   fi
 else
-  echo "Warning: App not found at expected path: $APP_PATH"
+  echo "ERROR: App not found at expected path: $APP_PATH" >&2
+  echo "See $ARTIFACT_DIR/build-Debug.log for xcodebuild output." >&2
+  exit 1
+fi
+
+# Lightweight smoke validations (no second full rebuild)
+if [ -x ./scripts/chunk7_smoke.sh ]; then
+  echo "\n--- Bundle checks (smoke) ---"
+  export CODE_SIGNING_ALLOWED="${CODE_SIGNING_ALLOWED:-YES}"
+  export SMOKE_SKIP_BUILD=1
+  export SMOKE_APP_PATH="$APP_PATH"
+  ./scripts/chunk7_smoke.sh 2>&1 | tee "$ARTIFACT_DIR/chunk7_smoke.log" || echo "smoke checks exited with non-zero status"
 fi
 
 # Collect some metadata

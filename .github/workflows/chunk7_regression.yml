@@ -19,9 +19,11 @@ jobs:
 
       - name: Run regression (no codesign on CI)
         env:
+          CI: true
           CODE_SIGNING_ALLOWED: NO
           TMPDIR: ${{ runner.temp }}
         run: |
+          chmod +x ./scripts/xcodebuild_ci.sh
           ./scripts/chunk7_regression.sh
 
       - name: Upload regression artifacts

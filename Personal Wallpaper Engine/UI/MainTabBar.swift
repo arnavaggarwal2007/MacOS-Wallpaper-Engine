@@ -52,12 +52,18 @@ extension TabbedMainView.MainTab: CaseIterable {
 }
 
 #Preview {
-    @Previewable @State var selectedTab: TabbedMainView.MainTab = .home
+    MainTabBarPreview()
+        .frame(width: 900, height: 120)
+}
 
-    ZStack {
-        LinearGradient(colors: [.blue, .black], startPoint: .top, endPoint: .bottom)
-            .ignoresSafeArea()
-        MainTabBar(selectedTab: $selectedTab)
+private struct MainTabBarPreview: View {
+    @State private var selectedTab: TabbedMainView.MainTab = .home
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [.blue, .black], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            MainTabBar(selectedTab: $selectedTab)
+        }
     }
-    .frame(width: 900, height: 120)
 }
