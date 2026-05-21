@@ -33,12 +33,12 @@ for cfg in "${CONFIGS[@]}"; do
   if [ "${CODE_SIGNING_ALLOWED:-YES}" = "NO" ]; then
     echo "Running build with unsigned CI settings (CODE_SIGN_IDENTITY=-)"
   fi
-  BUILD_ACTION=build
+  BUILD_ARGS=(build)
   if [ "$FIRST_CFG" -eq 1 ]; then
-    BUILD_ACTION="clean build"
+    BUILD_ARGS=(clean build)
     FIRST_CFG=0
   fi
-  if ! TMPDIR="${TMPDIR:-/tmp}" "$XCODEBUILD" $BUILD_ACTION \
+  if ! TMPDIR="${TMPDIR:-/tmp}" "$XCODEBUILD" "${BUILD_ARGS[@]}" \
     -project "Personal Wallpaper Engine.xcodeproj" \
     -scheme "Personal Wallpaper Engine" \
     -configuration "$cfg" \
