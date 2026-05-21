@@ -5,6 +5,8 @@ struct CollectionSummaryCard: View {
     let isSelected: Bool
     let isLastUsed: Bool
     let mappingDescriptions: [String]
+    var previewSourceURL: String?
+    var collectionName: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
 
@@ -19,34 +21,47 @@ struct CollectionSummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
             HStack(alignment: .top, spacing: DesignTokens.Spacing.medium) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
+                if let previewSourceURL {
+                    WallpaperThumbnailView(
+                        urlString: previewSourceURL,
+                        collectionName: collectionName,
+                        width: DesignTokens.Surfaces.thumbnailLandscapeSummaryWidth,
+                        cornerRadius: DesignTokens.Corner.thumbnail
+                    )
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(collection.name)
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(DesignTokens.Colors.textPrimary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
 
-                        if isSelected {
-                            pill("Selected")
+                        if !collection.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text(collection.description)
+                                .font(DesignTokens.Typography.body)
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                                .lineLimit(2)
                         }
                     }
 
-                    if !collection.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(collection.description)
-                            .font(DesignTokens.Typography.body)
-                            .foregroundColor(DesignTokens.Colors.textSecondary)
-                            .lineLimit(2)
-                    }
+                    Spacer(minLength: 8)
                 }
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 6) {
+                HStack(spacing: 6) {
                     pill(collectionTypeLabel)
+
+                    if isSelected {
+                        pill("Selected")
+                    }
 
                     if isLastUsed {
                         pill("Last used")
                     }
+                }
                 }
             }
 
@@ -99,16 +114,19 @@ struct CollectionSummaryCard: View {
         }
         .shadow(color: Color.black.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.05), radius: isHovered ? DesignTokens.Elevation.cardShadowRadius : 2, x: 0, y: isHovered ? DesignTokens.Elevation.cardShadowYOffset : 1)
         .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
-        .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
+        .animation(DesignTokens.Motion.hoverAnimation(reduceMotion: reduceMotion), value: isHovered)
         .onHover { isHovered = $0 }
     }
 
     private func pill(_ text: String) -> some View {
         Text(text)
-            .font(DesignTokens.Typography.subtitle)
+            .font(.caption2.weight(.semibold))
             .foregroundColor(DesignTokens.Colors.primary)
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 3)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .fixedSize(horizontal: true, vertical: false)
             .background(DesignTokens.Colors.primary.opacity(0.10))
             .cornerRadius(999)
     }
@@ -116,12 +134,15 @@ struct CollectionSummaryCard: View {
     private func infoBadge(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(DesignTokens.Typography.subtitle)
+                .font(.caption2)
                 .foregroundColor(DesignTokens.Colors.textSecondary)
             Text(value)
-                .font(DesignTokens.Typography.subtitle)
+                .font(.caption2.weight(.semibold))
                 .foregroundColor(DesignTokens.Colors.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(

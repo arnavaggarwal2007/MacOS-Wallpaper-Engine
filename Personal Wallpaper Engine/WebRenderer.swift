@@ -7,6 +7,7 @@ final class WebRenderer: Renderer {
     private weak var containerView: NSView?
     private var webView: WKWebView?
     private var activeURL: URL?
+    private var currentScalingMode: VideoScalingMode = .resizeAspectFill
 
     func start(in containerView: NSView) async -> Result<Void, WallpaperError> {
         self.containerView = containerView
@@ -63,6 +64,7 @@ final class WebRenderer: Renderer {
     }
 
     func setScalingMode(_ mode: VideoScalingMode) async {
+        currentScalingMode = mode
         switch mode {
         case .resizeAspectFill:
             await runJavaScript("document.documentElement.style.objectFit='cover';")
@@ -84,6 +86,7 @@ final class WebRenderer: Renderer {
         webView = nil
         containerView = nil
         activeURL = nil
+        currentScalingMode = .resizeAspectFill
         logger.debug("WebRenderer disposed")
     }
 
@@ -111,7 +114,7 @@ final class WebRenderer: Renderer {
     }
 
     func scalingMode() async -> VideoScalingMode {
-        return .resizeAspectFill
+        currentScalingMode
     }
 
     func isValid() -> Bool {

@@ -40,22 +40,10 @@ struct DisplaySwitcherView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
             }
-            .frame(height: 174)
+            .frame(height: 200)
         }
         .padding(12)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(DesignTokens.Colors.cardBackground)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                }
-        }
+        .glassChrome(.panel)
     }
 
     private func button(for display: DisplayCard) -> some View {
@@ -108,8 +96,10 @@ struct DisplaySwitcherView: View {
                     .resizable()
                     .interpolation(.high)
                     .antialiased(true)
-                    .scaledToFit()
-                    .padding(6)
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .padding(0)
                     .background(DesignTokens.Colors.background.opacity(0.34))
             } else {
                 LinearGradient(

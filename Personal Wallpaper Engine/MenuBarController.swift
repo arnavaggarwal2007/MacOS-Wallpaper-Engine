@@ -15,7 +15,7 @@ final class MenuBarController: NSObject, ObservableObject {
         let statusBar = NSStatusBar.system
         statusItem = statusBar.statusItem(withLength: NSStatusItem.squareLength)
         
-        guard let button = statusItem?.button else {
+        guard statusItem?.button != nil else {
             logger.error("Failed to get status item button")
             return
         }

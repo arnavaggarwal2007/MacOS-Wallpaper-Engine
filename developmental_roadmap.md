@@ -1,6 +1,26 @@
 # VSCode-based Development Roadmap for macOS Wallpaper Engine Core
 
-**Last Updated:** May 4, 2026 | **Status:** Phase 5 Complete (UI & Collections Planning) | **Next Phase:** Phase 6A—Wallpaper Collections | **macOS Version Support:** 12.0+ | **Swift Version:** 5.10+
+**Last Updated:** May 20, 2026 | **Status:** Phase 6A complete; UI Final Vision Phases 0–4 complete and merged to `main` | **Next:** Part 2 / library features per `version2_developmental_roadmap.md` (optional) | **macOS:** Xcode target 26.2 | **Swift:** 5.10+
+
+---
+
+## Final UI Vision (May 20, 2026)
+
+Canonical spec: KB `Feature-UI-Final-Vision.md` and repo `ui_revamp_roadmap.md`.
+
+- **Home:** Edge-to-edge hero preview (live wallpaper background); scroll down for display carousel; toggleable translucent status sidebar.
+- **Tabs:** Home | Collections | Setups | Settings (no community wallpaper carousel).
+- **Execution order:** (0) Documentation → (1) Bug fixes → (2) UI revamp → (3–4) Validation & polish — **done** (see `ui_revamp_roadmap.md`).
+
+Overlay-sidebar refactor notes: see `PHASE_UI-Overlay-Sidebar-May16.md` (not the same as Phase 6B Desktop Setups).
+
+---
+
+## May 16, 2026 — UI Architecture (Historical)
+
+A layout issue was identified after the overlay-sidebar refactor (`ModernHomeView.swift`): overlapping layers and possible blocked interactions. **Remediation** is tracked under UI revamp Phase 2a (three-layer ZStack, translucent materials, scroll-down carousel)—not a permanent block on Desktop Setups implementation.
+
+---
 
 ## Table of Contents
 
@@ -1806,6 +1826,226 @@ Notes: Added `WebRenderer.swift` (WKWebView-backed) in the app target; configura
 
 ---
 
+---
+
+## Phase 6-UI-FIX: Bug Fixes & Hero-First Architecture Refactor (3–4 days)
+
+**Status:** Superseded by Final UI Vision execution plan (May 2026) — work folded into Phase 1 (bug verification) + `ui_revamp_roadmap.md` Phase 2a  
+**Priority:** P0 for UI quality (not a doc-level block on Desktop Setups code)  
+**Target:** Stabilize UI, fix critical bugs, implement correct hero-first architecture  
+**Acceptance:** All user interactions responsive, hero preview scales correctly, no visual glitches
+
+### Problem Summary
+
+The May 16 overlay-sidebar refactor introduced a critical UI layout bug:
+
+**Symptoms:**
+- UI elements overlapping incorrectly (text bleeding through wallpaper)
+- Display switching non-responsive (interactions blocked)
+- Wallpaper application broken (no feedback or action)
+- Layout breaks on different window sizes (clipping, misalignment)
+
+**Root Cause:**
+- Multiple full-screen `VStack` layers in a `ZStack`, each with `.frame(maxWidth: .infinity, maxHeight: .infinity)`
+- Conflicting background colors and z-index layering
+- Overlay blindly covering content and blocking click zones
+
+**This Phase's Task:**
+- Fix the `ZStack` architecture to use correct three-layer model
+- Restore user interactions (display switching, wallpaper application)
+- Implement responsive hero-first layout
+- Verify image quality (sharp, not blurry)
+
+### Phase 6-UI-FIX Tasks (3–4 days)
+
+#### **Task 1: Refactor `ModernHomeView.swift` ZStack Architecture (1–1.5 days)**
+
+**Current Broken Structure:**
+```swift
+ZStack {
+    VStack { /* hero + display switcher */ }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white)
+    
+    VStack { /* sidebar */ }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)  // Still blocks content
+}
+```
+
+**Corrected Three-Layer Structure:**
+```swift
+ZStack(alignment: .topTrailing) {
+    // Layer 1: Background - Hero wallpaper (edge-to-edge)
+    ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+            HeroWallpaperView()  // Responsive 16:9 aspect ratio
+                .frame(maxWidth: .infinity)
+                .padding(28)
+            
+            DisplaySwitcherView()  // Carousel below hero
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 28)
+            
+            // Main content area
+            VStack(alignment: .leading, spacing: 16) {
+                // Collections preview, etc.
+            }
+            .frame(maxWidth: .infinity)
+            .padding(28)
+        }
+    }
+    .zIndex(0)  // Content layer
+    
+    // Layer 3: Overlay - Floating controls
+    if showTopControls {
+        VStack {
+            TopUtilityBar()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .zIndex(1)  // Overlay layer
+    }
+    
+    // Layer 2: Sidebar panel (if visible)
+    if isSidebarVisible {
+        SidebarPanel()
+            .zIndex(0.5)  // Between content and overlay
+    }
+}
+```
+
+**Key Changes:**
+- Single `ScrollView` wrapping all content (not multiple nested ones)
+- Clear z-index layering: 0 = content, 0.5 = sidebar, 1 = overlay
+- No `frame(maxHeight: .infinity)` on content VStack (only overlay controls if needed)
+- Sidebar positioned with explicit trailing edge, not overlapping entire view
+
+**Deliverables:**
+- ✅ App builds without layout errors
+- ✅ No visual overlapping of elements
+- ✅ Content scrolls smoothly
+- ✅ Sidebar doesn't block interactive content
+
+#### **Task 2: Fix `HeroWallpaperView.swift` Responsive Scaling (0.5 days)**
+
+**Current Issue:**
+- Fixed height constraints cause cropping on small windows
+- Aspect ratio not maintained on resize
+
+**Solution:**
+```swift
+HeroWallpaperView()
+    .frame(maxWidth: .infinity)
+    .aspectRatio(16 / 9, contentMode: .fit)  // Responsive scaling
+    .cornerRadius(28)
+    .padding(28)
+```
+
+**Verification:**
+- ✅ Test 800×600 window: hero scales down, no clipping
+- ✅ Test fullscreen: hero scales up, maintains aspect ratio
+- ✅ Test resize: hero smoothly scales as window resizes
+- ✅ Image quality sharp (not blurry)
+
+#### **Task 3: Fix `DisplaySwitcherView.swift` Interactivity (0.5 days)**
+
+**Current Issue:**
+- Display carousel not responding to clicks
+- No visual feedback on display selection
+
+**Solution:**
+- Ensure carousel is in content layer (zIndex 0), not covered by overlays
+- Add `.onTapGesture` with proper hit detection
+- Add visual feedback (highlight, scale animation)
+
+**Verification:**
+- ✅ Click display thumbnail → hero preview updates immediately
+- ✅ Visual feedback (highlight changes) on hover/click
+- ✅ Display name and resolution visible
+- ✅ All displays clickable and responsive
+
+#### **Task 4: Test User Interactions End-to-End (0.5–1 days)**
+
+**Test Matrix:**
+
+| Action | Expected Behavior | Status |
+|--------|-------------------|--------|
+| Click display thumbnail | Hero preview updates; display selected | ⚠️ To test |
+| Apply wallpaper | Wallpaper applies to selected display | ⚠️ To test |
+| Bookmark wallpaper | Bookmark saved; bookmark list updates | ⚠️ To test |
+| Edit collection | Collection editor opens; displays list | ⚠️ To test |
+| Sidebar toggle | Sidebar shows/hides smoothly | ⚠️ To test |
+| Preview toggle | Preview mode on/off works | ⚠️ To test |
+| Mute button | Mute state toggles; icon updates | ⚠️ To test |
+
+**Responsive Layout Tests:**
+
+| Window Size | Hero Scales | No Clipping | Sidebar Visible | All Controls Responsive |
+|-------------|------------|------------|-----------------|------------------------|
+| 800×600 | ✅ | ✅ | ✅ | ✅ |
+| 1024×768 | ✅ | ✅ | ✅ | ✅ |
+| 1920×1080 | ✅ | ✅ | ✅ | ✅ |
+| Fullscreen | ✅ | ✅ | ✅ | ✅ |
+
+#### **Task 5: Verify Image Quality and Preview Rendering (0.5 days)**
+
+**Quality Checks:**
+- ✅ Hero preview image sharp (not blurry)
+- ✅ Per-display tiles use correct aspect ratio (16:9, not square)
+- ✅ Collection thumbnails render correctly
+- ✅ No artifacts or visual glitches
+
+### Phase 6-UI-FIX Acceptance Criteria
+
+**Critical (Must Fix):**
+- ✅ App builds cleanly without layout errors
+- ✅ No UI element overlapping or visual glitches
+- ✅ Hero preview displays without clipping on all window sizes (800×600 to fullscreen)
+- ✅ Display switching is responsive and updates hero immediately
+- ✅ Wallpaper application works end-to-end
+- ✅ Sidebar doesn't block interactive content areas
+
+**Important (Must Verify):**
+- ✅ Hero preview is 50–60% of visible area (responsive)
+- ✅ Collections sidebar is visible and functional
+- ✅ All user interactions (buttons, toggles, pickers) are responsive
+- ✅ Layout is responsive across all window sizes and aspect ratios
+- ✅ Image quality is sharp (not blurry or pixelated)
+
+**Nice-to-Have (Polish):**
+- ✅ Smooth animations on state changes (display switch, sidebar toggle)
+- ✅ Accessibility: Keyboard navigation, focus indicators
+- ✅ Dark mode support (if applicable)
+
+### Build & Verification
+
+**Build Command:**
+```bash
+xcodebuild -project "Personal Wallpaper Engine.xcodeproj" \
+  -scheme "Personal Wallpaper Engine" \
+  -configuration Debug \
+  -destination "platform=macOS" \
+  build
+```
+
+**Expected Output:**
+```
+Build complete! (X.XXs)
+```
+
+**No Errors or Warnings:** Required for phase completion
+
+### Next Steps After Phase 6-UI-FIX
+
+Once this phase is complete:
+1. ✅ Core UI architecture is stable and responsive
+2. ✅ All user interactions are working
+3. ✅ Hero-first layout is implemented
+4. ✅ Ready to proceed with Phase 6B (Desktop Setups)
+
+---
+
 ## Phase 6 Roadmap: Collections and Desktop Setups
 
 Phase 6 introduces **Wallpaper Collections** (Phase 6A) and **Desktop Setups** (Phase 6B)—two complementary features that enable users to organize, save, and restore complex wallpaper configurations.
@@ -2159,7 +2399,9 @@ The UI Overhaul is functionally complete, but the interface still needs a dedica
 
 Each chunk should be tracked in the KB (Feature pages and per-chunk deliverables) and in the issue tracker to enable parallel work and clear handoffs.
 
-### **Phase 6B: Desktop Setups** (Estimated 3–4 days, planned for after 6A)
+### **Phase 6B: Desktop Setups** (Estimated 3–4 days; **in progress** in codebase as of May 2026)
+
+**Status:** `SavedSetup` model, `SettingsStore` persistence, `AppViewModel` CRUD/restore, and sidebar UI exist on branch; full **Setups tab** and QA pending per `ui_revamp_roadmap.md` Phase 2b.
 
 #### **Scope & Architecture**
 

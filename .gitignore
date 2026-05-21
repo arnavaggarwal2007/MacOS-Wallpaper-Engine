@@ -40,17 +40,18 @@ Carthage/Build/
 *.obj
 *.linkfilelist
 *.hmap
-*.sdk
+*.pcm
 
 # Derived data variants used in local builds
 .derivedData*
 *.deriveddata
+.derivedDataPhase*
+.phase*.log
 
-# Xcode build outputs
-build/
+# Xcode build outputs (duplicate patterns kept for clarity)
 /**/*.build/
 
-# IDEs
+# IDEs (local editor settings only)
 .vscode/
 .idea/
 
@@ -58,29 +59,22 @@ build/
 tmp/
 *.tmp
 
-# Logs
+# Regression / smoke artifacts
+artifacts/
+
+# Local logs (never commit Xcode export or debug captures)
 *.log
-
-# Prevent accidentally adding large binary caches
-*.pcm
-
-# Custom derived-data used in this project
-.derivedDataPhase*
+Logs/Build*.txt
+Logs/console_logs.md
+Logs/console_logs_kb_summary.md
 
 # Ignore user session files
 *.xcscmblueprint
 
-# Ignore unimportant documentation
+# Optional local-only docs (canonical specs live in repo root + KB)
 guidelines.md
 best_coding_practices.md
 update_KB_guidelines.md
-
-# End of .gitignore
-artifacts/
-Logs/console_logs_kb_summary.md
-Logs/console_logs.md
 UI_Overhaul_1.md
-.gitignore
-UI_Overhaul_Checklist.md
 UI_Overhaul_2.md
-.github/workflows/chunk7_regression.yml
+UI_Overhaul_Checklist.md

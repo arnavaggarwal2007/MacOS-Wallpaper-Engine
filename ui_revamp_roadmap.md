@@ -1,495 +1,246 @@
-# UI Revamp Roadmap: Modern macOS Wallpaper App
+# UI Revamp Roadmap — Final Vision (Wallspace / Wallux Competitive)
 
-**Status:** Planning phase  
-**Start Date:** 2026-05-15  
-**Target Completion:** ~10–14 days (8 phases)  
-**Vision:** Transform the app from a "polished settings panel" to a "sleek, modern macOS wallpaper showcase app" inspired by Wallspace.
-
----
-
-## Executive Summary
-
-The current UI is functional and polished, but positioned like system preferences rather than a modern macOS application. This overhaul will:
-
-- **Emphasize visual beauty**: Hero preview dominates (50–60% of window); controls are minimal and overlay-based
-- **Adopt hero-first layout**: Large, high-quality wallpaper preview with display switcher carousel
-- **Improve image quality**: Fix blurry previews and incorrect aspect ratios (square per-display tiles)
-- **Create visual collections browsing**: Collections sidebar with rich thumbnails, not text-heavy cards
-- **Design for future extensibility**: Structure assumes online library integration later (not implementing now)
-- **Integrate per-display UX**: Display switching in hero area via carousel; no separate settings section
-- **Modernize interactions**: Full-screen collection editor sheet with live workspace preview
-- **Add depth and polish**: Glassmorphism, gradients, proper shadows, and smooth animations
-
-**Key Inspiration:** Wallspace (hero-dominant layout, visual-first design, discovery-focused browsing)
+**Status:** Complete — merged to `main` May 20, 2026  
+**Canonical spec:** KB `Feature-UI-Final-Vision.md`  
+**Execution order:** Phase 0 (docs) → Phase 1 (broken fixes only) → Phase 2 (this roadmap) → Phase 3 (validation)  
+**Out of scope:** Community/online wallpaper carousel, Workshop, lock screen (future)
 
 ---
 
-## Phase 1: Architecture & Hero-First Layout (2–3 days)
+## Design references
 
-**Goal:** Establish new layout model with hero preview as primary content.
+- [Wallspace](https://wallspace.app/) — preview-first, native, minimal chrome, multi-display
+- [Wallux](https://wallux.app/) — efficient engine, per-display, clean management UI
 
-### Tasks
-
-1. **Redesign ContentView.swift** — Major rewrite
-   - New split layout: Left (70%) = hero + display switcher; Right (30%) = collections sidebar + quick controls
-   - Hero preview: 50–60% of window height (vs. current ~20%)
-   - Top chrome: Floating toolbar with play/pause, mute, settings (minimal)
-   - Collections sidebar: Scrollable list with visual thumbnails
-   - Per-display switch integrated into hero area (not separate section)
-
-2. **Create `HeroWallpaperView.swift`** (new component)
-   - Large, high-quality wallpaper preview
-   - Overlay controls: display name, scaling mode, quick apply/preview buttons
-   - Gradient overlay for text legibility
-   - Smooth transitions when switching displays
-
-3. **Create `CollectionsSidebarView.swift`** (new component)
-   - Vertical scrollable list of collections
-   - Small thumbnail + collection name + source count per item
-   - Selected state highlighting
-   - Quick action buttons on hover (edit, apply, delete)
-
-4. **Refactor `TopUtilityBar.swift`**
-   - Make floating and minimal
-   - Position as overlay on hero preview
-   - Subtle background (glassmorphism or semi-transparent blur)
-
-### Files Modified
-- `ContentView.swift` — Major rewrite
-- `TopUtilityBar.swift` — Refactor to floating layout
-- `HeroWallpaperView.swift` — Create new
-- `CollectionsSidebarView.swift` — Create new
-- `AppViewModel.swift` — Minor updates for display switcher state
-
-### Acceptance Criteria
-- ✅ App builds cleanly after refactor
-- ✅ Hero preview is 50–60% of window height
-- ✅ Collections sidebar visible on right
-- ✅ Floating toolbar appears over hero
-- ✅ Layout responsive to window resize
+**Personal Wallpaper Engine difference:** Local files and user collections only—no discovery grid on Home.
 
 ---
 
-## Phase 2: Per-Display Browsing (2 days)
+## Target experience
 
-**Goal:** Integrate multi-display switching into hero view with carousel.
+### Home tab
 
-### Tasks
+1. **Hero (layer 0):** Edge-to-edge live preview = app background; shows resolved wallpaper for selected display.
+2. **Content (layer 1):** Translucent `TopUtilityBar`; scroll **down** to reveal **display carousel** (select preview + edit target).
+3. **Overlay (layer 2):** Toggleable **right sidebar** — status only (display, wallpaper name, collection/setup status, save setup, banners).
 
-1. **Create `DisplaySwitcherView.swift`** (new component)
-   - Horizontal carousel of display thumbnails
-   - Shows current wallpaper for each display
-   - Tap to switch hero preview
-   - Displays name + resolution per display
+### Tabs (top of window)
 
-2. **Update `HeroWallpaperView.swift`**
-   - Display switching triggers smooth hero preview transition
-   - Show "bound to Display X" indicator for per-display wallpapers
-   - No separate "Per-Display Settings" section
+| Tab | Responsibility |
+|-----|----------------|
+| **Home** | Preview, apply local wallpaper, per-display carousel |
+| **Collections** | Full CRUD / apply (`CollectionsTabView`) |
+| **Setups** | List, save, restore, delete (`SetupsTabView` — extract from sidebar) |
+| **Settings** | Renderer, scaling, mute, per-display mode, launch on login, web URL |
 
-3. **Integrate display carousel into hero area**
-   - Below main preview or in a floating carousel UI
+### Visual rules
 
-### Files Modified
-- `HeroWallpaperView.swift` — Add display switching logic
-- `DisplaySwitcherView.swift` — Create new
-- `ContentView.swift` — Integrate carousel
-
-### Acceptance Criteria
-- ✅ Display carousel visible below or adjacent to hero
-- ✅ Clicking display thumbnail switches hero preview smoothly
-- ✅ Display name and resolution shown
-- ✅ Per-display wallpaper indicator visible
+- Translucent, legible overlays (`.ultraThinMaterial`, light hero scrims)—not opaque full-window dark gradients.
+- Three logical ZStack layers; no full-screen non-interactive layers stealing clicks.
+- Hero preview URL must match engine playback (bookmarks / resolved URLs).
 
 ---
 
-## Phase 3: Visual Refinements & Depth (2 days)
+## Phase 1 — Verify existing behavior (prerequisite)
 
-**Goal:** Add premium, modern aesthetic through colors, typography, shadows, and animations.
+**Status:** Code fixes applied 2026-05-20 — **local build + manual matrix required** (`PHASE_1_VERIFICATION.md`).
 
-### Tasks
+**Goal:** Confirm what is broken before UI refactor. **No new features.**
 
-1. **Enhance `DesignTokens.swift`**
-   - Add new tokens: `elevatedShadow`, `heroGradient`, `cardGradient`
-   - Increase shadow depth for layered feel
-   - Add gradient overlay colors for hero image legibility
-   - Increase typography sizes for hero prominence
-   - Add backdrop blur tokens for glassmorphism
+| Check | Action if fail |
+|-------|----------------|
+| Display carousel selects display | Fix selection binding |
+| Apply wallpaper (unified + per-display) | Fix `AppViewModel` / bookmarks |
+| Collection apply from Collections tab | Regression only |
+| Setup save/restore | Regression only |
+| Hero preview vs desktop playback | ✅ `heroPreviewURL(forDisplayID:)` |
+| Web mode status message | ✅ Updated `updateRendererMode` copy |
+| `WebRenderer.scalingMode()` | ✅ `currentScalingMode` tracking |
+| ZStack blocked clicks | ✅ Minimal hit-test fix on decorative layers |
 
-2. **Update component styling**
-   - Collection cards: Add gradient overlays and text overlays
-   - Buttons: Larger, rounded, more prominent (Apple-style)
-   - Use `.continuous` corner styles consistently
-   - Reduce sharp corners throughout
-
-3. **Implement glassmorphism/backdrop blur**
-   - Top toolbar: Subtle blur background
-   - Collections sidebar: Optional semi-transparent blur
-   - Floating panels: Depth through shadows and blur
-
-### Files Modified
-- `DesignTokens.swift` — Add new tokens
-- `CardView.swift` — Update styling with gradients and depth
-- `HeroWallpaperView.swift` — Add gradient overlay
-- `CollectionsSidebarView.swift` — Add backdrop blur
-- `TopUtilityBar.swift` — Add glassmorphic background
-
-### Acceptance Criteria
-- ✅ New shadow tokens applied consistently
-- ✅ Gradient overlays visible on collection cards
-- ✅ Backdrop blur visible on sidebar and toolbar
-- ✅ Typography sizes increased for prominence
-- ✅ No sharp corners; consistent `.continuous` radius
+**Exit:** Smoke + manual matrix pass; then Phase 2a.
 
 ---
 
-## Phase 4: Collections Editor & Modals (2 days)
+## Phase 2a — Home shell (3–4 days)
 
-**Goal:** Transform collection editor from cramped form to immersive full-screen sheet.
+**Status:** Implemented 2026-05-20
 
-### Tasks
+**Files:** `ModernHomeView.swift`, `HeroWallpaperView.swift`, `DisplaySwitcherView.swift`, `TopUtilityBar.swift`, `CollectionsTabView.swift`
 
-1. **Redesign `CollectionEditorView.swift`** — Major rewrite
-   - Full-screen sheet (not modal dialog)
-   - Split layout: Left (60%) = hero workspace preview; Right (40%) = settings
-   - Workspace preview: Live grid/carousel of sources being edited
-   - Updates in real-time as sources are added/removed
-   - Source addition feels more visual/browsing, less form-like
+**Tasks:**
 
-2. **Create `CollectionWorkspacePreview.swift`** (new component)
-   - Live preview of collection as you edit
-   - Shows thumbnails of sources at proper aspect ratios
-   - Updates as sources are added/removed
-   - Grid or carousel layout
+1. ✅ Remove page-title ZStack overlays ("Wallpaper Configuration", "Wallpaper Collections").
+2. ✅ Collapse to **3-layer** ZStack (hero → utility bar + scroll → sidebar).
+3. ✅ Move display carousel **into ScrollView**; remove bottom overlay layer.
+4. ✅ Replace opaque gradients with **`.ultraThinMaterial`** on Home and Collections.
+5. Hero uses resolved preview URL from `AppViewModel` (Phase 1).
 
-3. **Polish `CollectionSourceInput.swift`**
-   - Less form-like appearance
-   - Visual file browser with thumbnail previews
-   - Display mapping shown as visual selectors (not dropdowns)
+**Acceptance:**
 
-### Files Modified
-- `CollectionEditorView.swift` — Major rewrite to full-screen sheet
-- `CollectionWorkspacePreview.swift` — Create new
-- `CollectionSourceInput.swift` — Polish and simplify
-- `ContentView.swift` — Update sheet presentation
-
-### Acceptance Criteria
-- ✅ Collection editor appears as full-screen sheet
-- ✅ Workspace preview shows live collection thumbnail grid
-- ✅ Settings on right side; clear and uncluttered
-- ✅ Sources update in real-time on preview
-- ✅ No form-like appearance; visual and inviting
+- [x] No page-title overlays blocking utility bar or collection cards
+- [x] `TopUtilityBar` unobstructed on Home
+- [x] Collections tab content starts below tab bar without floating header
+- [x] Carousel only in scroll region (not duplicate bottom overlay)
+- [x] Scroll down to reveal display carousel (Phase 2d)
+- [x] Translucent glass chrome on utility bar, tab pills, display panel (Phase 2d)
+- [ ] 800×600 through fullscreen — no clip/block on hero (verify locally)
+- [ ] Display switch and apply responsive (verify locally)
 
 ---
 
-## Phase 5: Image Quality & Aspect Ratios (1 day)
+## Phase 2b — Four tabs + slim sidebar (1–2 days)
 
-**Goal:** Fix preview blurriness and incorrect proportions.
+**Status:** Implemented 2026-05-20
 
-### Tasks
+**Files:** `TabbedMainView.swift`, `SetupsTabView.swift`, `SettingsTabView.swift`, `ModernHomeView.swift`
 
-1. **Review all preview image rendering**
-   - Ensure `WallpaperPreviewCard` uses `.resizable().scaledToFill()` with proper clipping
-   - Remove any blur filters or unintended down-sampling
-   - Verify image scaling logic is optimal
+**Tasks:**
 
-2. **Fix per-display preview proportions**
-   - Currently rendering as squares (incorrect)
-   - Change to proper 16:9 or matching source aspect ratio
-   - Update `PerDisplayPreviewTile.swift` sizing
+1. ✅ Add **Setups** and **Settings** tabs.
+2. ✅ Migrate setup list/restore/delete to Setups tab; settings cards to Settings tab.
+3. ✅ Slim Home sidebar: display, wallpaper, collection status (+ apply shortcut), setup status, save setup, status banners.
+4. ✅ Remove collection editor/setup CRUD and workspace controls from Home sidebar.
 
-3. **Ensure thumbnail sharpness**
-   - Verify thumbnails are cached and not re-rendered
-   - Check sampling filters are appropriate
-   - No unnecessary image processing
+**Acceptance:**
 
-### Files Modified
-- `WallpaperPreviewCard.swift` — Fix image rendering
-- `PerDisplayPreviewTile.swift` — Fix aspect ratio from square
-- `HeroWallpaperView.swift` — Ensure high-quality rendering
-- Image caching logic review
-
-### Acceptance Criteria
-- ✅ Preview images are sharp, not blurry
-- ✅ Per-display tiles show proper 16:9 ratio (not square)
-- ✅ Hero preview is high-quality
-- ✅ No artifacting or unexpected scaling
+- [x] Four tabs navigable
+- [x] Home sidebar ≤ status blocks per `Feature-UI-Final-Vision`
+- [x] Collections tab remains sole full editor home
 
 ---
 
-## Phase 6: Collections Browsing & Discovery (1–2 days)
+## Phase 2c — Visual polish (2–3 days)
 
-**Goal:** Make collections browsing feel like Wallspace's carousel experience.
+**Status:** Implemented 2026-05-20
 
-### Tasks
+**Files:** `DesignTokens.swift`, `MainTabBar.swift`, `WallpaperThumbnail.swift`, `CollectionThumbnailStrip.swift`, `CollectionSummaryCard.swift`, `CollectionsTabView.swift`, `SetupPreviewCard.swift`, `TabbedMainView.swift`
 
-1. **Enhance collections sidebar**
-   - Vertical scrollable with richer visual cards
-   - Thumbnail of first source in collection
-   - Collection name overlaid (like Wallspace)
-   - Type badge (Simple/Display-Bound)
-   - Source count indicator
+**Tasks:**
 
-2. **Visual collection cards**
-   - Thumbnail background with text overlay
-   - Hover state: Show quick actions (apply, edit, delete)
-   - Smooth transitions and animations
-   - Selection highlighting
+1. ✅ Glassmorphism / shadow depth tokens (`DesignTokens.Surfaces`, shared scroll backdrop opacity).
+2. ✅ Thumbnail-forward collection strip + preview on `CollectionSummaryCard`.
+3. ✅ PR4 motion helpers (`Motion.selectionAnimation`, `hoverAnimation`); `reduceMotion` on setup cards.
+4. ⏭ Optional: `CollectionWorkspacePreview` split editor (deferred).
+5. ✅ Labeled `MainTabBar` (icon + text); legacy `ContentView` / `HomeTabView` marked unused; `TransparentTabSwitcher` deprecated.
 
-3. **Add carousel-like feel (if horizontal layout)**
-   - Scrollable carousel of collection cards
-   - Thumbnail-based browsing
-   - Similar to Wallspace grid
+**Acceptance:**
 
-### Files Modified
-- `CollectionsSidebarView.swift` — Enhance visual cards
-- New collection card component (if needed)
-- Motion tokens for smooth transitions
-
-### Acceptance Criteria
-- ✅ Collection cards show thumbnails prominently
-- ✅ Hover actions visible and accessible
-- ✅ Smooth animations on interaction
-- ✅ Selection state clear
-- ✅ Type badge visible
+- [x] Tab bar shows **Home**, **Collections**, **Setups**, **Settings** labels
+- [x] Premium translucent aesthetic on management tabs
+- [x] Collections tab thumbnail strip + summary preview
 
 ---
 
-## Phase 7: Global Settings & Refinements (1 day)
+## Phase 2d — Home glass + scroll reveal (2026-05-20)
 
-**Goal:** Move less-used controls out of hero area; add final polish.
+**Status:** Implemented 2026-05-20
 
-### Tasks
+**Files:** `UI/GlassChrome.swift`, `MainTabBar.swift`, `TopUtilityBar.swift`, `ModernHomeView.swift`, `DisplaySwitcherView.swift`, `DesignTokens.swift`
 
-1. **Create `SettingsPanelView.swift`** (new component or refactored section)
-   - Renderer mode (Video/Web)
-   - Scaling mode global default
-   - Launch on login
-   - Less prominent in main view
-   - Accessible via settings icon or menu
+**Tasks:**
 
-2. **Fine-tune spacing and padding**
-   - Apply new spacing tokens consistently
-   - Ensure text is never cramped
-   - Proper breathing room around controls
-
-3. **Polish animations and transitions**
-   - Smooth display switching
-   - Fade/scale on collection selection
-   - Gentle motion on hover
-
-### Files Modified
-- `SettingsPanelView.swift` — Create new or refactor existing
-- `ContentView.swift` — Finalize spacing and layout
-- `TopUtilityBar.swift` — Polish animations
-- `DesignTokens.swift` — Finalize all spacing values
-
-### Acceptance Criteria
-- ✅ Settings accessible but not cluttering main view
-- ✅ Consistent spacing throughout
-- ✅ All motion feels smooth and purposeful
-- ✅ No cramped or hard-to-read text
+1. Shared `GlassChrome` + `VisualEffectView` (HUD window material, pill/bar/panel styles).
+2. `MainTabBar` — pill-only glass; no full-width grey strip.
+3. `TopUtilityBar` + `DisplaySwitcherView` + Home sidebar — glass panels.
+4. Home scroll spacer (~62% height) reveals display carousel; “Scroll for Displays” hint.
+5. Removed Layer 1 full-window material blanket.
 
 ---
 
-## Phase 8: Validation & Testing (1 day)
+## Phase 3 — Validation (1 day)
 
-**Goal:** Comprehensive testing and final visual acceptance.
+**Status:** Automated complete 2026-05-20; manual matrix in `PHASE_3_VALIDATION.md`
 
-### Tasks
-
-1. **Smoke tests**
-   - Build succeeds in Debug configuration
-   - App launches without crashes
-   - All sections render without errors
-
-2. **Regression tests**
-   - Collection creation/editing works
-   - Collection apply works (simple and display-bound)
-   - Per-display wallpaper switching works
-   - Settings persistence works
-   - Launch on login functions
-
-3. **Visual acceptance pass**
-   - Compare against Wallspace screenshots
-   - Verify hero-first layout works
-   - Check image quality and aspect ratios
-   - Validate animation smoothness
-   - Test responsive layout (narrow/wide windows)
-
-4. **Performance validation**
-   - No lag on preview switching
-   - Smooth scrolling in collections sidebar
-   - Image rendering is efficient
-
-### Files Modified
-- All files: Verify no warnings or errors
-- Test scripts may need updates
-
-### Acceptance Criteria
-- ✅ All smoke tests pass
-- ✅ All regression tests pass
-- ✅ Visual comparison: UI matches Wallspace inspiration
-- ✅ No compile warnings or errors
-- ✅ Performance is smooth across all interactions
-- ✅ Responsive layout works on narrow and wide windows
+- [x] `scripts/chunk7_smoke.sh` — build + bundle check
+- [x] `scripts/chunk7_regression.sh` — Debug/Release
+- [x] Manual sign-off (user verified May 20, 2026)
+- [x] Always per-display (toggle removed); Home **Choose Wallpaper** restored
+- [x] Collection apply refreshes Home preview
+- [x] Merged `ui/polish/pr4-motion` → `main`
 
 ---
 
-## Summary of All Files Modified/Created
+## Phase 4a — App-wide wallpaper background (2026-05-20)
 
-### Major Rewrites
-- `ContentView.swift` — New hero-first layout with split view
-- `CollectionEditorView.swift` — Full-screen sheet with workspace preview
+**Status:** Implemented 2026-05-20
 
-### New Components
-- `HeroWallpaperView.swift` — Large preview with overlay controls
-- `DisplaySwitcherView.swift` — Multi-display carousel
-- `CollectionsSidebarView.swift` — Visual collections browser
-- `CollectionWorkspacePreview.swift` — Live collection preview during editing
-- `SettingsPanelView.swift` — Global settings panel
+**Files:** `UI/AppWallpaperBackground.swift`, `TabbedMainView.swift`, `ModernHomeView.swift`, `CollectionsTabView.swift`, `SetupsTabView.swift`, `SettingsTabView.swift`, `DesignTokens.swift`
 
-### Refactors & Polish
-- `TopUtilityBar.swift` — Floating, minimal toolbar
-- `DesignTokens.swift` — New tokens for depth, shadows, gradients
-- `CardView.swift` — Updated styling with depth
-- `WallpaperPreviewCard.swift` — Fix image quality; add gradient
-- `PerDisplayPreviewTile.swift` — Fix aspect ratio
-- `CollectionSourceInput.swift` — Simplify, visual file browser
-- `AppViewModel.swift` — Minor display switcher state updates
+**Tasks:**
 
-### Deprecated/Retired
-- `PerDisplayCard.swift` — Functionality absorbed into hero + display carousel
-- `TopUtilityBar.swift` (current form) — Reimplemented as floating overlay
+1. Shared `AppWallpaperBackground` at shell level (hero vs management intensity).
+2. Remove duplicate Home hero layer; management tabs use transparent scroll roots.
+3. Blur + scrim on non-Home tabs for readability.
 
 ---
 
-## Timeline
+## Phase 4b — Management tab visual refresh (2026-05-20)
 
-| Phase | Duration | Start | End |
-|-------|----------|-------|-----|
-| 1: Layout & Hero | 2–3 days | Day 1 | Day 3 |
-| 2: Per-Display | 2 days | Day 4 | Day 5 |
-| 3: Visual Polish | 2 days | Day 6 | Day 7 |
-| 4: Editor & Modals | 2 days | Day 8 | Day 9 |
-| 5: Image Quality | 1 day | Day 10 | Day 10 |
-| 6: Collections Browse | 1–2 days | Day 11 | Day 12 |
-| 7: Settings & Refinements | 1 day | Day 13 | Day 13 |
-| 8: Validation & Testing | 1 day | Day 14 | Day 14 |
-| **Total** | **~10–14 days** | — | — |
+**Status:** Implemented 2026-05-20
+
+**Files:** `UI/TabHeaderView.swift`, `UI/GlassCardView.swift`, `CollectionsTabView.swift`, `SetupsTabView.swift`, `SettingsTabView.swift`
+
+**Tasks:**
+
+1. Glass section headers and cards on Collections / Setups / Settings.
+2. Collections sticky action bar + 2-column grid when multiple collections.
+3. Settings grouped sections with captions.
 
 ---
 
-## Design Decisions
+## Phase 4c — Home scroll performance (2026-05-20)
 
-### Hero-First Layout (Option: Middle of 1 & 2)
-- Large hero preview dominates visual hierarchy
-- Collections sidebar secondary but visible
-- Rationale: Balances visual prominence with collection accessibility
+**Status:** Implemented 2026-05-20
 
-### Hybrid-Ready Structure
-- Design assumes online library could be added later
-- Collections browsing pattern mirrors carousel UI
-- Rationale: Extensibility without redesign
+**Files:** `ModernHomeView.swift`, `VideoPreviewView.swift`, `HeroWallpaperView.swift`
 
-### Integrated Per-Display UX
-- Display carousel in hero area; no separate settings section
-- Display switching smooth and immediate
-- Rationale: Reduces UI complexity; keeps focus on visual content
+**Tasks:**
 
-### Full-Screen Collection Editor
-- Immersive sheet, not cramped modal
-- Live workspace preview shows collection as you edit
-- Rationale: Makes editing feel creative, not utilitarian
-
-### Visual-First Information Hierarchy
-- Images and beauty prioritized over text and controls
-- Controls minimal and overlay-based
-- Rationale: Wallpaper engine is fundamentally about visual content
+1. Threshold-based scroll state (no per-frame full-tree updates).
+2. Shorter scroll spacer; cached display cards.
+3. Pause wallpaper video while scrolling; carousel mounts only when revealed (no `drawingGroup` ghost panel).
 
 ---
 
-## Known Constraints & Future Work
+## Phase 4d — Cleanup (2026-05-20)
 
-### Out of Scope
-- Online wallpaper library (planned for Phase 6B)
-- Community curation (planned for Phase 6B)
-- Explore tab / discovery (planned for future)
-- Advanced effects and filters (future phase)
+**Status:** Implemented 2026-05-20
 
-### Assumptions
-- Local wallpapers and collections remain primary use case
-- Multi-display support continues to work as-is
-- Wallpaper apply and rendering logic unchanged
-
-### Future Enhancements
-- Online library carousel integration (minimal changes needed)
-- Advanced filtering and search
-- Favorites and custom collections
-- Animation and effect previews
+- Removed legacy `ContentView.swift`, `HomeTabView.swift`, `TransparentTabSwitcher.swift`.
+- Updated `ApplyWallpaperModal` thumbnail generation API.
 
 ---
 
-## Verification Checklist
+## Phase 4 — Validation
 
-### Phase 1 Acceptance
-- [ ] App builds cleanly
-- [ ] Hero preview is 50–60% of window
-- [ ] Collections sidebar visible on right
-- [ ] Floating toolbar appears over hero
-- [ ] Layout responsive to resize
-
-### Phase 2 Acceptance
-- [ ] Display carousel visible
-- [ ] Display switching smooth
-- [ ] Display name and resolution shown
-
-### Phase 3 Acceptance
-- [ ] New shadow tokens applied
-- [ ] Gradient overlays visible
-- [ ] Backdrop blur working
-- [ ] Typography sizes increased
-
-### Phase 4 Acceptance
-- [ ] Full-screen sheet works
-- [ ] Workspace preview live
-- [ ] Settings on right clear
-- [ ] Visual, not form-like
-
-### Phase 5 Acceptance
-- [ ] Previews sharp
-- [ ] Per-display 16:9 (not square)
-- [ ] No blur artifacts
-
-### Phase 6 Acceptance
-- [ ] Collection cards visual
-- [ ] Hover actions visible
-- [ ] Smooth animations
-
-### Phase 7 Acceptance
-- [ ] Settings accessible
-- [ ] Consistent spacing
-- [ ] Motion smooth
-
-### Phase 8 Acceptance
-- [ ] All smoke tests pass
-- [ ] All regression tests pass
-- [ ] Visual comparison matches Wallspace inspiration
-- [ ] No warnings/errors
-- [ ] Performance smooth
+**Status:** Automated complete 2026-05-20; manual matrix in `PHASE_4_VALIDATION.md`
 
 ---
 
-## Next Steps
+## Mapping from legacy 9-phase plan
 
-1. Review and approve this roadmap
-2. Create KB entries linking to phases
-3. Begin Phase 1 implementation
-4. Daily progress updates and phase completions
+| Legacy phase | New mapping |
+|--------------|-------------|
+| 1 Architecture + bug fix | Phase 2a |
+| 2 Per-display carousel | Phase 2a (scroll placement) |
+| 3 Visual depth | Phase 2c (partial) |
+| 4 Collection editor | Phase 2c optional |
+| 5 Image quality | Phase 1 + 2a hero URL |
+| 6 Collections browsing | Collections tab + 2c |
+| 7 Sidebar typography | Slim sidebar 2b |
+| 8 Global settings | Settings tab 2b |
+| 9 Validation | Phase 3 |
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2026-05-15  
-**Created By:** AI Assistant  
-**Status:** Ready for implementation
+## Files — do not reference
+
+- `CollectionsSidebarView` — does not exist; use `ModernHomeView.sidebarPanel`
+- ~~`ContentView`~~ — removed; use `TabbedMainView` / `ModernHomeView`
+
+---
+
+**Document version:** 3.1  
+**Last updated:** 2026-05-20  
+**Status:** Phases 0–4 complete; merged to `main`

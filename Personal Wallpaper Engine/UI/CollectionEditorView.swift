@@ -74,87 +74,138 @@ struct CollectionEditorView: View {
     var body: some View {
         CardView(title: originalCollectionName == nil ? "Create Collection" : "Edit Collection", style: .elevated) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Group wallpaper sources into a reusable collection. Collection behavior is unchanged; this view only improves how the inputs are presented and validated.")
-                    .font(DesignTokens.Typography.subtitle)
-                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Group wallpaper sources into a reusable collection. Collection behavior is unchanged; this view only improves how the inputs are presented and validated.")
+                            .font(DesignTokens.Typography.subtitle)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
 
-                CardSection(header: "Basics") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            TextField("Collection Name", text: $collectionName)
-                                .textFieldStyle(.roundedBorder)
-                                .focused($focusedField, equals: .name)
-                                .onSubmit { validateCollectionName() }
+                        CardSection(header: "Basics") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    TextField("Collection Name", text: $collectionName)
+                                        .textFieldStyle(.roundedBorder)
+                                        .focused($focusedField, equals: .name)
+                                        .onSubmit { _ = validateCollectionName() }
 
-                            TextField("Description (optional)", text: $collectionDescription)
-                                .textFieldStyle(.roundedBorder)
-                                .focused($focusedField, equals: .description)
+                                    TextField("Description (optional)", text: $collectionDescription)
+                                        .textFieldStyle(.roundedBorder)
+                                        .focused($focusedField, equals: .description)
+                                }
+
+                                HStack(alignment: .center, spacing: 12) {
+                                    Picker("Type", selection: $collectionType) {
+                                        Text("Simple").tag(WallpaperCollection.CollectionType.simple)
+                                        Text("Display-Bound").tag(WallpaperCollection.CollectionType.displayBound)
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .frame(maxWidth: 260)
+
+                                    Spacer()
+                                }
+                            }
+
+                            if let nameValidationMessage {
+                                statusBanner(title: "Name", message: nameValidationMessage, color: .red)
+                            }
                         }
 
-                        HStack(alignment: .center, spacing: 12) {
-                            Picker("Type", selection: $collectionType) {
-                                Text("Simple").tag(WallpaperCollection.CollectionType.simple)
-                                Text("Display-Bound").tag(WallpaperCollection.CollectionType.displayBound)
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(maxWidth: 260)
+                        CardSection(header: "Sources") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                if !sourceDrafts.isEmpty {
+                                    ForEach(sourceDrafts.indices, id: \.self) { index in
+                                        CollectionSourceInput(
+                                            isDisplayBound: collectionType == .displayBound,
+                                            onDelete: { removeSource(at: index) },
+                                            onBrowse: {
+                                                browseIndex = index
+                                                isFileImporterPresented = true
+                                            },
+                                            url: Binding(
+                                                get: { sourceDrafts[index].url },
+                                                set: { sourceDrafts[index].url = $0 }
+                                            ),
+                                            displayLabel: Binding(
+                                                get: { sourceDrafts[index].displayLabel },
+                                                set: { sourceDrafts[index].displayLabel = $0 }
+                                            ),
+                                            displayIDFallback: Binding(
+                                                get: { sourceDrafts[index].displayIDFallback },
+                                                set: { sourceDrafts[index].displayIDFallback = $0 }
+                                            ),
+                                            scalingMode: Binding(
+                                                get: { sourceDrafts[index].scalingMode },
+                                                set: { sourceDrafts[index].scalingMode = $0 }
+                                            ),
+                                            bookmark: Binding(
+                                                get: { sourceDrafts[index].bookmark },
+                                                set: { sourceDrafts[index].bookmark = $0 }
+                                            ),
+                                            captureError: Binding(
+                                                get: { sourceDrafts[index].captureError },
+                                                set: { sourceDrafts[index].captureError = $0 }
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "tray.and.arrow.down")
+                                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                                        Text("Add a source to get started.")
+                                            .font(DesignTokens.Typography.subtitle)
+                                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                                        Spacer()
+                                    }
+                                    .padding(12)
+                                    .background {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                            .fill(DesignTokens.Colors.cardBackground)
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
+                                            }
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                                            }
+                                }
+                                }
 
-                            Spacer()
+                                HStack {
+                                    Button(action: { addSource() }) {
+                                        Label("Add Source", systemImage: "plus")
+                                            .labelStyle(.titleAndIcon)
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .disabled(!canAddNew)
+
+                                    Spacer()
+
+                                    Text("\(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count) active source\(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count == 1 ? "" : "s")")
+                                        .font(DesignTokens.Typography.subtitle)
+                                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                                }
+                            }
                         }
-                    }
 
-                    if let nameValidationMessage {
-                        statusBanner(title: "Name", message: nameValidationMessage, color: .red)
-                    }
-                }
-
-                CardSection(header: "Sources") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if !sourceDrafts.isEmpty {
-                            ForEach(sourceDrafts.indices, id: \.self) { index in
-                                CollectionSourceInput(
-                                    isDisplayBound: collectionType == .displayBound,
-                                    onDelete: { removeSource(at: index) },
-                                    onBrowse: {
-                                        browseIndex = index
-                                        isFileImporterPresented = true
-                                    },
-                                    url: Binding(
-                                        get: { sourceDrafts[index].url },
-                                        set: { sourceDrafts[index].url = $0 }
-                                    ),
-                                    displayLabel: Binding(
-                                        get: { sourceDrafts[index].displayLabel },
-                                        set: { sourceDrafts[index].displayLabel = $0 }
-                                    ),
-                                    displayIDFallback: Binding(
-                                        get: { sourceDrafts[index].displayIDFallback },
-                                        set: { sourceDrafts[index].displayIDFallback = $0 }
-                                    ),
-                                    scalingMode: Binding(
-                                        get: { sourceDrafts[index].scalingMode },
-                                        set: { sourceDrafts[index].scalingMode = $0 }
-                                    ),
-                                    bookmark: Binding(
-                                        get: { sourceDrafts[index].bookmark },
-                                        set: { sourceDrafts[index].bookmark = $0 }
-                                    ),
-                                    captureError: Binding(
-                                        get: { sourceDrafts[index].captureError },
-                                        set: { sourceDrafts[index].captureError = $0 }
-                                    )
-                                )
-                            }
-                        } else {
-                            HStack(spacing: 10) {
-                                Image(systemName: "tray.and.arrow.down")
-                                    .foregroundColor(DesignTokens.Colors.textSecondary)
-                                Text("Add a source to get started.")
+                        CardSection(header: "Preview") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Sources: \(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count)")
                                     .font(DesignTokens.Typography.subtitle)
                                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                                Spacer()
+
+                                if !collectionDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    Text(collectionDescription)
+                                        .font(DesignTokens.Typography.body)
+                                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                                } else {
+                                    Text("The preview reflects the collection metadata and source count only.")
+                                        .font(DesignTokens.Typography.subtitle)
+                                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                                }
                             }
-                            .padding(12)
+                            .padding(DesignTokens.Spacing.medium)
                             .background {
                                 RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
                                     .fill(DesignTokens.Colors.cardBackground)
@@ -170,58 +221,13 @@ struct CollectionEditorView: View {
                             }
                         }
 
-                        HStack {
-                            Button(action: { addSource() }) {
-                                Label("Add Source", systemImage: "plus")
-                                    .labelStyle(.titleAndIcon)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!canAddNew)
-
-                            Spacer()
-
-                            Text("\(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count) active source\(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count == 1 ? "" : "s")")
-                                .font(DesignTokens.Typography.subtitle)
-                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                        if let validationMessage {
+                            statusBanner(title: "Save", message: validationMessage, color: .orange)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-
-                CardSection(header: "Preview") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Sources: \(sourceDrafts.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count)")
-                            .font(DesignTokens.Typography.subtitle)
-                            .foregroundColor(DesignTokens.Colors.textSecondary)
-
-                        if !collectionDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text(collectionDescription)
-                                .font(DesignTokens.Typography.body)
-                                .foregroundColor(DesignTokens.Colors.textPrimary)
-                        } else {
-                            Text("The preview reflects the collection metadata and source count only.")
-                                .font(DesignTokens.Typography.subtitle)
-                                .foregroundColor(DesignTokens.Colors.textSecondary)
-                        }
-                    }
-                    .padding(DesignTokens.Spacing.medium)
-                    .background {
-                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                            .fill(DesignTokens.Colors.cardBackground)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
-                            }
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                            }
-                    }
-                }
-
-                if let validationMessage {
-                    statusBanner(title: "Save", message: validationMessage, color: .orange)
-                }
+                .frame(maxHeight: .infinity, alignment: .topLeading)
 
                 HStack {
                     Spacer()
@@ -296,12 +302,12 @@ struct CollectionEditorView: View {
         }
         .onChange(of: focusedField) { _, newField in
             if newField != .name {
-                validateCollectionName()
+                _ = validateCollectionName()
             }
         }
         .onChange(of: collectionName) { _, _ in
             if focusedField != .name {
-                validateCollectionName()
+                _ = validateCollectionName()
             }
         }
     }

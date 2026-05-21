@@ -1,7 +1,7 @@
 ---
 type: feature-contract
 feature_id: "Phase-6A"
-status: in-progress
+status: implemented
 related_kb: ../Wallpaper Engine KB/30 Features/Feature-Wallpaper-Collections-Phase-6A.md
 created: 2026-05-06T15:58
 ---
@@ -23,13 +23,13 @@ This document tracks implementation status and code contract for Phase 6A: Wallp
 | **Persistence** | UserDefaults via SettingsStore with keys `savedCollections` and `lastUsedCollectionName` | ✅ Implemented (`Personal Wallpaper Engine/SettingsStore.swift`) | Chunk 3 |
 | | JSON-encoded dictionaries with Codable structs | ✅ Implemented in same file | Chunk 3 |
 | | CRUD helpers: `allCollectionNames()`, `saveCollection()`, `loadCollection()`, `updateCollection()`, `deleteCollection()` | ✅ Implemented in same file | Chunk 3 |
-| **UI Components** | Collection picker with preview area | ❌ Not implemented yet | Chunk 6 (Editor), Chunk 7 (ContentView) |
-| | CollectionEditorView modal | ❌ Not implemented yet | Chunk 6 |
-| | CollectionSourceInput rows | ❌ Not implemented yet | Chunk 6 |
-| **ViewModel Orchestration** | `@Published` collection state in AppViewModel | ❌ Missing | Chunk 4 |
-| | Async methods for collection apply/management | ❌ Missing | Chunk 4, Chunk 5 |
-| **Manager Logic** | Simple collection apply logic | ❌ Missing | Chunk 5 |
-| | Display-bound collection apply logic | ❌ Missing | Chunk 5 |
+| **UI Components** | Collection picker with preview area | ✅ `CollectionsTabView`, `CollectionSummaryCard` | Chunk 6–7 |
+| | CollectionEditorView modal | ✅ Sheet in `ModernHomeView` / Collections tab | Chunk 6 |
+| | CollectionSourceInput rows | ✅ `UI/CollectionSourceInput.swift` | Chunk 6 |
+| **ViewModel Orchestration** | `@Published` collection state in AppViewModel | ✅ Implemented | Chunk 4 |
+| | Async methods for collection apply/management | ✅ Implemented | Chunk 4, Chunk 5 |
+| **Manager Logic** | Simple collection apply logic | ✅ Implemented | Chunk 5 |
+| | Display-bound collection apply logic | ✅ Implemented | Chunk 5 |
 | **Error Handling** | `WallpaperError.collectionNotFound()`, `invalidCollectionName()`, `invalidCollectionSource()`, `displayMismatchWarning()` | ✅ Extended in same file as data model | Chunk 2, Chunk 8 |
 
 ---

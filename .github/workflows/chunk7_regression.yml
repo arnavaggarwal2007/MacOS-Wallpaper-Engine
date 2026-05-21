@@ -1,0 +1,31 @@
+name: Chunk 7 — Regression Runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  regression:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure scripts executable
+        run: |
+          chmod +x ./scripts/chunk7_regression.sh || true
+          chmod +x ./scripts/chunk7_smoke.sh || true
+
+      - name: Run regression (no codesign on CI)
+        env:
+          CODE_SIGNING_ALLOWED: NO
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          ./scripts/chunk7_regression.sh
+
+      - name: Upload regression artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk7-regression-artifacts
+          path: artifacts/*.tar.gz

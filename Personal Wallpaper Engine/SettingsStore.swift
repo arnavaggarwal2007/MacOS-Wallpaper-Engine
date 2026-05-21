@@ -15,11 +15,14 @@ final class SettingsStore {
         static let debugDiagnostics = "debugDiagnostics"  // Chunk 4E: Debug flag
         static let launchOnLogin = "launchOnLogin"  // Phase 5G: Launch-on-login flag
         static let perDisplayScalingModes = "perDisplayScalingModes"  // Per-display scaling modes
+        static let perDisplayRendererModes = "perDisplayRendererModes"  // Phase 7: Per-display renderer modes
         static let usePerDisplay = "usePerDisplay" // Bool: whether to use per-display wallpapers
         static let perDisplayBookmarks = "perDisplayBookmarks" // Per-display security-scoped bookmarks
         static let savedCollections = "savedCollections"  // Phase 6A: Saved wallpaper collections
         static let collectionBookmarks = "collectionBookmarks"  // Phase 6A: Security-scoped bookmarks for collection sources
         static let lastUsedCollectionName = "lastUsedCollectionName"  // Phase 6A: Most recently used collection
+        static let savedSetups = "savedSetups"  // Phase 6B: Saved desktop state snapshots
+        static let currentSetupName = "currentSetupName"  // Phase 6B: Currently active setup name
     }
 
     private init() {
@@ -51,7 +54,18 @@ final class SettingsStore {
         } else {
             perDisplayScalingModes = [:]
         }
-        usePerDisplay = UserDefaults.standard.bool(forKey: Keys.usePerDisplay)
+        // Load per-display renderer modes (JSON encoded dictionary) - Phase 7
+        if let data = UserDefaults.standard.data(forKey: Keys.perDisplayRendererModes) {
+            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+                perDisplayRendererModes = decoded
+            } else {
+                perDisplayRendererModes = [:]
+            }
+        } else {
+            perDisplayRendererModes = [:]
+        }
+        usePerDisplay = true
+        UserDefaults.standard.set(true, forKey: Keys.usePerDisplay)
         if let data = UserDefaults.standard.data(forKey: Keys.perDisplayBookmarks) {
             if let decoded = try? JSONDecoder().decode([String: Data].self, from: data) {
                 perDisplayBookmarks = decoded
@@ -82,6 +96,17 @@ final class SettingsStore {
             collectionBookmarks = [:]
         }
         lastUsedCollectionName = UserDefaults.standard.string(forKey: Keys.lastUsedCollectionName)
+        // Load saved setups (Phase 6B): JSON encoded dictionary of setups keyed by name
+        if let data = UserDefaults.standard.data(forKey: Keys.savedSetups) {
+            if let decoded = try? JSONDecoder().decode([String: SavedSetup].self, from: data) {
+                savedSetups = decoded
+            } else {
+                savedSetups = [:]
+            }
+        } else {
+            savedSetups = [:]
+        }
+        currentSetupName = UserDefaults.standard.string(forKey: Keys.currentSetupName)
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -134,6 +159,17 @@ final class SettingsStore {
                 UserDefaults.standard.set(encoded, forKey: Keys.perDisplayScalingModes)
             } else {
                 UserDefaults.standard.removeObject(forKey: Keys.perDisplayScalingModes)
+            }
+        }
+    }
+
+    // Per-display mapping: displayID (as string) -> renderer mode (Phase 7)
+    var perDisplayRendererModes: [String: String] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(perDisplayRendererModes) {
+                UserDefaults.standard.set(encoded, forKey: Keys.perDisplayRendererModes)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.perDisplayRendererModes)
             }
         }
     }
@@ -276,6 +312,95 @@ final class SettingsStore {
             lastUsedCollectionName = nil
         }
         
+        return .success(())
+    }
+
+    // MARK: - Phase 6B: Setup Persistence
+
+    // Saved setups: keyed by setup name (unique identifier for user)
+    var savedSetups: [String: SavedSetup] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(savedSetups) {
+                UserDefaults.standard.set(encoded, forKey: Keys.savedSetups)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.savedSetups)
+            }
+        }
+    }
+
+    // Currently active setup name (for tracking which setup was last loaded)
+    var currentSetupName: String? {
+        didSet {
+            if let name = currentSetupName {
+                UserDefaults.standard.set(name, forKey: Keys.currentSetupName)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.currentSetupName)
+            }
+        }
+    }
+
+    // MARK: - Setup CRUD Helpers
+
+    /// Returns sorted list of all saved setup names.
+    func allSetupNames() -> [String] {
+        savedSetups.keys.sorted()
+    }
+
+    /// Creates and persists a new setup with given parameters.
+    func saveSetup(
+        name: String,
+        description: String = "",
+        rendererMode: String,
+        isMuted: Bool,
+        scalingMode: String,
+        usePerDisplay: Bool,
+        unifiedSource: String?,
+        perDisplaySources: [String: String],
+        perDisplayScalingModes: [String: String],
+        unifiedBookmarkBase64: String?,
+        perDisplayBookmarksBase64: [String: String]
+    ) -> Result<SavedSetup, WallpaperError> {
+        // Validate name is not empty and unique
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(.internalError(description: "Setup name cannot be empty."))
+        }
+
+        let setup = SavedSetup(
+            name: name,
+            description: description,
+            rendererMode: rendererMode,
+            isMuted: isMuted,
+            scalingMode: scalingMode,
+            usePerDisplay: usePerDisplay,
+            unifiedSource: unifiedSource,
+            perDisplaySources: perDisplaySources,
+            perDisplayScalingModes: perDisplayScalingModes,
+            unifiedBookmarkBase64: unifiedBookmarkBase64,
+            perDisplayBookmarksBase64: perDisplayBookmarksBase64
+        )
+        savedSetups[name] = setup
+        return .success(setup)
+    }
+
+    /// Loads an existing setup by name.
+    func loadSetup(name: String) -> Result<SavedSetup, WallpaperError> {
+        guard let setup = savedSetups[name] else {
+            return .failure(.internalError(description: "Setup '\(name)' not found."))
+        }
+        return .success(setup)
+    }
+
+    /// Deletes a setup by name.
+    func deleteSetup(name: String) -> Result<Void, WallpaperError> {
+        guard savedSetups.removeValue(forKey: name) != nil else {
+            return .failure(.internalError(description: "Setup '\(name)' not found."))
+        }
+
+        // Clear currentSetupName if it was this setup
+        if currentSetupName == name {
+            currentSetupName = nil
+        }
+
         return .success(())
     }
 }

@@ -78,7 +78,7 @@ struct CardView<Content: View>: View {
         }
         .shadow(color: Color.black.opacity(isHovered ? DesignTokens.Motion.hoverShadowOpacity : 0.05), radius: isHovered ? style.shadowRadius : 1, x: 0, y: isHovered ? style.shadowYOffset : 1)
         .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
-        .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
+        .animation(DesignTokens.Motion.hoverAnimation(reduceMotion: reduceMotion), value: isHovered)
         .onHover { isHovered = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title ?? "Card")

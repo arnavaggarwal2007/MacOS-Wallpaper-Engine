@@ -1,4 +1,8 @@
-# Phase 6B – Overlay Sidebar & Responsive Hero Preview
+# Overlay Sidebar & Responsive Hero Preview (May 16, 2026)
+
+> **Note:** This document describes the **overlay sidebar UI refactor**, not **Phase 6B Desktop Setups** in `developmental_roadmap.md`. Renamed from `PHASE_6B_COMPLETION.md` on 2026-05-20 to avoid confusion.
+
+# Phase UI – Overlay Sidebar & Responsive Hero Preview
 **Status:** ✅ COMPLETE  
 **Date:** May 16, 2026  
 **Build:** Succeeded

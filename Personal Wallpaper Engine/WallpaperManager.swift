@@ -288,7 +288,7 @@ final class WallpaperManager {
     @MainActor
     private func reconcileDisplayState(reason: String) async {
         logger.info("Starting display state reconciliation (triggered by: \(reason))")
-        let usePerDisplay = SettingsStore.shared.usePerDisplay
+        let usePerDisplay = true
         
         var healed: [CGDirectDisplayID] = []
         
@@ -296,9 +296,7 @@ final class WallpaperManager {
             let expectedVideoURL: URL? = usePerDisplay
                 ? expectedPerDisplayURL(for: displayID) ?? currentWallpaperURL
                 : currentWallpaperURL
-            let expectedScalingMode = usePerDisplay
-                ? expectedPerDisplayScalingMode(for: displayID)
-                : scalingMode
+            let expectedScalingMode = expectedPerDisplayScalingMode(for: displayID) ?? scalingMode
 
             let healResult = await controller.reconcileState(
                 expectedLifecycleState: lifecycleState,

@@ -5,6 +5,7 @@ struct TopUtilityBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var buttonHovers: [String: Bool] = [:]
     @Binding var isSidebarVisible: Bool
+    var onChooseWallpaper: () -> Void
 
     private func button(key: String, action: @escaping () -> Void, label: @escaping () -> some View) -> some View {
         Button(action: action) {
@@ -18,7 +19,12 @@ struct TopUtilityBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Play / Pause
+            button(key: "choose", action: onChooseWallpaper) {
+                Label("Choose Wallpaper", systemImage: "folder.badge.plus")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .help("Pick a video for the selected display (or multiple displays)")
+
             button(key: "play", action: {
                 Task { await appModel.togglePlayback() }
             }) {
@@ -28,7 +34,6 @@ struct TopUtilityBar: View {
             .help(appModel.isPlaying ? "Pause wallpaper" : "Play wallpaper")
             .accessibilityLabel(appModel.isPlaying ? "Pause wallpaper" : "Play wallpaper")
 
-            // Mute toggle
             button(key: "mute", action: {
                 Task { await appModel.toggleMute() }
             }) {
@@ -38,7 +43,6 @@ struct TopUtilityBar: View {
             .help(appModel.isMuted ? "Unmute audio" : "Mute audio")
             .accessibilityLabel(appModel.isMuted ? "Unmute audio" : "Mute audio")
 
-            // Scaling menu
             Menu {
                 ForEach(VideoScalingMode.allCases, id: \.self) { mode in
                     Button(action: { appModel.updateScalingMode(mode) }) {
@@ -50,21 +54,17 @@ struct TopUtilityBar: View {
                     .help("Set global scaling mode")
             }
 
-            // Quick apply
             button(key: "apply", action: {
-                Task { await appModel.applyWallpaperFromSelection() }
+                Task { await appModel.applyWallpaperToFocusedDisplay() }
             }) {
                 Label("Apply Now", systemImage: "bolt.fill")
             }
-            .disabled(appModel.isApplyingWallpaper || appModel.usePerDisplay)
-            .opacity((appModel.isApplyingWallpaper || appModel.usePerDisplay) ? 0.5 : 1.0)
-            .help("Apply the current selection as wallpaper")
+            .disabled(appModel.isApplyingWallpaper)
+            .opacity(appModel.isApplyingWallpaper ? 0.5 : 1.0)
+            .help("Apply the wallpaper assigned to the selected display")
 
-            Spacer()
-
-            // Sidebar toggle
             button(key: "sidebar", action: {
-                withAnimation(.easeInOut(duration: DesignTokens.Motion.standardDuration)) {
+                withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
                     isSidebarVisible.toggle()
                 }
             }) {
@@ -76,26 +76,14 @@ struct TopUtilityBar: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background {
-            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                .fill(DesignTokens.Colors.cardBackground)
-                .overlay {
-                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                        .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .opacity(DesignTokens.Effects.cardBackdropOpacity)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                }
-        }
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .fixedSize(horizontal: true, vertical: false)
+        .glassChrome(.bar)
         .animation(reduceMotion ? .none : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: appModel.isPlaying)
     }
 }
 
 #Preview("Top Utility Bar") {
-    TopUtilityBar(isSidebarVisible: .constant(true))
+    TopUtilityBar(isSidebarVisible: .constant(true), onChooseWallpaper: {})
         .environmentObject(AppViewModel())
         .padding()
 }

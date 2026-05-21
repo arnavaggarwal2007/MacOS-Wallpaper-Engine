@@ -10,85 +10,110 @@ struct ModernHomeView: View {
     @State private var selectedDisplayForPicker: CGDirectDisplayID?
     @State private var selectedDisplayID: CGDirectDisplayID?
     @State private var transientPerDisplayPreviewURL: URL?
-    @State private var isCollectionEditorPresented = false
-    @State private var isDeleteCollectionAlertPresented = false
-    @State private var editingCollectionName: String?
+    @State private var isSaveSetupModalPresented = false
     @State private var isSidebarVisible = true
+    @State private var isDisplaySelectionModalPresented = false
+    @State private var pendingVideoURL: URL?
+    @State private var showDisplaysScrollHint = true
+    @State private var isDisplaysPanelVisible = false
+    @State private var pauseWallpaperPreview = false
+    @State private var cachedDisplayCards: [DisplayCard] = []
 
     var body: some View {
+        ScrollViewReader { scrollProxy in
         GeometryReader { proxy in
-            let horizontalPadding = DesignTokens.Spacing.large * 2
-            let availableWidth = max(proxy.size.width - horizontalPadding, 0)
-            let sidebarWidth = min(max(320, availableWidth * 0.33), 420)
-
-            ZStack(alignment: .topTrailing) {
-                // Main content area - hero gets full width
+            let sidebarWidth = min(max(320, proxy.size.width * 0.33), 420)
+            ZStack(alignment: .topLeading) {
+                // Layer 1: Scroll to reveal display carousel (background owned by TabbedMainView)
                 ScrollView {
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
-                        headerSection
+                    VStack(alignment: .leading, spacing: 0) {
+                        Color.clear
+                            .frame(height: scrollRevealSpacerHeight(in: proxy.size))
+                            .accessibilityHidden(true)
 
-                        TopUtilityBar(isSidebarVisible: $isSidebarVisible)
-                            .padding(.horizontal, 4)
-
-                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
-                            HeroWallpaperView(
-                                title: heroTitle,
-                                subtitle: heroSubtitle,
-                                image: heroPreviewImage,
-                                badge: heroBadge,
-                                metadata: heroMetadata,
-                                videoURL: heroVideoURL
-                            )
-
-                            if appModel.usePerDisplay && NSScreen.screens.count > 1 {
-                                DisplaySwitcherView(
-                                    selectedDisplayID: Binding(
-                                        get: { selectedDisplayID ?? NSScreen.screens.first?.displayID },
-                                        set: { selectedDisplayID = $0 }
-                                    ),
-                                    displays: displayCards,
-                                    onSelect: { selectedDisplayID = $0 }
-                                )
+                        Group {
+                            if isDisplaysPanelVisible {
+                                scrollContentSection
+                            } else {
+                                Color.clear
+                                    .frame(height: displaysPanelPlaceholderHeight)
+                                    .accessibilityHidden(true)
                             }
-
-                            previewSection
                         }
-                        .frame(maxWidth: availableWidth, alignment: .leading)
+                        .id(Self.displaysPanelScrollID)
+                        .padding(.horizontal, DesignTokens.Spacing.large)
+                        .padding(.bottom, DesignTokens.Spacing.large)
                     }
-                    .padding(DesignTokens.Spacing.large)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .background {
-                    LinearGradient(
-                        colors: [
-                            DesignTokens.Colors.background,
-                            DesignTokens.Colors.cardBackground.opacity(0.92),
-                            DesignTokens.Colors.background.opacity(0.96)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .ignoresSafeArea()
+                .scrollIndicators(.hidden)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.contentOffset.y
+                } action: { _, offsetY in
+                    updateScrollRevealState(offsetY: offsetY)
+                }
+                .zIndex(1)
+
+                // Layer 1: Floating glass utility bar (fixed at top)
+                TopUtilityBar(
+                    isSidebarVisible: $isSidebarVisible,
+                    onChooseWallpaper: { isFileImporterPresented = true }
+                )
+                .padding(.horizontal, 24)
+                .padding(.top, DesignTokens.Surfaces.mainTabBarReservedHeight + 8)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .zIndex(2)
+
+                if showDisplaysScrollHint && !isDisplaysPanelVisible {
+                    displaysScrollHint(scrollProxy: scrollProxy)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .padding(.bottom, DesignTokens.Spacing.large)
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
+                        .zIndex(2)
                 }
 
-                // Overlay sidebar - transparent, positioned at top-right
+                // Layer 2: Toggleable sidebar overlay
                 if isSidebarVisible {
-                    sidebarPanel(width: sidebarWidth)
-                        .frame(width: sidebarWidth)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    HStack(alignment: .top, spacing: 0) {
+                        Spacer()
+                            .allowsHitTesting(false)
+                        sidebarPanel(width: sidebarWidth)
+                            .frame(width: sidebarWidth)
+                    }
+                    .padding(.top, DesignTokens.Surfaces.mainTabBarReservedHeight + 8)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .zIndex(3)
                 }
             }
         }
+        }
+        .wallpaperPreviewPause(pauseWallpaperPreview)
         .frame(minWidth: 800, minHeight: 600)
         .task {
             await appModel.loadSavedCollections()
-            syncSelectedDisplayIfNeeded()
-        }
-        .task(id: appModel.usePerDisplay) {
+            await appModel.loadSavedSetups()
+            appModel.ensurePerDisplayMode()
             syncSelectedDisplayIfNeeded()
         }
         .task(id: NSScreen.screens.count) {
             syncSelectedDisplayIfNeeded()
+            rebuildDisplayCardsCache()
+        }
+        .onChange(of: selectedDisplayID) { _, newValue in
+            appModel.focusedDisplayID = newValue
+            rebuildDisplayCardsCache()
+        }
+        .onChange(of: appModel.focusedDisplayID) { _, newValue in
+            if selectedDisplayID != newValue {
+                selectedDisplayID = newValue
+            }
+        }
+        .onChange(of: appModel.displaySourcesVersion) { _, _ in
+            transientPerDisplayPreviewURL = nil
+            rebuildDisplayCardsCache()
+        }
+        .onAppear {
+            rebuildDisplayCardsCache()
         }
         .fileImporter(
             isPresented: $isFileImporterPresented,
@@ -98,90 +123,37 @@ struct ModernHomeView: View {
             switch result {
             case .success(let urls):
                 guard let firstURL = urls.first else { return }
-
-                if let displayID = selectedDisplayForPicker {
-                    // Keep a transient URL so the preview can load immediately
-                    transientPerDisplayPreviewURL = firstURL
-                    appModel.selectPerDisplaySource(displayID, at: firstURL)
-                    selectedDisplayID = displayID
-                    selectedDisplayForPicker = nil
-                } else {
-                    if !appModel.usePerDisplay {
-                        appModel.selectVideo(at: firstURL)
-                    } else {
-                        appModel.errorMessage = "Main wallpaper selection is disabled while per-display mode is enabled."
-                        appModel.statusMessage = nil
-                    }
-                }
+                
+                // Store URL and show display selection modal
+                pendingVideoURL = firstURL
+                isDisplaySelectionModalPresented = true
+                
             case .failure(let error):
                 appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
                 appModel.statusMessage = nil
                 selectedDisplayForPicker = nil
             }
         }
-        .sheet(isPresented: $isCollectionEditorPresented) {
-            let selectedName = editingCollectionName.flatMap { appModel.savedCollections[$0] }
-            CardView(title: editingCollectionName == nil ? "Create Collection" : "Edit Collection", style: .elevated) {
-                CollectionEditorView(
-                    initialName: selectedName?.name ?? "",
-                    initialDescription: selectedName?.description ?? "",
-                    initialType: selectedName?.collectionType ?? .simple,
-                    initialSources: selectedName?.sources ?? [],
-                    initialBookmarks: editingCollectionName.map { appModel.bookmarksForCollection(name: $0) } ?? [:],
-                    originalCollectionName: editingCollectionName,
-                    existingCollectionNames: Set(appModel.savedCollections.keys),
-                    onCancel: { isCollectionEditorPresented = false },
-                    onSave: { collection, bookmarks in
-                        Task {
-                            if let editingCollectionName {
-                                _ = await appModel.updateCollection(
-                                    existingName: editingCollectionName,
-                                    newName: collection.name,
-                                    description: collection.description,
-                                    collectionType: collection.collectionType,
-                                    sources: collection.sources,
-                                    bookmarks: bookmarks
-                                )
-                            } else {
-                                _ = await appModel.createCollection(
-                                    name: collection.name,
-                                    description: collection.description,
-                                    collectionType: collection.collectionType,
-                                    sources: collection.sources,
-                                    bookmarks: bookmarks
-                                )
-                            }
-                            self.editingCollectionName = nil
-                            isCollectionEditorPresented = false
-                        }
-                    }
-                )
+        .sheet(isPresented: $isDisplaySelectionModalPresented) {
+            if let videoURL = pendingVideoURL {
+                DisplaySelectionModal(videoURL: videoURL, appModel: appModel)
             }
-            .frame(minWidth: 640, minHeight: 520)
         }
-        .alert("Delete Collection", isPresented: $isDeleteCollectionAlertPresented) {
-            Button("Delete", role: .destructive) {
-                Task {
-                    guard let selectedName = appModel.selectedCollectionName else { return }
-                    _ = await appModel.deleteCollection(name: selectedName)
-                    editingCollectionName = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Are you sure you want to delete the selected collection?")
+        .sheet(isPresented: $isSaveSetupModalPresented) {
+            SaveSetupModal(viewModel: appModel)
+                .frame(minWidth: 400, minHeight: 520)
         }
     }
 
     private func sidebarPanel(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
             HStack {
-                Text("Settings")
+                Text("Status")
                     .font(.headline)
                     .foregroundColor(DesignTokens.Colors.textPrimary)
-                
+
                 Spacer()
-                
+
                 Button(action: { withAnimation { isSidebarVisible = false } }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
@@ -195,382 +167,40 @@ struct ModernHomeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
-                    CardView(title: "Workspace", style: .elevated) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Use Per-Display Wallpapers")
-                                        .font(DesignTokens.Typography.subtitle)
-                                        .foregroundColor(DesignTokens.Colors.textPrimary)
-                                    Text(appModel.usePerDisplay ? "Every display keeps its own source." : "One wallpaper drives the entire desktop.")
-                                        .font(DesignTokens.Typography.subtitle)
-                                        .foregroundColor(DesignTokens.Colors.textSecondary)
-                                }
+                    statusCard(
+                        title: "Display",
+                        icon: "display",
+                        value: sidebarDisplayStatus
+                    )
 
-                                Spacer()
-
-                                Toggle("", isOn: Binding(get: { appModel.usePerDisplay }, set: { appModel.toggleUsePerDisplay($0) }))
-                                    .labelsHidden()
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Label("Renderer Mode", systemImage: "display")
-                                    .font(DesignTokens.Typography.subtitle)
-                                    .foregroundColor(DesignTokens.Colors.textPrimary)
-
-                                Picker(
-                                    "Renderer Mode",
-                                    selection: Binding(
-                                        get: { appModel.rendererMode },
-                                        set: { appModel.updateRendererMode($0) }
-                                    )
-                                ) {
-                                    ForEach(WallpaperRendererMode.allCases, id: \.self) { mode in
-                                        Text(mode.displayName).tag(mode)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Label("Scaling Mode", systemImage: "aspectratio")
-                                    .font(DesignTokens.Typography.subtitle)
-                                    .foregroundColor(DesignTokens.Colors.textPrimary)
-
-                                Picker(
-                                    "Scaling Mode",
-                                    selection: Binding(
-                                        get: { appModel.scalingMode },
-                                        set: { appModel.updateScalingMode($0) }
-                                    )
-                                ) {
-                                    ForEach(VideoScalingMode.allCases, id: \.self) { mode in
-                                        Text(mode.displayName).tag(mode)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                            }
-
-                            Toggle(
-                                isOn: Binding(
-                                    get: { appModel.isMuted },
-                                    set: { appModel.updateMuted($0) }
-                                )
-                            ) {
-                                Label("Mute Audio", systemImage: appModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                    .font(DesignTokens.Typography.subtitle)
-                                    .foregroundColor(DesignTokens.Colors.textPrimary)
-                            }
-                        }
-                    }
-
-                    if appModel.usePerDisplay, let selectedDisplay {
-                        CardView(title: "Current Display", style: .elevated) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(selectedPerDisplaySource.isEmpty ? "No source selected" : selectedPerDisplaySource)
-                                    .font(DesignTokens.Typography.subtitle)
-                                    .foregroundColor(DesignTokens.Colors.textSecondary)
-                                    .lineLimit(2)
-
-                                HStack(spacing: 10) {
-                                    Button(action: {
-                                        selectedDisplayForPicker = selectedDisplay.displayID
-                                        selectedDisplayID = selectedDisplay.displayID
-                                        isFileImporterPresented = true
-                                    }) {
-                                        Label("Choose Video", systemImage: "folder.badge.plus")
-                                    }
-
-                                    Button(action: {
-                                        Task { @MainActor in
-                                            await appModel.applyPerDisplayWallpaper(displayID: selectedDisplay.displayID, sourceString: selectedPerDisplaySource)
-                                        }
-                                    }) {
-                                        Label("Apply", systemImage: "checkmark.circle.fill")
-                                    }
-                                    .disabled(selectedPerDisplaySource.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isApplyingWallpaper)
-                                }
-
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Label("Scaling", systemImage: "aspectratio")
-                                        .font(DesignTokens.Typography.subtitle)
-                                        .foregroundColor(DesignTokens.Colors.textPrimary)
-
-                                    Picker(
-                                        "Scaling",
-                                        selection: Binding(
-                                            get: { appModel.perDisplayScalingMode(for: selectedDisplay.displayID) },
-                                            set: { appModel.updatePerDisplayScalingMode(selectedDisplay.displayID, $0) }
-                                        )
-                                    ) {
-                                        ForEach(VideoScalingMode.allCases, id: \.self) { mode in
-                                            Text(mode.displayName).tag(mode)
-                                        }
-                                    }
-                                    .pickerStyle(.segmented)
-                                }
-                            }
-                        }
-                    } else {
-                        CardView(title: "Main Source", style: .elevated) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(appModel.selectedVideoPath.isEmpty ? "No video selected" : appModel.selectedVideoPath)
-                                    .font(DesignTokens.Typography.subtitle)
-                                    .foregroundColor(DesignTokens.Colors.textSecondary)
-                                    .lineLimit(2)
-
-                                if appModel.rendererMode == .web {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Label("Web Source URL", systemImage: "globe")
-                                            .font(DesignTokens.Typography.subtitle)
-                                            .foregroundColor(DesignTokens.Colors.textPrimary)
-
-                                        TextField("https://example.com/animated-background", text: Binding(
-                                            get: { appModel.webURLString },
-                                            set: { appModel.updateWebURL($0) }
-                                        ))
-                                        .textFieldStyle(.roundedBorder)
-
-                                        HStack(spacing: 10) {
-                                            Button(action: { isFileImporterPresented = true }) {
-                                                Label("Choose File", systemImage: "folder.badge.plus")
-                                            }
-
-                                            Button(action: { Task { await appModel.applyWallpaperFromSelection() } }) {
-                                                Label("Apply", systemImage: "checkmark.circle.fill")
-                                            }
-                                            .disabled(appModel.webURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isApplyingWallpaper)
-                                        }
-
-                                        Text("Enter a public HTTP(S) URL to render as the wallpaper source.")
-                                            .font(DesignTokens.Typography.subtitle)
-                                            .foregroundColor(DesignTokens.Colors.textSecondary)
-                                    }
-                                } else {
-                                    HStack(spacing: 10) {
-                                        Button(action: { isFileImporterPresented = true }) {
-                                            Label("Choose Video", systemImage: "folder.badge.plus")
-                                        }
-
-                                        Button(action: { Task { await appModel.applyWallpaperFromSelection() } }) {
-                                            Label("Apply", systemImage: "checkmark.circle.fill")
-                                        }
-                                        .disabled(appModel.selectedVideoPath.isEmpty || appModel.isApplyingWallpaper)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    CardView(title: "Saved Collections", style: .elevated) {
-                        let collectionNames = appModel.savedCollections.keys.sorted()
-                        let selectedCollection = appModel.selectedCollectionName.flatMap { appModel.savedCollections[$0] }
-                        let lastUsedCollection = appModel.lastUsedCollectionName.flatMap { appModel.savedCollections[$0] }
-
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack(alignment: .top, spacing: 12) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "square.stack.3d.up")
-                                            .foregroundStyle(.secondary)
-
-                                        Text("\(collectionNames.count) saved collection\(collectionNames.count == 1 ? "" : "s")")
-                                            .font(DesignTokens.Typography.subtitle)
-                                            .fontWeight(.semibold)
-                                    }
-
-                                    Text(collectionNames.isEmpty ? "Create a collection to capture a wallpaper set." : "Pick a collection to review its summary and actions.")
-                                        .font(DesignTokens.Typography.subtitle)
-                                        .foregroundColor(DesignTokens.Colors.textSecondary)
-                                }
-
-                                Spacer()
-
-                                if let lastUsedCollection {
-                                    VStack(alignment: .trailing, spacing: 4) {
-                                        Text("Last used")
-                                            .font(.caption)
-                                            .foregroundColor(DesignTokens.Colors.textSecondary)
-                                        Text(lastUsedCollection.name)
-                                            .font(DesignTokens.Typography.subtitle)
-                                            .fontWeight(.medium)
-                                    }
-                                }
-                            }
-
-                            if collectionNames.isEmpty {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Image(systemName: "tray")
-                                        .foregroundStyle(.secondary)
-                                        .font(.title3)
-
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("No collections saved yet")
-                                            .font(DesignTokens.Typography.subtitle)
-                                            .fontWeight(.semibold)
-                                        Text("Create one to save a wallpaper set for later.")
-                                            .font(DesignTokens.Typography.subtitle)
-                                            .foregroundColor(DesignTokens.Colors.textSecondary)
-                                    }
-
-                                    Spacer()
-                                }
-                                .padding(14)
-                                .background {
-                                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                        .fill(DesignTokens.Colors.cardBackground)
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                                .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                .opacity(DesignTokens.Effects.cardBackdropOpacity)
-                                        }
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                                .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                                        }
-                                }
-                            } else {
-                                Picker(
-                                    "Collection",
-                                    selection: Binding(
-                                        get: { appModel.selectedCollectionName ?? "" },
-                                        set: { newValue in
-                                            if newValue.isEmpty {
-                                                appModel.selectedCollectionName = nil
-                                            } else {
-                                                appModel.selectCollection(name: newValue)
-                                            }
-                                        }
-                                    )
-                                ) {
-                                    Text("Select Collection").tag("")
-                                    ForEach(collectionNames, id: \.self) { name in
-                                        Text(name).tag(name)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .frame(maxWidth: 320, alignment: .leading)
-
-                                if let selectedCollection {
-                                    CollectionSummaryCard(
-                                        collection: selectedCollection,
-                                        isSelected: true,
-                                        isLastUsed: lastUsedCollection?.name == selectedCollection.name,
-                                        mappingDescriptions: selectedCollection.sources.enumerated().map { index, source in
-                                            collectionMappingDescription(index: index, source: source, type: selectedCollection.collectionType)
-                                        }
-                                    )
-                                }
-
-                                CardSection(header: "Actions") {
-                                    HStack(spacing: 10) {
-                                        Button(action: { isCollectionEditorPresented = true }) {
-                                            Label("Create Collection", systemImage: "plus.circle")
-                                                .labelStyle(.titleAndIcon)
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .contentShape(Rectangle())
-
-                                        Button(action: {
-                                            guard let selectedName = appModel.selectedCollectionName,
-                                                  let selectedCollection = appModel.savedCollections[selectedName] else { return }
-                                            editingCollectionName = selectedName
-                                            isCollectionEditorPresented = true
-                                            appModel.selectCollection(name: selectedCollection.name)
-                                        }) {
-                                            Label("Edit Collection", systemImage: "pencil")
-                                                .labelStyle(.titleAndIcon)
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .contentShape(Rectangle())
-                                        .disabled(appModel.selectedCollectionName == nil)
-
-                                        Button(action: {
-                                            Task {
-                                                guard let selectedName = appModel.selectedCollectionName else { return }
-                                                let loaded = await appModel.loadSelectedCollection()
-                                                switch loaded {
-                                                case .success:
-                                                    appModel.statusMessage = "Loaded collection '\(selectedName)'."
-                                                    appModel.errorMessage = nil
-                                                case .failure(let error):
-                                                    appModel.errorMessage = error.errorDescription
-                                                    appModel.statusMessage = nil
-                                                }
-                                            }
-                                        }) {
-                                            Label("Load Collection", systemImage: "folder")
-                                                .labelStyle(.titleAndIcon)
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .contentShape(Rectangle())
-                                        .disabled(appModel.selectedCollectionName == nil)
-
-                                        Button(action: {
-                                            Task {
-                                                guard let selectedName = appModel.selectedCollectionName else { return }
-                                                _ = await appModel.applyCollection(name: selectedName)
-                                            }
-                                        }) {
-                                            Label("Apply Collection", systemImage: "checkmark.circle.fill")
-                                                .labelStyle(.titleAndIcon)
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .contentShape(Rectangle())
-                                        .disabled(appModel.selectedCollectionName == nil || appModel.isApplyingWallpaper)
-
-                                        Button(role: .destructive, action: {
-                                            isDeleteCollectionAlertPresented = true
-                                        }) {
-                                            Label("Delete Collection", systemImage: "trash")
-                                                .labelStyle(.titleAndIcon)
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .contentShape(Rectangle())
-                                        .disabled(appModel.selectedCollectionName == nil)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    CardView(title: "System", style: .elevated) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Toggle(
-                                isOn: Binding(
-                                    get: { appModel.isLaunchOnLoginEnabled },
-                                    set: { _ in Task { await appModel.toggleLaunchOnLogin() } }
-                                )
-                            ) {
-                                Label("Launch on Login", systemImage: "power")
-                                    .font(DesignTokens.Typography.subtitle)
-                                    .fontWeight(.medium)
-                            }
-
-                            Text("Automatically start the wallpaper engine when you log in (requires macOS 13.2+)")
+                    CardView(title: "Wallpaper", style: .elevated) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(sidebarWallpaperName)
                                 .font(DesignTokens.Typography.subtitle)
-                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                                .foregroundColor(DesignTokens.Colors.textPrimary)
+                                .lineLimit(3)
+
+                            Button(action: { isFileImporterPresented = true }) {
+                                Label("Choose Wallpaper", systemImage: "folder.badge.plus")
+                                    .labelStyle(.titleAndIcon)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
                         }
                     }
+
+                    collectionStatusCard
+
+                    setupStatusCard
 
                     VStack(alignment: .leading, spacing: 12) {
                         if appModel.isApplyingWallpaper {
                             statusBanner(title: "Applying wallpaper...", systemImage: "arrow.triangle.2.circlepath", tint: .blue)
                         }
-
                         if let message = appModel.statusMessage {
                             statusBanner(title: message, systemImage: "checkmark.circle.fill", tint: .green)
                         }
-
                         if let error = appModel.errorMessage {
-                            statusBanner(title: error, systemImage: "exclamationmark.circle.fill", tint: .red)
-                        }
-
-                        if let message = appModel.launchOnLoginStatusMessage {
-                            statusBanner(title: message, systemImage: "checkmark.circle.fill", tint: .green)
-                        }
-
-                        if let error = appModel.launchOnLoginErrorMessage {
                             statusBanner(title: error, systemImage: "exclamationmark.circle.fill", tint: .red)
                         }
                     }
@@ -579,112 +209,167 @@ struct ModernHomeView: View {
         }
         .padding(DesignTokens.Spacing.large)
         .frame(maxWidth: width)
-        .background(.ultraThinMaterial)
-        .cornerRadius(DesignTokens.Corner.radius)
+        .glassChrome(.panel)
         .padding(DesignTokens.Spacing.large)
     }
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Wallpaper Configuration")
-                .font(.system(size: 28, weight: .semibold, design: .default))
-                .foregroundColor(DesignTokens.Colors.textPrimary)
+    private static let displaysPanelScrollID = "home-displays-panel"
 
-            Text("A modern workspace for live wallpaper previews, collections, and display-specific control.")
-                .font(DesignTokens.Typography.subtitle)
-                .foregroundColor(DesignTokens.Colors.textSecondary)
-        }
+    /// Reserves scroll space below the fold without rendering the carousel (avoids HUD/drawingGroup glitches).
+    private var displaysPanelPlaceholderHeight: CGFloat {
+        DesignTokens.Surfaces.homeDisplaysPanelHeight + DesignTokens.Spacing.large
     }
 
-    private var heroTitle: String {
-        if appModel.usePerDisplay, let selectedDisplay {
-            return selectedDisplay.title
+    private func updateScrollRevealState(offsetY: CGFloat) {
+        let shouldPause = offsetY > 8
+        if shouldPause != pauseWallpaperPreview {
+            pauseWallpaperPreview = shouldPause
         }
 
-        return appModel.usePerDisplay ? "Multi-Display Workspace" : "Current Wallpaper Preview"
-    }
-
-    private var heroSubtitle: String {
-        if appModel.usePerDisplay {
-            if let selectedDisplay {
-                return selectedDisplay.subtitle
+        if offsetY > DesignTokens.Surfaces.homeDisplaysRevealThreshold {
+            if !isDisplaysPanelVisible {
+                withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+                    isDisplaysPanelVisible = true
+                }
             }
-
-            return NSScreen.screens.count > 1
-                ? "Each display keeps its own source and scaling. Switch among screens without leaving the workspace."
-                : "Per-display mode is enabled, but only one display is connected."
+            if showDisplaysScrollHint {
+                showDisplaysScrollHint = false
+            }
+        } else if offsetY < DesignTokens.Surfaces.homeDisplaysHideThreshold {
+            if isDisplaysPanelVisible {
+                withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+                    isDisplaysPanelVisible = false
+                }
+            }
+            if !showDisplaysScrollHint {
+                showDisplaysScrollHint = true
+            }
         }
-
-        if appModel.rendererMode == .web {
-            return appModel.webURLString.isEmpty ? "No web source configured yet." : appModel.webURLString
-        }
-
-        return appModel.selectedVideoPath.isEmpty ? "No video selected yet." : URL(fileURLWithPath: appModel.selectedVideoPath).lastPathComponent
+        uiDebugLog("displays scroll offset=\(offsetY) visible=\(isDisplaysPanelVisible)")
     }
 
-    private var heroBadge: String {
-        if appModel.usePerDisplay {
-            return selectedDisplay?.badge ?? "Per-Display"
-        }
-        return appModel.rendererMode == .web ? "Web" : "Video"
+    /// Spacer keeps the carousel below the fold while total content height still exceeds the viewport.
+    private func scrollRevealSpacerHeight(in size: CGSize) -> CGFloat {
+        let reserved = DesignTokens.Surfaces.homeUtilityBarReservedHeight
+            + DesignTokens.Surfaces.homeScrollPeekHeight
+        return max(size.height - reserved, 280)
     }
 
-    private var heroMetadata: [String] {
-        var values: [String] = [appModel.isMuted ? "Muted" : "Audio On"]
-        values.append(appModel.usePerDisplay ? "\(NSScreen.screens.count) displays" : "Unified mode")
-        values.append(appModel.usePerDisplay ? selectedPerDisplayScaling.displayName : appModel.scalingMode.displayName)
-        if let selectedDisplay {
-            values.append(selectedDisplay.resolution)
-        }
-        return values
+    private func rebuildDisplayCardsCache() {
+        cachedDisplayCards = buildDisplayCards()
     }
 
-    private var heroPreviewImage: NSImage? {
-        if appModel.usePerDisplay, let selectedDisplay {
-            print("ModernHomeView: heroPreviewImage - Per-display mode, using display preview")
-            return selectedDisplay.previewImage
+    private func displaysScrollHint(scrollProxy: ScrollViewProxy) -> some View {
+        Button {
+            revealDisplaysPanel(using: scrollProxy)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                Text("Scroll for Displays")
+                    .font(DesignTokens.Typography.subtitle)
+                    .fontWeight(.medium)
+            }
+            .foregroundStyle(DesignTokens.Colors.textSecondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .glassChrome(.bar)
         }
-
-        if appModel.rendererMode == .web {
-            print("ModernHomeView: heroPreviewImage - Web mode, returning web icon")
-            return NSWorkspace.shared.icon(forFileType: "webloc")
-        }
-
-        let path = appModel.selectedVideoPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !path.isEmpty else {
-            print("ModernHomeView: heroPreviewImage - No path selected, returning movie icon")
-            return NSWorkspace.shared.icon(forFileType: "public.movie")
-        }
-
-        print("ModernHomeView: heroPreviewImage - Loading preview for: \(path)")
-        let image = previewIcon(forURL: URL(fileURLWithPath: path), fallbackIsWeb: false)
-        print("ModernHomeView: heroPreviewImage - Got image with size: \(image.size)")
-        return image
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show display picker")
+        .accessibilityHint("Scrolls to the display carousel")
     }
 
-    private var heroVideoURL: URL? {
-        if appModel.usePerDisplay, let selectedDisplay {
-            // For per-display mode, return the selected display's preview URL as video
-            let url = selectedPerDisplayPreviewURL
-            print("ModernHomeView.heroVideoURL: per-display -> \(url?.absoluteString ?? "nil")")
-            return url
+    private func revealDisplaysPanel(using scrollProxy: ScrollViewProxy) {
+        withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+            scrollProxy.scrollTo(Self.displaysPanelScrollID, anchor: .bottom)
+            isDisplaysPanelVisible = true
         }
+        showDisplaysScrollHint = false
+    }
 
-        // For unified mode, return the selected video path
-        if appModel.rendererMode == .web {
-            print("ModernHomeView.heroVideoURL: rendererMode=web -> nil")
-            return nil  // Don't play web URLs in preview
+    private var sidebarDisplayStatus: String {
+        if let display = selectedDisplay {
+            return "\(display.title) · \(display.resolution)"
         }
+        return "\(NSScreen.screens.count) display\(NSScreen.screens.count == 1 ? "" : "s")"
+    }
 
-        let path = appModel.selectedVideoPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !path.isEmpty else {
-            print("ModernHomeView.heroVideoURL: selectedVideoPath empty -> nil")
-            return nil
+    private var sidebarWallpaperName: String {
+        if let display = selectedDisplay {
+            return display.subtitle
         }
+        return "No display selected"
+    }
 
-        let fileURL = URL(fileURLWithPath: path)
-        print("ModernHomeView.heroVideoURL: unified -> \(fileURL.absoluteString), exists=\(FileManager.default.fileExists(atPath: fileURL.path))")
-        return fileURL
+    @ViewBuilder
+    private var collectionStatusCard: some View {
+        CardView(title: "Collection", style: .elevated) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(appModel.selectedCollectionName ?? appModel.lastUsedCollectionName ?? "None applied")
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                    .lineLimit(2)
+
+                if let name = appModel.selectedCollectionName ?? appModel.lastUsedCollectionName {
+                    Button(action: {
+                        Task { _ = await appModel.applyCollection(name: name) }
+                    }) {
+                        Label("Apply Collection", systemImage: "checkmark.circle")
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                    .disabled(appModel.isApplyingWallpaper)
+                } else {
+                    Text("Manage collections in the Collections tab.")
+                        .font(.caption)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var setupStatusCard: some View {
+        CardView(title: "Setup", style: .elevated) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(appModel.selectedSetupName ?? "None active")
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                    .lineLimit(2)
+
+                Button(action: { isSaveSetupModalPresented = true }) {
+                    Label("Save Current Setup", systemImage: "square.and.arrow.down")
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+
+                Text("Restore and delete setups in the Setups tab.")
+                    .font(.caption)
+                    .foregroundColor(DesignTokens.Colors.textSecondary)
+            }
+        }
+    }
+
+    private func statusCard(title: String, icon: String, value: String) -> some View {
+        CardView(title: title, style: .elevated) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                    .lineLimit(3)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func uiDebugLog(_ message: String) {
+        guard SettingsStore.shared.debugDiagnosticsEnabled else { return }
+        print("ModernHomeView: \(message)")
     }
 
     private var selectedDisplay: DisplayCard? {
@@ -712,17 +397,11 @@ struct ModernHomeView: View {
             return nil
         }
 
-        let source = selectedPerDisplaySource.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !source.isEmpty else {
-            return nil
-        }
-
-        // If we've just selected a file for this display, prefer the transient URL
         if let transient = transientPerDisplayPreviewURL, displayID == selectedPerDisplayID {
             return transient
         }
 
-        return appModel.perDisplayResolvedURL(for: displayID) ?? URL(string: source) ?? URL(fileURLWithPath: source)
+        return appModel.previewURL(forDisplayID: displayID)
     }
 
     private var selectedPerDisplayScaling: VideoScalingMode {
@@ -734,7 +413,12 @@ struct ModernHomeView: View {
     }
 
     private var displayCards: [DisplayCard] {
-        NSScreen.screens.enumerated().map { index, screen in
+        cachedDisplayCards.isEmpty ? buildDisplayCards() : cachedDisplayCards
+    }
+
+    private func buildDisplayCards() -> [DisplayCard] {
+        _ = appModel.displaySourcesVersion
+        return NSScreen.screens.enumerated().map { index, screen in
             let displayID = screen.displayID
             let source = perDisplaySource(for: displayID)
             let resolvedURL = perDisplayPreviewURL(for: displayID)
@@ -761,12 +445,7 @@ struct ModernHomeView: View {
     }
 
     private func perDisplayPreviewURL(for displayID: CGDirectDisplayID) -> URL? {
-        let source = perDisplaySource(for: displayID)
-        guard !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return nil
-        }
-
-        return appModel.perDisplayResolvedURL(for: displayID) ?? URL(string: source) ?? URL(fileURLWithPath: source)
+        appModel.previewURL(forDisplayID: displayID)
     }
 
     private func displayPreviewImage(for displayID: CGDirectDisplayID, source: String, resolvedURL: URL?) -> NSImage? {
@@ -801,17 +480,20 @@ struct ModernHomeView: View {
     }
 
     private func syncSelectedDisplayIfNeeded() {
-        guard appModel.usePerDisplay, !NSScreen.screens.isEmpty else {
+        appModel.syncFocusedDisplayIfNeeded()
+        guard !NSScreen.screens.isEmpty else {
             selectedDisplayID = nil
             return
         }
 
         if let selectedDisplayID,
            NSScreen.screens.contains(where: { $0.displayID == selectedDisplayID }) {
+            appModel.focusedDisplayID = selectedDisplayID
             return
         }
 
-        selectedDisplayID = NSScreen.screens.first?.displayID
+        selectedDisplayID = appModel.focusedDisplayID ?? NSScreen.screens.first?.displayID
+        appModel.focusedDisplayID = selectedDisplayID
     }
 
     @ViewBuilder
@@ -839,71 +521,45 @@ struct ModernHomeView: View {
     }
 
     @ViewBuilder
-    private var previewSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Per-Display Workspace")
-                .font(.headline)
-                .fontWeight(.semibold)
-
-            VStack(spacing: 12) {
-                if appModel.usePerDisplay && NSScreen.screens.count > 1 {
-                    if let selectedDisplay {
-                        let sourceSummary = selectedPerDisplaySource.isEmpty ? "No source selected" : (selectedPerDisplayPreviewURL?.lastPathComponent ?? selectedPerDisplaySource)
-
-                        CardView(title: "Current Display Preview", style: .elevated) {
-                            VStack(alignment: .leading, spacing: 14) {
-                                WallpaperPreviewCard(
-                                    title: selectedDisplay.title,
-                                    subtitle: selectedDisplay.subtitle,
-                                    thumbnail: selectedDisplay.previewImage,
-                                    trailingInfo: selectedPerDisplayScaling.displayName,
-                                    isHero: false
-                                )
-
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(sourceSummary)
-                                        .font(DesignTokens.Typography.subtitle)
-                                        .foregroundColor(DesignTokens.Colors.textSecondary)
-                                        .lineLimit(2)
-                                }
-                            }
+    private var scrollContentSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
+            if !NSScreen.screens.isEmpty {
+                DisplaySwitcherView(
+                    selectedDisplayID: Binding(
+                        get: { selectedDisplayID ?? NSScreen.screens.first?.displayID },
+                        set: { newValue in
+                            selectedDisplayID = newValue
+                            appModel.focusedDisplayID = newValue
                         }
+                    ),
+                    displays: displayCards,
+                    onSelect: { displayID in
+                        selectedDisplayID = displayID
+                        appModel.focusedDisplayID = displayID
                     }
-                } else {
-                    HStack {
-                        Image(systemName: "rectangle.on.rectangle")
-                            .foregroundStyle(.secondary)
-                        Text("Unified wallpaper mode is active. Enable per-display mode to manage individual displays here.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(10)
-                    .background {
-                        RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                            .fill(DesignTokens.Colors.cardBackground)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                    .fill(.linearGradient(colors: [DesignTokens.Colors.cardHighlight, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .opacity(DesignTokens.Effects.cardBackdropOpacity)
-                            }
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                                    .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                            }
-                    }
+                )
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "rectangle.on.rectangle")
+                        .foregroundStyle(.secondary)
+                        .font(.title3)
+
+                    Text("No displays detected. Connect a display to assign wallpapers.")
+                        .font(DesignTokens.Typography.subtitle)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(14)
+                .background {
+                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
+                                .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
+                        }
                 }
             }
-        }
-        .padding(12)
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(DesignTokens.Colors.background.opacity(0.72))
-                .background(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                }
         }
     }
 
@@ -917,19 +573,21 @@ struct ModernHomeView: View {
             }
 
             if let thumbnail = thumbnailForLocalFile(at: url) {
-                print("ModernHomeView.previewIcon: Successfully generated thumbnail with size \(thumbnail.size)")
+                uiDebugLog("previewIcon: thumbnail size \(thumbnail.size)")
                 return thumbnail
             }
-            print("ModernHomeView.previewIcon: Thumbnail generation failed, trying direct load")
+            uiDebugLog("previewIcon: thumbnail failed, trying direct load")
             if let image = NSImage(contentsOf: url), image.size != .zero {
-                print("ModernHomeView.previewIcon: Loaded image directly with size \(image.size)")
+                uiDebugLog("previewIcon: direct load size \(image.size)")
                 return image
             }
-            print("ModernHomeView.previewIcon: Direct load failed, using file icon")
+            uiDebugLog("previewIcon: direct load failed, using file icon")
             return NSWorkspace.shared.icon(forFile: url.path)
         }
 
-        return fallbackIsWeb ? NSWorkspace.shared.icon(forFileType: "webloc") : NSWorkspace.shared.icon(forFileType: "public.movie")
+        return fallbackIsWeb
+            ? NSWorkspace.shared.icon(for: UTType.internetLocation)
+            : NSWorkspace.shared.icon(for: .movie)
     }
 
     private func thumbnailForLocalFile(at url: URL) -> NSImage? {
@@ -943,33 +601,33 @@ struct ModernHomeView: View {
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 1920, height: 1920)
 
-        do {
-            let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-            // Calculate proper size from CGImage dimensions
-            let imageSize = NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
-            return NSImage(cgImage: cgImage, size: imageSize)
-        } catch {
-            print("ModernHomeView: Failed to generate thumbnail - \(error.localizedDescription)")
-            return nil
-        }
-    }
+        let requestedTime = NSValue(time: .zero)
+        let semaphore = DispatchSemaphore(value: 0)
+        var generatedImage: NSImage?
+        var generationError: Error?
 
-    private func collectionMappingDescription(
-        index: Int,
-        source: CollectionSource,
-        type: WallpaperCollection.CollectionType
-    ) -> String {
-        let sourceName = URL(string: source.url)?.lastPathComponent ?? source.url
+        generator.generateCGImagesAsynchronously(forTimes: [requestedTime]) { _, cgImage, _, result, error in
+            defer { semaphore.signal() }
 
-        if type == .simple {
-            if appModel.savedCollections[appModel.selectedCollectionName ?? ""]?.sources.count == 1 {
-                return "\(sourceName) → all displays"
+            guard result == .succeeded, let cgImage else {
+                generationError = error
+                return
             }
-            return "\(sourceName) → screen slot \(index + 1) in order"
+
+            let imageSize = NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
+            generatedImage = NSImage(cgImage: cgImage, size: imageSize)
         }
 
-        let target = source.displayLabel ?? source.displayIDFallback.map { "Display ID \($0)" } ?? "Auto-detect"
-        return "\(sourceName) → bound to \(target)"
+        semaphore.wait()
+
+        if let generatedImage {
+            return generatedImage
+        }
+
+        if let generationError {
+            uiDebugLog("thumbnail generation failed - \(generationError.localizedDescription)")
+        }
+        return nil
     }
 }
 

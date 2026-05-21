@@ -8,76 +8,106 @@ struct HeroWallpaperView: View {
     let badge: String
     let metadata: [String]
     let videoURL: URL?
+    let isFullWindowBackground: Bool
+    let dynamicAspectRatio: CGFloat?
+    var isPlaybackPaused: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: isFullWindowBackground ? .topLeading : .bottomLeading) {
             heroImage
 
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.12),
-                    Color.black.opacity(0.40),
-                    Color.black.opacity(0.68)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            // Only show gradient overlay if NOT full-window background
+            if !isFullWindowBackground {
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.12),
+                        Color.black.opacity(0.40),
+                        Color.black.opacity(0.68)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            } else {
+                // For full-window, lighter gradient at bottom for text readability
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0),
+                        Color.black.opacity(0.15),
+                        Color.black.opacity(0.35)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
 
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    Text(badge)
-                        .font(DesignTokens.Typography.subtitle)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white.opacity(0.88))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.black.opacity(0.24))
-                        .clipShape(Capsule(style: .continuous))
+            // Only show UI overlay if NOT full-window background
+            if !isFullWindowBackground {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(badge)
+                            .font(DesignTokens.Typography.subtitle)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white.opacity(0.88))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(.black.opacity(0.24))
+                            .clipShape(Capsule(style: .continuous))
 
-                    Spacer()
-                }
+                        Spacer()
+                    }
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(title)
-                        .font(.system(size: 34, weight: .semibold, design: .default))
-                        .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 2)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(title)
+                            .font(.system(size: 34, weight: .semibold, design: .default))
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 2)
 
-                    Text(subtitle)
-                        .font(DesignTokens.Typography.subtitle)
-                        .foregroundColor(.white.opacity(0.82))
-                        .lineLimit(2)
+                        Text(subtitle)
+                            .font(DesignTokens.Typography.subtitle)
+                            .foregroundColor(.white.opacity(0.82))
+                            .lineLimit(2)
 
-                    HStack(spacing: 8) {
-                        ForEach(metadata, id: \.self) { item in
-                            Text(item)
-                                .font(DesignTokens.Typography.subtitle)
-                                .foregroundColor(.white.opacity(0.88))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(.white.opacity(0.14))
-                                .clipShape(Capsule(style: .continuous))
+                        HStack(spacing: 8) {
+                            ForEach(metadata, id: \.self) { item in
+                                Text(item)
+                                    .font(DesignTokens.Typography.subtitle)
+                                    .foregroundColor(.white.opacity(0.88))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(.white.opacity(0.14))
+                                    .clipShape(Capsule(style: .continuous))
+                            }
                         }
                     }
                 }
+                .padding(28)
             }
-            .padding(28)
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(16 / 9, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(DesignTokens.Colors.cardBorder.opacity(0.6), lineWidth: 1)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .aspectRatio(
+            dynamicAspectRatio ?? (16 / 9),
+            contentMode: isFullWindowBackground ? .fill : .fit
+        )
+        .clipped()
+        .conditionalModifier(!isFullWindowBackground) {
+            $0
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(DesignTokens.Colors.cardBorder.opacity(0.6), lineWidth: 1)
+                }
         }
-        .shadow(color: Color.black.opacity(isHovered ? 0.16 : 0.10), radius: isHovered ? 28 : 20, x: 0, y: isHovered ? 14 : 10)
-        .scaleEffect(isHovered && !reduceMotion ? 1.01 : 1)
+        .conditionalModifier(!isFullWindowBackground) {
+            $0
+                .shadow(color: Color.black.opacity(isHovered ? 0.16 : 0.10), radius: isHovered ? 28 : 20, x: 0, y: isHovered ? 14 : 10)
+                .scaleEffect(isHovered && !reduceMotion ? 1.01 : 1)
+                .onHover { isHovered = $0 }
+        }
         .animation(reduceMotion ? .linear(duration: 0) : .easeInOut(duration: DesignTokens.Motion.standardDuration), value: isHovered)
-        .onHover { isHovered = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
         .accessibilityHint(subtitle)
@@ -86,10 +116,19 @@ struct HeroWallpaperView: View {
     private var heroImage: some View {
         Group {
             if let videoURL = videoURL, isVideoFile(videoURL) {
-                VideoPreviewView(videoURL: videoURL, shouldLoop: true, isMuted: true)
+                VideoPreviewView(
+                    videoURL: videoURL,
+                    shouldLoop: true,
+                    isMuted: true,
+                    isPlaybackPaused: isPlaybackPaused
+                )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .id(videoURL.absoluteString)
-                    .onAppear { print("HeroWallpaperView: Rendering video preview for \(videoURL.path)") }
+                    .onAppear {
+                        if SettingsStore.shared.debugDiagnosticsEnabled {
+                            print("HeroWallpaperView: video preview \(videoURL.path)")
+                        }
+                    }
             } else if let image {
                 Image(nsImage: image)
                     .resizable()
@@ -97,7 +136,11 @@ struct HeroWallpaperView: View {
                     .antialiased(true)
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .onAppear { print("HeroWallpaperView: Rendering static image") }
+                    .onAppear {
+                        if SettingsStore.shared.debugDiagnosticsEnabled {
+                            print("HeroWallpaperView: static image")
+                        }
+                    }
             } else {
                 ZStack {
                     LinearGradient(
@@ -115,7 +158,11 @@ struct HeroWallpaperView: View {
                         .foregroundColor(.white.opacity(0.7))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onAppear { print("HeroWallpaperView: Rendering placeholder") }
+                .onAppear {
+                    if SettingsStore.shared.debugDiagnosticsEnabled {
+                        print("HeroWallpaperView: placeholder")
+                    }
+                }
             }
         }
     }
@@ -125,4 +172,34 @@ struct HeroWallpaperView: View {
         let fileExtension = url.pathExtension.lowercased()
         return videoExtensions.contains(fileExtension)
     }
+}
+
+// MARK: - View Modifier Helper
+
+extension View {
+    @ViewBuilder
+    func conditionalModifier<Content: View>(
+        _ condition: Bool,
+        @ViewBuilder transform: (Self) -> Content
+    ) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+}
+
+#Preview {
+    HeroWallpaperView(
+        title: "Spider-Man Black",
+        subtitle: "High contrast wallpaper",
+        image: nil,
+        badge: "System",
+        metadata: ["4K", "Dark", "Portrait"],
+        videoURL: nil,
+        isFullWindowBackground: false,
+        dynamicAspectRatio: nil
+    )
+    .frame(maxWidth: 600, maxHeight: 340)
 }

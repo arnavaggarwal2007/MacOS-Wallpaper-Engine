@@ -1,179 +1,127 @@
 import SwiftUI
 import AppKit
 import AVFoundation
+import AVKit
 
-/// A SwiftUI wrapper around AVPlayer for video preview playback
+/// A SwiftUI wrapper around `AVPlayerView` for video preview playback.
 struct VideoPreviewView: NSViewRepresentable {
+    typealias NSViewType = AVPlayerView
     let videoURL: URL
     let shouldLoop: Bool
     var isMuted: Bool = true
-    
-    func makeNSView(context: Context) -> NSView {
-        let containerView = NSView()
-        containerView.wantsLayer = true
-        containerView.layer?.backgroundColor = NSColor.black.cgColor
-        containerView.postsFrameChangedNotifications = true
+    var isPlaybackPaused: Bool = false
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .none
+        view.videoGravity = .resizeAspectFill
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.black.cgColor
         
+        // Critical: Disable auto-resizing masks to allow SwiftUI to control the frame
+        view.translatesAutoresizingMaskIntoConstraints = false
+
         let player = AVPlayer()
         player.isMuted = isMuted
-        
-        let playerLayer = AVPlayerLayer(player: player)
-        playerLayer.videoGravity = .resizeAspectFill
-        playerLayer.backgroundColor = NSColor.clear.cgColor
-        playerLayer.frame = containerView.bounds
-        
-        if let contentLayer = containerView.layer {
-            contentLayer.addSublayer(playerLayer)
-        }
-        
-        // Store player and layer for updates
+        view.player = player
+
         context.coordinator.player = player
-        context.coordinator.playerLayer = playerLayer
-        context.coordinator.containerView = containerView
+        context.coordinator.playerView = view
         context.coordinator.currentURL = videoURL
 
-        // Observe frame changes to keep playerLayer sized correctly
-        context.coordinator.frameObserver = NotificationCenter.default.addObserver(
-            forName: NSView.frameDidChangeNotification,
-            object: containerView,
-            queue: .main
-        ) { _ in
-            playerLayer.frame = containerView.bounds
-            print("VideoPreviewView: frame updated to \(playerLayer.frame)")
-        }
+        // Start playback
+        Task { await loadAndPlay(player: player, url: videoURL, shouldLoop: shouldLoop, coordinator: context.coordinator) }
 
-        // Load and play video
-        Task {
-            await loadAndPlayVideo(player: player, url: videoURL, shouldLoop: shouldLoop, coordinator: context.coordinator)
-        }
-        
-        return containerView
+        return view
     }
-    
-    func updateNSView(_ nsView: NSView, context: Context) {
-        // Update layout when size changes
-        if let playerLayer = context.coordinator.playerLayer {
-            playerLayer.frame = nsView.bounds
-        }
-        
-        // Update mute state if changed
+
+    func updateNSView(_ nsView: AVPlayerView, context: Context) {
         if context.coordinator.player?.isMuted != isMuted {
             context.coordinator.player?.isMuted = isMuted
         }
-        
-        // If the incoming videoURL changed, reload the player with new URL
+
+        if isPlaybackPaused {
+            context.coordinator.player?.pause()
+        } else if context.coordinator.player?.rate == 0, context.coordinator.currentURL != nil {
+            context.coordinator.player?.play()
+        }
+
         if context.coordinator.currentURL?.absoluteString != videoURL.absoluteString {
             context.coordinator.currentURL = videoURL
-            Task {
-                await loadAndPlayVideo(player: context.coordinator.player ?? AVPlayer(), url: videoURL, shouldLoop: shouldLoop, coordinator: context.coordinator)
-            }
+            Task { await loadAndPlay(player: context.coordinator.player ?? AVPlayer(), url: videoURL, shouldLoop: shouldLoop, coordinator: context.coordinator) }
         }
     }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-    
-    private func loadAndPlayVideo(player: AVPlayer, url: URL, shouldLoop: Bool, coordinator: Coordinator) async {
-        print("VideoPreviewView: Starting video load for \(url.path)")
 
-        // Stop any existing loop observer
-        if let observer = coordinator.loopObserver, let existingItem = player.currentItem {
-            NotificationCenter.default.removeObserver(observer, name: .AVPlayerItemDidPlayToEndTime, object: existingItem)
-            coordinator.loopObserver = nil
-        }
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
-        // Ensure the coordinator holds a security-scoped access handle while playback is active.
+    private func loadAndPlay(player: AVPlayer, url: URL, shouldLoop: Bool, coordinator: Coordinator) async {
+        let debug = SettingsStore.shared.debugDiagnosticsEnabled
+        if debug { print("VideoPreviewView: loadAndPlay -> \(url.path)") }
+
+        // Manage security-scoped access for file URLs
         if url.isFileURL {
-            // If we were accessing a previous URL, stop it first
             if let prev = coordinator.accessedURL, prev.path != url.path {
                 prev.stopAccessingSecurityScopedResource()
-                print("VideoPreviewView: stopped previous security scope for \(prev.path)")
                 coordinator.accessedURL = nil
+                if debug { print("VideoPreviewView: stopped scope for \(prev.path)") }
             }
-
             if coordinator.accessedURL?.path != url.path {
-                let didStartAccessing = url.startAccessingSecurityScopedResource()
-                print("VideoPreviewView: startAccessingSecurityScopedResource -> \(didStartAccessing) for \(url.path)")
-                if didStartAccessing {
-                    coordinator.accessedURL = url
-                } else {
-                    print("VideoPreviewView: WARNING - failed to start security scope for \(url.path)")
-                }
+                let didStart = url.startAccessingSecurityScopedResource()
+                if debug { print("VideoPreviewView: startAccessingScope -> \(didStart) for \(url.path)") }
+                if didStart { coordinator.accessedURL = url }
             } else {
-                print("VideoPreviewView: already accessing security scope for \(url.path)")
+                if debug { print("VideoPreviewView: already accessing scope for \(url.path)") }
             }
         }
 
         guard FileManager.default.fileExists(atPath: url.path) else {
-            print("VideoPreviewView: File does not exist at \(url.path)")
+            if debug { print("VideoPreviewView: file missing at \(url.path)") }
             return
         }
 
-        print("VideoPreviewView: File exists, creating asset")
         let asset = AVURLAsset(url: url)
-        let playerItem = AVPlayerItem(asset: asset)
+        if debug { print("VideoPreviewView: asset created") }
+        let item = AVPlayerItem(asset: asset)
 
-        // Observe player item status for debugging (ready/failure)
-        coordinator.playerItemStatusObserver = playerItem.observe(\AVPlayerItem.status, options: [.initial, .new]) { item, _ in
+        coordinator.playerItemObserver = item.observe(\AVPlayerItem.status, options: [.initial, .new]) { item, _ in
+            guard debug else { return }
             print("VideoPreviewView: playerItem.status = \(item.status.rawValue)")
             if item.status == .readyToPlay {
-                print("VideoPreviewView: playerItem is readyToPlay")
+                print("VideoPreviewView: playerItem readyToPlay")
+            } else if item.status == .failed {
+                print("VideoPreviewView: playerItem failed -> \(String(describing: item.error))")
             }
         }
 
-        print("VideoPreviewView: Asset created, setting up playback")
-
-        // Set up loop observer if needed
         if shouldLoop {
-            coordinator.loopObserver = NotificationCenter.default.addObserver(
-                forName: .AVPlayerItemDidPlayToEndTime,
-                object: playerItem,
-                queue: .main
-            ) { _ in
-                print("VideoPreviewView: Video ended, looping")
+            coordinator.loopObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { _ in
+                if debug { print("VideoPreviewView: didPlayToEnd, looping") }
                 player.seek(to: .zero)
                 player.play()
             }
         }
 
         await MainActor.run {
-            player.replaceCurrentItem(with: playerItem)
+            player.replaceCurrentItem(with: item)
             player.play()
-            print("VideoPreviewView: Video playback started")
-            if player.currentItem?.status == .failed {
-                print("VideoPreviewView: player.currentItem failed with error: \(String(describing: player.currentItem?.error))")
-            }
-        }
-
-        // Also log asset resource loader errors if any
-        if let itemError = playerItem.error {
-            print("VideoPreviewView: playerItem.error after setup -> \(itemError.localizedDescription)")
+            if debug { print("VideoPreviewView: player.play()") }
         }
     }
-    
+
     class Coordinator {
         var player: AVPlayer?
-        var playerLayer: AVPlayerLayer?
-        weak var containerView: NSView?
+        var playerView: AVPlayerView?
         var loopObserver: NSObjectProtocol?
-        var currentURL: URL?
-        var frameObserver: NSObjectProtocol?
-        var playerItemStatusObserver: NSKeyValueObservation?
+        var playerItemObserver: NSKeyValueObservation?
         var accessedURL: URL?
+        var currentURL: URL?
 
         deinit {
             if let observer = loopObserver, let item = player?.currentItem {
                 NotificationCenter.default.removeObserver(observer, name: .AVPlayerItemDidPlayToEndTime, object: item)
             }
-            if let frameObs = frameObserver {
-                NotificationCenter.default.removeObserver(frameObs)
-            }
-            playerItemStatusObserver?.invalidate()
-            if let accessed = accessedURL {
-                accessed.stopAccessingSecurityScopedResource()
-                print("VideoPreviewView: deinit - stopped security scope for \(accessed.path)")
-            }
+            playerItemObserver?.invalidate()
+            if let accessed = accessedURL { accessed.stopAccessingSecurityScopedResource() }
             player?.pause()
         }
     }
