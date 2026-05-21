@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import os.log
 
+@MainActor
 final class MenuBarController: NSObject, ObservableObject {
     private let logger = Logger(subsystem: "MenuBarController", category: "menu")
     private weak var viewModel: AppViewModel?
@@ -29,6 +30,7 @@ final class MenuBarController: NSObject, ObservableObject {
         
         // Subscribe to ViewModel changes to update menu state
         viewModel.objectWillChange
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 self?.updateMenuState()
             }
@@ -89,7 +91,7 @@ final class MenuBarController: NSObject, ObservableObject {
     
     @objc private func handlePlayPauseAction() {
         guard let viewModel = viewModel else { return }
-        Task { @MainActor in
+        Task {
             await viewModel.togglePlayback()
         }
         logger.debug("Play/Pause toggled from menu")
@@ -97,7 +99,7 @@ final class MenuBarController: NSObject, ObservableObject {
     
     @objc private func handleMuteAction() {
         guard let viewModel = viewModel else { return }
-        Task { @MainActor in
+        Task {
             await viewModel.toggleMute()
         }
         logger.debug("Mute toggled from menu")
@@ -105,7 +107,7 @@ final class MenuBarController: NSObject, ObservableObject {
     
     @objc private func handlePreferencesAction() {
         guard let viewModel = viewModel else { return }
-        Task { @MainActor in
+        Task {
             await viewModel.openPreferences()
         }
         logger.debug("Preferences opened from menu")

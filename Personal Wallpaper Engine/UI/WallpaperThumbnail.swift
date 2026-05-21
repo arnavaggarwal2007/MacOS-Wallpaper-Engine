@@ -38,7 +38,11 @@ enum WallpaperThumbnailLoader {
 
     static func image(for urlString: String, collectionName: String? = nil, maxPixelSize: CGFloat = 320) -> NSImage? {
         guard let url = resolveURL(from: urlString, collectionName: collectionName) else { return nil }
+        return image(for: url, maxPixelSize: maxPixelSize)
+    }
 
+    /// Loads a thumbnail from an already-resolved URL (safe to call off the main actor).
+    nonisolated static func image(for url: URL, maxPixelSize: CGFloat = 320) -> NSImage? {
         if url.isFileURL {
             let didStartScope = url.startAccessingSecurityScopedResource()
             defer {
@@ -62,7 +66,7 @@ enum WallpaperThumbnailLoader {
             : NSWorkspace.shared.icon(for: .movie)
     }
 
-    private static func thumbnailForLocalFile(at url: URL, maxPixelSize: CGFloat) -> NSImage? {
+    nonisolated private static func thumbnailForLocalFile(at url: URL, maxPixelSize: CGFloat) -> NSImage? {
         let fileExtension = url.pathExtension.lowercased()
         if ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"].contains(fileExtension),
            let image = NSImage(contentsOf: url),
@@ -135,13 +139,14 @@ struct WallpaperThumbnailView: View {
                 return
             }
             let maxPixelSize = max(width, height) * 2
-            let collection = collectionName
+            let resolvedURL = WallpaperThumbnailLoader.resolveURL(
+                from: urlString,
+                collectionName: collectionName
+            )
+            let url = resolvedURL
             image = await Task.detached(priority: .utility) {
-                WallpaperThumbnailLoader.image(
-                    for: urlString,
-                    collectionName: collection,
-                    maxPixelSize: maxPixelSize
-                )
+                guard let url else { return nil as NSImage? }
+                return WallpaperThumbnailLoader.image(for: url, maxPixelSize: maxPixelSize)
             }.value
         }
     }
