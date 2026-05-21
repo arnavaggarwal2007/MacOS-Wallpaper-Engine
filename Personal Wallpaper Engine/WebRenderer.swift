@@ -12,6 +12,13 @@ final class WebRenderer: Renderer {
     func start(in containerView: NSView) async -> Result<Void, WallpaperError> {
         self.containerView = containerView
 
+        containerView.layoutSubtreeIfNeeded()
+        let bounds = containerView.bounds
+        guard !bounds.isEmpty else {
+            logger.error("Container view has zero bounds: \(String(describing: bounds))")
+            return .failure(.windowCreationFailed(reason: "Container view has zero bounds after layout"))
+        }
+
         // Configure WKWebView for macOS: avoid using iOS-only APIs like `allowsInlineMediaPlayback`.
         let configuration = WKWebViewConfiguration()
         // Allow autoplay by not requiring a user action for media playback
@@ -29,14 +36,14 @@ final class WebRenderer: Renderer {
             configuration.preferences = preferences
         }
 
-        let webView = WKWebView(frame: containerView.bounds, configuration: configuration)
+        let webView = WKWebView(frame: bounds, configuration: configuration)
         webView.autoresizingMask = [.width, .height]
         webView.navigationDelegate = nil
         webView.allowsBackForwardNavigationGestures = false
 
         containerView.addSubview(webView)
         webView.translatesAutoresizingMaskIntoConstraints = true
-        webView.frame = containerView.bounds
+        webView.frame = bounds
 
         self.webView = webView
         logger.info("WebRenderer initialized and attached to container view")

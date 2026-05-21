@@ -25,14 +25,23 @@ final class DisplayController {
     private var lastFrameSize: CGSize = .zero
 
     var displayID: CGDirectDisplayID { screen.displayID }
-    
+
+    private let boundSignature: DisplayConfigurationMigrator.DisplaySignature
+
     /// Computed property exposing the screen's localizedName for matching collection sources
     var displayName: String? { screen.localizedName }
 
     init(screen: NSScreen, manager: WallpaperManager?) {
         self.screen = screen
         self.manager = manager
+        self.boundSignature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
         setupWindow()
+    }
+
+    /// Returns false when macOS reused this display ID for a different monitor after hotplug.
+    func matchesCurrentScreen(_ screen: NSScreen) -> Bool {
+        screen.displayID == displayID
+            && DisplayConfigurationMigrator.DisplaySignature(screen: screen) == boundSignature
     }
 
     private func setupWindow() {
@@ -45,10 +54,8 @@ final class DisplayController {
         let desktopLevel = CGWindowLevelForKey(.desktopWindow)
         window.level = NSWindow.Level(rawValue: Int(desktopLevel))
 
-        // Prevent activation: cannot assign to canBecomeKey/canBecomeMain (get-only)
-
-        // Content view
-        let contentView = NSView(frame: frame)
+        let contentView = NSView(frame: localContentRect(for: frame))
+        contentView.autoresizingMask = [.width, .height]
         contentView.wantsLayer = true
         window.contentView = contentView
         window.collectionBehavior = [.canJoinAllSpaces, .stationary]
@@ -58,8 +65,7 @@ final class DisplayController {
         self.contentView = contentView
         self.lastFrameSize = frame.size
         logger.info("Window created for display \(self.displayID)")
-        
-        // MARK: - Setup Resize Observer (Chunk 4C)
+
         resizeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResizeNotification,
             object: window,
@@ -67,15 +73,44 @@ final class DisplayController {
         ) { [weak self] _ in
             self?.handleWindowResize()
         }
-        
-        // Write a diagnostic entry so external checks can verify runtime behavior
-        // MARK: - Conditional Diagnostics (Chunk 4E)
-        if SettingsStore.shared.debugDiagnosticsEnabled {
-            let diag = "\(Date()): Window created for display \(self.displayID) frame=\(frame)\n"
-            if let data = diag.data(using: .utf8) {
-                let path = "/tmp/pwe_display.log"
-                if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil, attributes: nil) }
-                if let handle = FileHandle(forWritingAtPath: path) { handle.seekToEndOfFile(); handle.write(data); try? handle.close() }
+
+        logGeometryDiagnostics(for: screen, event: "Window created")
+    }
+
+    /// Window-local content rect; `NSScreen.frame` is global and must not be used as the content view frame.
+    private func localContentRect(for screenFrame: NSRect) -> NSRect {
+        NSRect(origin: .zero, size: screenFrame.size)
+    }
+
+    /// Aligns the desktop window and content view with the current screen (required after hotplug / primary swap).
+    func syncWindowGeometry(for screen: NSScreen) {
+        guard screen.displayID == displayID, let window, let contentView else { return }
+
+        let screenFrame = screen.frame
+        window.setFrame(screenFrame, display: true)
+        contentView.frame = localContentRect(for: screenFrame)
+        lastFrameSize = screenFrame.size
+        logGeometryDiagnostics(for: screen, event: "Geometry synced")
+    }
+
+    private func currentScreen() -> NSScreen {
+        NSScreen.screens.first(where: { $0.displayID == displayID }) ?? screen
+    }
+
+    private func logGeometryDiagnostics(for screen: NSScreen, event: String) {
+        guard SettingsStore.shared.debugDiagnosticsEnabled else { return }
+        let bounds = contentView?.bounds ?? .zero
+        let windowFrame = window?.frame ?? .zero
+        let diag = "\(Date()): \(event) display=\(displayID) screen.frame=\(screen.frame) window.frame=\(windowFrame) contentView.bounds=\(bounds)\n"
+        if let data = diag.data(using: .utf8) {
+            let path = "/tmp/pwe_display.log"
+            if !FileManager.default.fileExists(atPath: path) {
+                FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
+            }
+            if let handle = FileHandle(forWritingAtPath: path) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
             }
         }
     }
@@ -86,11 +121,18 @@ final class DisplayController {
         scalingMode: VideoScalingMode,
         rendererMode: WallpaperRendererMode
     ) async -> Result<Void, WallpaperError> {
-        guard let contentView = contentView else {
+        guard contentView != nil else {
             logger.error("Content view not available for playback")
             return .failure(.windowCreationFailed(reason: "No content view"))
         }
-        
+
+        let activeScreen = currentScreen()
+        syncWindowGeometry(for: activeScreen)
+
+        guard let contentView = contentView else {
+            return .failure(.windowCreationFailed(reason: "No content view"))
+        }
+
         // Dispose old renderer before starting new playback
         if let oldRenderer = renderer {
             logger.debug("Disposing old renderer before starting new playback on display \(self.displayID)")
@@ -271,9 +313,8 @@ final class DisplayController {
     private func applyResize(_ newSize: CGSize) async {
         logger.info("Applying resize to \(newSize.width)x\(newSize.height) for display \(self.displayID)")
         
-        // Update content view bounds if needed
         if let contentView = contentView, contentView.bounds.size != newSize {
-            contentView.frame.size = newSize
+            contentView.frame = NSRect(origin: .zero, size: newSize)
         }
         
         // Notify renderer about size change

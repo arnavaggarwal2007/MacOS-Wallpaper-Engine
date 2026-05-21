@@ -1,12 +1,12 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
+# Version 2 Developmental Roadmap (Phases 7–10)
 
-# I see. Can you take all of these recommendations and information and transfer it into a part 2 developmental roadmap that I can use to build this product once everything from the current developmental roadmap is completed (as you can see, I have a Phase 6 in place with working on collections and will see where things go from there based on the roadmap). Make sure to have this fit linearly and serve as a natural successor once all features from my current roadmap are completed and ensure accuracy and clarity when providing the response and creating the roadmap.
+**Prerequisite:** Version 1 complete — see [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md), [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md), [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md).
 
 Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roadmap through Phase 6 (Collections + Desktop Setups) is complete and stable. It’s structured in the same style so you can drop it straight into your document as the next section.[^1]
 
 ***
 
-## Phase 7 Roadmap — Power, Performance Profiles, and Auto‑Tuning
+## Phase 7 Roadmap — Performance, Power, and Diagnostics
 
 **Goal:** Make the engine explicitly battery‑ and performance‑aware so it feels as \"light\" as apps like Wallspace on MacBooks and under load.[^2][^3][^4]
 
@@ -14,9 +14,9 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 | Phase | Scope | Duration | Depends On |
 | :-- | :-- | :-- | :-- |
-| 7A | PowerPolicyManager + power events wiring | 20 days | Phase 6B complete |
-| 7B | Performance profiles + UI | 20 days | 7A complete |
-| 7C | Auto‑tuning + performance diagnostics | 25 days | 7B complete |
+| 7A | PowerPolicyManager + power events wiring | ~2 weeks | V1 sign-off ([docs/V1_SIGNOFF.md](docs/V1_SIGNOFF.md)) |
+| 7B | Engine efficiency + performance profiles | ~3 weeks | 7A complete |
+| 7C | Performance monitoring + diagnostics UI | ~2 weeks | 7B complete |
 
 
 ***
@@ -70,43 +70,38 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ***
 
-### Phase 7B — Performance Profiles
+### Phase 7B — Engine Efficiency + Performance Profiles
 
-**Scope:** Add explicit performance profiles (e.g., Quality/Balanced/Battery Saver) that encapsulate resolution/frame‑rate/policy choices so users get Wallspace‑style low CPU without micromanaging settings.[^3][^5][^2]
+**Scope:** (1) **Reduce real resource usage** in the playback and preview stack; (2) expose **PerformanceProfile** presets (Max Quality / Balanced / Battery Saver) that apply FPS caps and policies. Compare all changes to the baseline in `docs/V1_SIGNOFF.md`.[^3][^5][^2]
 
-**Key Design Points:**
+**Engine efficiency (core optimization):**
 
-- New enum `PerformanceProfile: String, Codable` with cases like:
-    - `.maxQuality`, `.balanced`, `.batterySaver`.
-- Map each profile to:
-    - Max allowed effective resolution (e.g., downscale over‑sized videos).
-    - Suggested frame rate caps (e.g., 60 / 30 / 24).
-    - Whether video wallpapers are allowed on battery.
+- **VideoRenderer / WallpaperManager:** hardware decode path audit; FPS caps per profile; reduce reconciliation/timer churn.
+- **Pause when not visible:** pause `AVPlayer` when wallpaper fully occluded or inactive Space (Wallux-style); research window occlusion APIs in week 1.
+- **Multi-display:** evaluate shared `AVPlayer` vs N players when the same file is on all displays.
+- **UI/preview cost:** avoid double-decode (desktop engine + `AppWallpaperBackground` hero); static frame or single pipeline when engine is playing.
+- **WebRenderer:** pause/minimize WKWebView cost on Battery profile; fix `@MainActor` isolation (Swift 6-safe).
+- **Document:** `docs/PERFORMANCE_TUNING.md` + KB `ADR-005-Performance-Engine-Strategy`.
+
+**Profiles:**
+
+- `PerformanceProfile` + `PerformanceProfileConfig` in `SettingsStore` (max resolution hook, fps cap, allowOnBattery).
+- `WallpaperManager` passes config to `DisplayController` / renderers on apply.
+- Default **Balanced:** throttle FPS on battery before hard pause (coordinate with 7A).
 
 **Implementation Steps (7B):**
 
-1. **Profile Definition (Days 1–3)**
-    - Add `PerformanceProfile` enum and a `performanceProfile` property in `SettingsStore`.
-    - Define a `PerformanceProfileConfig` struct that maps to concrete parameters (max resolution, fps cap, allowOnBattery).
-2. **Renderer Integration (Days 4–8)**
-    - Extend `VideoRenderer` to accept a `PerformanceProfileConfig`:
-        - Optionally set `preferredFramesPerSecond` where applicable.
-        - (Future‑proof) Add a hook for downscaling before playback if you later add a transcoding path.
-    - In `WallpaperManager`, compute the active profile config on apply and pass through to `DisplayController`/`Renderer`.
-3. **UI \& UX (Days 9–13)**
-    - Add a \"Performance Profile\" selector to the System/Settings section:
-        - Segmented control or picker: Max Quality / Balanced / Battery Saver.
-        - Short, non‑technical descriptions (e.g., \"Recommended\" label on Balanced).
-    - Consider surfacing the currently used profile in the diagnostics section (Phase 9).
-4. **Testing (Days 14–20)**
-    - Create a small test set of videos (light/medium/heavy).
-    - Measure CPU usage for each profile using Activity Monitor and Instruments (desktop vs laptop).[^1]
-    - Adjust default profile (Balanced) to hit your target of \"feels light\" (ideally closer to Wallspace’s advertised sub‑2% CPU on modern Apple Silicon, within reason).[^6][^2]
+1. **Baseline comparison setup (Days 1–2)** — Reproduce V1_SIGNOFF scenarios; pick one reference 1080p H.264 clip.
+2. **Engine efficiency pass (Days 3–12)** — Items above; measure after each major change.
+3. **Profile wiring (Days 13–16)** — Enum, config, renderer integration.
+4. **Settings UI (Days 17–18)** — Performance profile selector in Settings tab (not legacy ContentView).
+5. **Testing (Days 19–21)** — Activity Monitor + Instruments; target measurable improvement vs V1 baseline (aspirational laptop goal: &lt;5% CPU on Balanced, 1×1080p).
 
 **Success Criteria (7B):**
 
-- Users can switch profile and see clear behavioral changes (CPU usage, smoothness).
-- Balanced profile is safe default on laptops; no regressions in multi‑display or collections behavior.[^1]
+- Steady-state CPU measurably below V1 baseline on Balanced (same test clip/displays).
+- Profiles produce visible CPU/smoothness differences.
+- No regressions in collections, setups, or multi-display apply.
 
 ***
 
@@ -219,7 +214,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ### Phase 8C — Library UI and Integration
 
-**Scope:** Integrate the local library into your existing ContentView as a first‑class way of choosing wallpapers, complementing the file importer.
+**Scope:** Integrate the local library into the **four-tab shell** (`TabbedMainView` / Home + Collections) as a first‑class way of choosing wallpapers, complementing the file importer.
 
 **Implementation Steps (8C):**
 

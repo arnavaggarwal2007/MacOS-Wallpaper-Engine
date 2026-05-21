@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 import SwiftUI
@@ -47,6 +48,11 @@ final class AppViewModel: ObservableObject {
     private var selectedVideoURL: URL?
     private var activeSecurityScopedVideoURL: URL?
     private var lastVideoRestoreFailure: String?
+    private var lastDisplaySignatures: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [:]
+    /// Maps physical display (name + resolution) to the last `perDisplaySources` UserDefaults key — survives disconnect.
+    private var settingsKeyBySignature: [DisplayConfigurationMigrator.DisplaySignature: String] = [:]
+    private var screenConfigurationTask: Task<Void, Never>?
+    private let screenConfigurationDebounceNs: UInt64 = 150_000_000
 
     init() {
         self.wallpaperManager = WallpaperManager()
@@ -131,6 +137,7 @@ final class AppViewModel: ObservableObject {
         }
         let key = String(displayID)
         settings.perDisplaySources[key] = url.absoluteString
+        recordPerDisplaySettingsKey(for: displayID)
 
         if url.isFileURL {
             do {
@@ -148,7 +155,7 @@ final class AppViewModel: ObservableObject {
             }
         }
 
-        statusMessage = "Selected for display \(displayID): \(url.lastPathComponent)"
+        statusMessage = "Selected for \(displayStatusLabel(for: displayID)): \(url.lastPathComponent)"
         errorMessage = nil
     }
 
@@ -190,11 +197,60 @@ final class AppViewModel: ObservableObject {
             }
         }
 
-        guard let source = settings.perDisplaySources[String(displayID)],
-              let url = resolvedSourceURL(from: source) else {
+        let collectionName = selectedCollectionName ?? lastUsedCollectionName
+        guard let source = settings.perDisplaySources[String(displayID)] else {
             return nil
         }
-        return url
+        if let collectionName,
+           let url = resolvedSourceURL(from: source, collectionName: collectionName) {
+            return url
+        }
+        return resolvedSourceURL(from: source)
+    }
+
+    private var activeCollectionNameForResolution: String? {
+        selectedCollectionName ?? lastUsedCollectionName
+    }
+
+    /// Canonical URL resolution for playback and previews (bookmarks, collection keys, paths).
+    func resolvePlaybackURL(
+        for displayID: CGDirectDisplayID,
+        explicitSource: String? = nil,
+        collectionName: String? = nil
+    ) -> URL? {
+        let collection = collectionName ?? activeCollectionNameForResolution
+
+        if let bookmarkURL = perDisplayResolvedURL(for: displayID) {
+            return bookmarkURL
+        }
+
+        let source = (explicitSource ?? perDisplaySource(for: displayID))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !source.isEmpty else { return nil }
+
+        if let collection,
+           let url = resolvedSourceURL(from: source, collectionName: collection) {
+            return url
+        }
+        return resolvedSourceURL(from: source)
+    }
+
+    func perDisplayRendererMode(for displayID: CGDirectDisplayID) -> WallpaperRendererMode {
+        if let raw = settings.perDisplayRendererModes[String(displayID)],
+           let mode = WallpaperRendererMode(rawValue: raw) {
+            return mode
+        }
+        return rendererMode
+    }
+
+    func hasPersistedPerDisplayConfiguration() -> Bool {
+        let connectedKeys = Set(NSScreen.screens.map { String($0.displayID) })
+        if settings.perDisplayBookmarks.keys.contains(where: { connectedKeys.contains($0) }) {
+            return true
+        }
+        return settings.perDisplaySources.contains { key, value in
+            connectedKeys.contains(key) && !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
 
     /// Notifies SwiftUI that per-display source data changed (Home carousel + hero).
@@ -204,20 +260,7 @@ final class AppViewModel: ObservableObject {
 
     /// Resolved preview URL for a display (bookmarks, collection paths, then path fallback).
     func previewURL(forDisplayID displayID: CGDirectDisplayID) -> URL? {
-        if let resolved = perDisplayResolvedURL(for: displayID) {
-            return resolved
-        }
-
-        let source = perDisplaySource(for: displayID).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !source.isEmpty else { return nil }
-
-        let collectionName = selectedCollectionName ?? lastUsedCollectionName
-        if let collectionName,
-           let url = resolvedSourceURL(from: source, collectionName: collectionName) {
-            return url
-        }
-
-        return resolvedSourceURL(from: source)
+        resolvePlaybackURL(for: displayID)
     }
 
     /// Resolved URL for hero preview — uses the same bookmark/path resolution as wallpaper playback.
@@ -235,28 +278,21 @@ final class AppViewModel: ObservableObject {
             return
         }
 
-        let key = String(displayID)
-        var candidateURLs: [URL] = []
-        let previousBookmarkedURL = perDisplayResolvedURL(for: displayID)
-
-        // Then try resolving the source string
-        guard let sourceURL = resolvedSourceURL(from: trimmed) else {
+        guard let primaryURL = resolvePlaybackURL(for: displayID, explicitSource: trimmed) else {
             errorMessage = "Please choose a wallpaper source for display \(displayID)."
             statusMessage = nil
             return
         }
 
-        // Always try the newly selected source first.
-        candidateURLs.append(sourceURL)
-
-        // Keep the prior bookmark as a fallback in case the new source fails.
-        if let previousBookmarkedURL,
-           previousBookmarkedURL.absoluteString != sourceURL.absoluteString {
-            candidateURLs.append(previousBookmarkedURL)
+        let key = String(displayID)
+        var candidateURLs: [URL] = [primaryURL]
+        if let bookmarkURL = perDisplayResolvedURL(for: displayID),
+           bookmarkURL.absoluteString != primaryURL.absoluteString {
+            candidateURLs.append(bookmarkURL)
         }
 
-        // Always update the source path storage
-        settings.perDisplaySources[key] = sourceURL.absoluteString
+        settings.perDisplaySources[key] = trimmed
+        let sourceURL = primaryURL
 
         // For file URLs, save/refresh the bookmark
         if sourceURL.isFileURL {
@@ -293,7 +329,7 @@ final class AppViewModel: ObservableObject {
             if attempted.contains(marker) { continue }
             attempted.insert(marker)
 
-            let rendererMode: WallpaperRendererMode = url.isFileURL ? .video : .web
+            let playbackMode = perDisplayRendererMode(for: displayID)
             let didStartScope = url.isFileURL ? url.startAccessingSecurityScopedResource() : false
             defer {
                 if didStartScope {
@@ -301,9 +337,15 @@ final class AppViewModel: ObservableObject {
                 }
             }
 
-            switch await wallpaperManager.setPerDisplayWallpaper(displayID: displayID, url: url, rendererMode: rendererMode, scalingMode: scaling) {
+            switch await wallpaperManager.setPerDisplayWallpaper(
+                displayID: displayID,
+                url: url,
+                rendererMode: playbackMode,
+                scalingMode: scaling
+            ) {
             case .success:
-                statusMessage = "Applied to display \(displayID): \(url.lastPathComponent)"
+                recordPerDisplaySettingsKey(for: displayID)
+                statusMessage = "Applied to \(displayStatusLabel(for: displayID)): \(url.lastPathComponent)"
                 errorMessage = nil
                 return
             case .failure(let error):
@@ -437,11 +479,166 @@ final class AppViewModel: ObservableObject {
         hasStarted = true
 
         await loadSavedCollections()
+        refreshSetupState()
 
         await wallpaperManager.setMuted(isMuted)
         await wallpaperManager.setScalingMode(scalingMode)
         await wallpaperManager.setRendererMode(rendererMode)
+
+        seedSettingsKeyBySignatureFromConnectedScreens()
+        updateDisplaySignatureSnapshot()
         await wallpaperManager.startMonitoring()
+
+        wallpaperManager.onScreenConfigurationChanged = { [weak self] in
+            await self?.handleDisplayConfigurationChanged()
+        }
+
+        await restorePersistedWallpapersOnLaunch()
+    }
+
+    /// Migrates per-display settings after hotplug and reapplies wallpapers to all connected displays.
+    func handleDisplayConfigurationChanged() {
+        screenConfigurationTask?.cancel()
+        screenConfigurationTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: screenConfigurationDebounceNs)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            await performDisplayConfigurationChange()
+        }
+    }
+
+    private func performDisplayConfigurationChange() async {
+        let focusedSignatureBefore = focusedDisplayID.flatMap { lastDisplaySignatures[$0] }
+        let mapping = migrateDisplayConfigurationOnScreenChange()
+        migrateFocusedDisplayAfterConfigurationChange(
+            mapping: mapping,
+            focusedSignatureBefore: focusedSignatureBefore
+        )
+        await reapplyPersistedPerDisplayWallpapers()
+    }
+
+    /// User-facing label for status messages (UI order + screen name, not raw `CGDirectDisplayID`).
+    func displayStatusLabel(for displayID: CGDirectDisplayID) -> String {
+        if let index = NSScreen.screens.firstIndex(where: { $0.displayID == displayID }),
+           let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) {
+            return "Display \(index + 1) (\(screen.localizedName))"
+        }
+        return "display \(displayID)"
+    }
+
+    private func updateDisplaySignatureSnapshot() {
+        lastDisplaySignatures = DisplayConfigurationMigrator.signatures(for: NSScreen.screens)
+    }
+
+    private func seedSettingsKeyBySignatureFromConnectedScreens() {
+        for screen in NSScreen.screens {
+            let displayID = screen.displayID
+            let key = String(displayID)
+            guard settings.perDisplaySources[key] != nil
+                || settings.perDisplayBookmarks[key] != nil else { continue }
+            recordPerDisplaySettingsKey(for: displayID)
+        }
+    }
+
+    /// Records which settings key owns data for a physical display (used when IDs change after hotplug).
+    private func recordPerDisplaySettingsKey(for displayID: CGDirectDisplayID) {
+        guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else { return }
+        let signature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
+        settingsKeyBySignature[signature] = String(displayID)
+    }
+
+    /// Includes disconnected displays so unplugged monitor settings can remap on replug.
+    private func augmentedPreviousSignatures(for screens: [NSScreen]) -> [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] {
+        var augmented = lastDisplaySignatures
+        let currentIDs = Set(screens.map(\.displayID))
+
+        for (signature, key) in settingsKeyBySignature {
+            guard let oldID = UInt32(key) else { continue }
+            let displayID = CGDirectDisplayID(oldID)
+            if augmented[displayID] == nil {
+                augmented[displayID] = signature
+            }
+        }
+
+        for (displayID, signature) in lastDisplaySignatures where !currentIDs.contains(displayID) {
+            if augmented[displayID] == nil {
+                augmented[displayID] = signature
+            }
+        }
+
+        return augmented
+    }
+
+    @discardableResult
+    private func migrateDisplayConfigurationOnScreenChange() -> [String: String] {
+        let screens = NSScreen.screens
+        let previousSnapshots = augmentedPreviousSignatures(for: screens)
+        let mapping = DisplayConfigurationMigrator.migrationMapping(
+            previousSignatures: previousSnapshots,
+            currentScreens: screens
+        )
+        if !mapping.isEmpty {
+            DisplayConfigurationMigrator.rekeyPerDisplaySettings(in: settings, mapping: mapping)
+            logger.info("Re-keyed per-display settings for \(mapping.count) display(s) after configuration change")
+            notifyDisplaySourcesChanged()
+            for (oldKey, newKey) in mapping {
+                guard let oldID = UInt32(oldKey), let newID = UInt32(newKey),
+                      let signature = previousSnapshots[CGDirectDisplayID(oldID)] else { continue }
+                settingsKeyBySignature[signature] = newKey
+            }
+        }
+        var nextSnapshots = DisplayConfigurationMigrator.signatures(for: screens)
+        let representedSignatures = Set(nextSnapshots.values)
+        for (displayID, signature) in previousSnapshots where !screens.map(\.displayID).contains(displayID) {
+            if !representedSignatures.contains(signature) {
+                nextSnapshots[displayID] = signature
+            }
+        }
+        for oldKey in mapping.keys {
+            if let id = UInt32(oldKey) {
+                nextSnapshots.removeValue(forKey: CGDirectDisplayID(id))
+            }
+        }
+        lastDisplaySignatures = nextSnapshots
+        return mapping
+    }
+
+    /// Keeps the focused display on the same physical screen when IDs shuffle or are reused.
+    private func migrateFocusedDisplayAfterConfigurationChange(
+        mapping: [String: String],
+        focusedSignatureBefore: DisplayConfigurationMigrator.DisplaySignature?
+    ) {
+        guard let focused = focusedDisplayID else {
+            syncFocusedDisplayIfNeeded()
+            return
+        }
+
+        if let newKey = mapping[String(focused)], let newID = UInt32(newKey) {
+            focusedDisplayID = CGDirectDisplayID(newID)
+            return
+        }
+
+        if let previousSignature = focusedSignatureBefore {
+            for screen in NSScreen.screens {
+                let signature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
+                if signature == previousSignature {
+                    focusedDisplayID = screen.displayID
+                    return
+                }
+            }
+        }
+
+        syncFocusedDisplayIfNeeded()
+    }
+
+    private func restorePersistedWallpapersOnLaunch() async {
+        if hasPersistedPerDisplayConfiguration() {
+            await reapplyPersistedPerDisplayWallpapers()
+            return
+        }
 
         if rendererMode == .video, restoreSelectedVideoReference() != nil {
             await applyWallpaperFromSavedPath()
@@ -452,10 +649,68 @@ final class AppViewModel: ObservableObject {
         } else if rendererMode == .web {
             statusMessage = "Web wallpaper mode is ready"
             errorMessage = nil
-            // Attempt to restore web selection across relaunch
             if !webURLString.isEmpty {
-                Task { await applyWallpaperFromSavedWebURL() }
+                await applyWallpaperFromSavedWebURL()
             }
+        }
+    }
+
+    /// Reapplies persisted per-display sources to every connected display (launch + hotplug).
+    func reapplyPersistedPerDisplayWallpapers() async {
+        let displayIDs = orderedConnectedDisplayIDs()
+        guard !displayIDs.isEmpty else { return }
+
+        isApplyingWallpaper = true
+        defer { isApplyingWallpaper = false }
+
+        var appliedCount = 0
+        var errors: [String] = []
+
+        for displayID in displayIDs {
+            if await applyPlaybackToDisplay(displayID: displayID) {
+                appliedCount += 1
+            } else if !perDisplaySource(for: displayID).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                errors.append("Display \(displayID)")
+            }
+        }
+
+        await refreshDisplayState()
+        notifyDisplaySourcesChanged()
+
+        if appliedCount > 0 {
+            statusMessage = "Wallpaper applied to \(appliedCount) display\(appliedCount == 1 ? "" : "s")."
+            errorMessage = errors.isEmpty ? nil : "Could not apply to: \(errors.joined(separator: ", "))"
+        } else if !errors.isEmpty {
+            errorMessage = "Could not apply wallpaper to connected displays."
+            statusMessage = nil
+        }
+    }
+
+    @discardableResult
+    private func applyPlaybackToDisplay(displayID: CGDirectDisplayID) async -> Bool {
+        guard let url = resolvePlaybackURL(for: displayID) else { return false }
+
+        let mode = perDisplayRendererMode(for: displayID)
+        let scaling = perDisplayScalingMode(for: displayID)
+        let didStartScope = url.isFileURL ? url.startAccessingSecurityScopedResource() : false
+        defer {
+            if didStartScope {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        switch await wallpaperManager.setPerDisplayWallpaper(
+            displayID: displayID,
+            url: url,
+            rendererMode: mode,
+            scalingMode: scaling
+        ) {
+        case .success:
+            recordPerDisplaySettingsKey(for: displayID)
+            return true
+        case .failure(let error):
+            logger.warning("applyPlaybackToDisplay failed for \(displayID): \(error.errorDescription ?? "unknown")")
+            return false
         }
     }
 
@@ -1379,83 +1634,55 @@ final class AppViewModel: ObservableObject {
         
         // Mark setup as current
         settings.currentSetupName = name
-        
-        // Apply the wallpaper(s) with per-display availability check
+        selectedSetupName = name
+
+        await wallpaperManager.setMuted(isMuted)
+        await wallpaperManager.setScalingMode(scalingMode)
+        await wallpaperManager.setRendererMode(rendererMode)
+
+        migrateDisplayConfigurationOnScreenChange()
+        notifyDisplaySourcesChanged()
+
         var wallpaperApplicationErrors: [String] = []
         var appliedDisplays: [CGDirectDisplayID] = []
-        
-        // Get currently available displays
-        let availableDisplays = Set(NSScreen.screens.compactMap { CGDirectDisplayID($0.displayID) })
+        let displayIDs = orderedConnectedDisplayIDs()
 
-        // Apply per-display wallpapers only to available displays
-        for (displayIDStr, source) in setup.perDisplaySources {
-                guard let displayID = CGDirectDisplayID(displayIDStr) else {
-                    logger.warning("Invalid display ID in setup: \(displayIDStr)")
-                    wallpaperApplicationErrors.append("Display \(displayIDStr): Invalid ID")
-                    continue
-                }
-                
-                // Check if display is available
-                if !availableDisplays.contains(displayID) {
-                    logger.info("Display \(displayIDStr) not available, skipping wallpaper application")
-                    continue
-                }
-                
-                // Validate source path
-                guard !source.isEmpty else {
-                    logger.warning("Empty source for display \(displayIDStr)")
-                    continue
-                }
-                
-                // Check if source file exists
-                let sourceURL = URL(fileURLWithPath: source)
-                let fileManager = FileManager.default
-                if !fileManager.fileExists(atPath: sourceURL.path) {
-                    logger.warning("Source file not found for display \(displayIDStr): \(source)")
-                    wallpaperApplicationErrors.append("Display \(displayIDStr): File not found")
-                    continue
-                }
-                
-                let rendererMode = setup.rendererMode == "web" ? WallpaperRendererMode.web : .video
-                let scalingMode = VideoScalingMode(rawValue: setup.perDisplayScalingModes[displayIDStr] ?? setup.scalingMode) ?? .resizeAspectFill
-                
-                let result = await wallpaperManager.setPerDisplayWallpaper(
-                    displayID: displayID,
-                    url: sourceURL,
-                    rendererMode: rendererMode,
-                    scalingMode: scalingMode
-                )
-                
-                switch result {
-                case .success:
-                    appliedDisplays.append(displayID)
-                    logger.debug("Successfully applied wallpaper to display \(displayIDStr)")
-                case .failure(let error):
-                    logger.error("Failed to apply wallpaper to display \(displayIDStr): \(error.errorDescription ?? "unknown")")
-                    wallpaperApplicationErrors.append("Display \(displayIDStr): \(error.errorDescription ?? "Unknown error")")
-                }
+        for displayID in displayIDs {
+            let key = String(displayID)
+            let hasSource = !(settings.perDisplaySources[key] ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+            let hasBookmark = settings.perDisplayBookmarks[key] != nil
+
+            guard hasSource || hasBookmark else { continue }
+
+            if await applyPlaybackToDisplay(displayID: displayID) {
+                appliedDisplays.append(displayID)
+            } else {
+                wallpaperApplicationErrors.append("Display \(displayID)")
             }
-        
-        // Generate status message based on results
+        }
+
         refreshSetupState()
-        
+        await refreshDisplayState()
+
         if wallpaperApplicationErrors.isEmpty {
-            statusMessage = "Setup '\(name)' restored successfully."
-            if !appliedDisplays.isEmpty {
+            if appliedDisplays.isEmpty {
+                statusMessage = "Setup '\(name)' settings restored. No wallpapers were configured for connected displays."
+            } else {
                 statusMessage = "Setup '\(name)' restored to \(appliedDisplays.count) display\(appliedDisplays.count == 1 ? "" : "s")."
             }
             errorMessage = nil
             return .success(())
-        } else {
-            // Partial success - setup restored but some displays couldn't be applied
-            let errorDetail = wallpaperApplicationErrors.prefix(2).joined(separator: "\n")
-            statusMessage = "Setup '\(name)' restored with warnings."
-            errorMessage = "Some displays could not be updated:\n\(errorDetail)"
-            if wallpaperApplicationErrors.count > 2 {
-                errorMessage?.append("\n+\(wallpaperApplicationErrors.count - 2) more")
-            }
-            return .success(())  // Return success since setup state was restored
         }
+
+        let errorDetail = wallpaperApplicationErrors.prefix(2).joined(separator: ", ")
+        statusMessage = "Setup '\(name)' settings restored with warnings."
+        errorMessage = "Could not apply wallpaper to: \(errorDetail)"
+        if wallpaperApplicationErrors.count > 2 {
+            errorMessage?.append(" (+\(wallpaperApplicationErrors.count - 2) more)")
+        }
+        return appliedDisplays.isEmpty ? .failure(.internalError(description: errorMessage ?? "Setup restore failed")) : .success(())
     }
     
     /// Delete a setup with validation

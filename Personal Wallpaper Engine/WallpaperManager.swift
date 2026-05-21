@@ -40,6 +40,9 @@ final class WallpaperManager {
     private(set) var lastFailureReason: String = ""
     private let maxFailureThreshold: Int = 5  // Threshold for degraded status
 
+    /// Called after controllers are added/removed for a screen configuration change.
+    var onScreenConfigurationChanged: (@MainActor () async -> Void)?
+
     @MainActor
     func startMonitoring() async {
         logger.debug("WallpaperManager startMonitoring")
@@ -93,32 +96,32 @@ final class WallpaperManager {
             }
         }
 
-        // Add new displays
+        // Add or refresh displays (ID reuse after hotplug can point at a different physical screen)
         for screen in screens {
             let id = screen.displayID
-            if !existingIDs.contains(id) {
-                let controller = DisplayController(screen: screen, manager: self)
-                displayControllers[id] = controller
-                logger.debug("Added display \(id) -> controller.displayID=\(controller.displayID)")
-                do { try addDiagnostic("Added display \(id) frame=\(screen.frame)") } catch { logger.error("diag write failed: \(error.localizedDescription)") }
-
-                    if let currentWallpaperURL {
-                    let result = await controller.startPlayback(
-                        url: currentWallpaperURL,
-                        isMuted: isMuted,
-                        scalingMode: scalingMode,
-                        rendererMode: currentRendererMode
-                    )
-
-                    if case .failure(let error) = result {
-                        logger.error("Failed to start playback on newly added display \(id): \(error.errorDescription ?? "unknown error")")
-                    }
-                }
+            if let controller = displayControllers[id], controller.matchesCurrentScreen(screen) {
+                controller.syncWindowGeometry(for: screen)
+                continue
             }
+
+            if let controller = displayControllers.removeValue(forKey: id) {
+                await controller.stop()
+                logger.debug("Replaced display controller \(id) after screen identity change")
+            }
+
+            let controller = DisplayController(screen: screen, manager: self)
+            displayControllers[id] = controller
+            controller.syncWindowGeometry(for: screen)
+            logger.debug("Added display \(id) -> controller.displayID=\(controller.displayID)")
+            do { try addDiagnostic("Added display \(id) frame=\(screen.frame)") } catch { logger.error("diag write failed: \(error.localizedDescription)") }
         }
         // Log current mapping for diagnostics
         logger.debug("Current displayControllers keys: \(self.displayControllers.keys)")
-        
+
+        if let onScreenConfigurationChanged {
+            await onScreenConfigurationChanged()
+        }
+
         // MARK: - Reconciliation After Screen Change (Chunk 4D)
         scheduleReconciliation(reason: "screen change")
     }

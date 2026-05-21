@@ -95,7 +95,8 @@ struct ModernHomeView: View {
             appModel.ensurePerDisplayMode()
             syncSelectedDisplayIfNeeded()
         }
-        .task(id: NSScreen.screens.count) {
+        .task(id: NSScreen.screens.map(\.displayID)) {
+            migrateSelectedDisplayAfterScreenChange()
             syncSelectedDisplayIfNeeded()
             rebuildDisplayCardsCache()
         }
@@ -479,6 +480,13 @@ struct ModernHomeView: View {
         return nil
     }
 
+    private func migrateSelectedDisplayAfterScreenChange() {
+        // AppViewModel remaps focusedDisplayID by screen signature; mirror that in local UI state.
+        if let focused = appModel.focusedDisplayID {
+            selectedDisplayID = focused
+        }
+    }
+
     private func syncSelectedDisplayIfNeeded() {
         appModel.syncFocusedDisplayIfNeeded()
         guard !NSScreen.screens.isEmpty else {
@@ -492,7 +500,13 @@ struct ModernHomeView: View {
             return
         }
 
-        selectedDisplayID = appModel.focusedDisplayID ?? NSScreen.screens.first?.displayID
+        if let focused = appModel.focusedDisplayID,
+           NSScreen.screens.contains(where: { $0.displayID == focused }) {
+            selectedDisplayID = focused
+            return
+        }
+
+        selectedDisplayID = NSScreen.screens.first?.displayID
         appModel.focusedDisplayID = selectedDisplayID
     }
 

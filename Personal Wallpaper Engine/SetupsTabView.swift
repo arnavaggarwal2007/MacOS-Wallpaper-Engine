@@ -135,7 +135,7 @@ struct SetupsTabView: View {
                                             _ = await appModel.restoreSetup(name: name)
                                         }
                                     }) {
-                                        Label("Restore", systemImage: "arrow.counterclockwise")
+                                        Label("Restore & Apply", systemImage: "arrow.counterclockwise")
                                     }
                                     .buttonStyle(.borderedProminent)
                                     .frame(maxWidth: .infinity)

@@ -15,6 +15,13 @@ final class VideoRenderer: Renderer {
     func start(in containerView: NSView) async -> Result<Void, WallpaperError> {
         self.containerView = containerView
 
+        containerView.layoutSubtreeIfNeeded()
+        let bounds = containerView.bounds
+        guard !bounds.isEmpty else {
+            logger.error("Container view has zero bounds: \(String(describing: bounds))")
+            return .failure(.windowCreationFailed(reason: "Container view has zero bounds after layout"))
+        }
+
         // Step 1: Create AVPlayer instance
         let player = AVPlayer()
         player.isMuted = true  // Default: muted playback
@@ -23,7 +30,7 @@ final class VideoRenderer: Renderer {
         // Step 2: Create AVPlayerLayer and attach to container view
         let layer = AVPlayerLayer(player: player)
         layer.videoGravity = videoGravity
-        layer.frame = containerView.bounds
+        layer.frame = bounds
 
         containerView.wantsLayer = true
         if let contentLayer = containerView.layer {
