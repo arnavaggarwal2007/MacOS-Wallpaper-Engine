@@ -8,6 +8,8 @@ final class WebRenderer: Renderer {
     private var webView: WKWebView?
     private var activeURL: URL?
     private var currentScalingMode: VideoScalingMode = .resizeAspectFill
+    private var performanceProfile: PerformanceProfile = .balanced
+    private var pausedForVisibilityPolicy = false
 
     func start(in containerView: NSView) async -> Result<Void, WallpaperError> {
         self.containerView = containerView
@@ -28,7 +30,7 @@ final class WebRenderer: Renderer {
 
         let preferences = WKPreferences()
         if #available(macOS 11.0, *) {
-            var pagePrefs = WKWebpagePreferences()
+            let pagePrefs = WKWebpagePreferences()
             pagePrefs.allowsContentJavaScript = true
             configuration.defaultWebpagePreferences = pagePrefs
         } else {
@@ -57,11 +59,34 @@ final class WebRenderer: Renderer {
     }
 
     func pause() async {
+        pausedForVisibilityPolicy = true
         await runJavaScript("document.querySelectorAll('video,audio').forEach(e => e.pause());")
+        if performanceProfile == .batterySaver {
+            await MainActor.run { webView?.stopLoading() }
+        }
+        logger.debug("WebRenderer paused visibilityPolicy=true profile=\(self.performanceProfile.rawValue, privacy: .public)")
     }
 
     func resume() async {
+        pausedForVisibilityPolicy = false
         await runJavaScript("document.querySelectorAll('video,audio').forEach(e => { try{ e.play(); } catch(e){} });")
+        if performanceProfile == .batterySaver, let url = activeURL {
+            await reloadIfNeeded(url: url)
+        }
+        logger.debug("WebRenderer resumed visibilityPolicy=false profile=\(self.performanceProfile.rawValue, privacy: .public)")
+    }
+
+    func applyPerformanceProfile(_ profile: PerformanceProfile) async {
+        performanceProfile = profile
+        logger.debug("WebRenderer performance profile=\(profile.rawValue, privacy: .public)")
+    }
+
+    private func reloadIfNeeded(url: URL) async {
+        guard let webView else { return }
+        if webView.url == nil {
+            let request = URLRequest(url: url)
+            _ = await MainActor.run { webView.load(request) }
+        }
     }
 
     func setMuted(_ isMuted: Bool) async {
@@ -106,7 +131,7 @@ final class WebRenderer: Renderer {
         }
 
         let request = URLRequest(url: url)
-        await MainActor.run {
+        _ = await MainActor.run {
             webView.load(request)
         }
 

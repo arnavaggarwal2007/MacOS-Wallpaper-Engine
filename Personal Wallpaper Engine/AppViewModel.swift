@@ -15,9 +15,54 @@ final class AppViewModel: ObservableObject {
     @Published var statusMessage: String?
     @Published var errorMessage: String?
     @Published var isPlaying: Bool = true
+    /// Mirrors engine pause flags; used for apply-path gating. Prefer shouldShowPausedChrome for UI overlays.
+    @Published private(set) var isGloballyPaused: Bool = false
+    /// Paused banner, carousel scrim, hero overlay — may differ from isPlaying when policy chrome applies.
+    @Published private(set) var shouldShowPausedChrome: Bool = false
+    @Published private(set) var isPlaybackCommandInFlight: Bool = false
+    /// True briefly after a user pause so the play button cannot immediately undo it.
+    @Published private(set) var isInPostPauseGrace: Bool = false
+    private var playbackCommandInFlight: Bool = false
+    private var playbackCommandTask: Task<Void, Never>?
+    private var postPauseGraceTask: Task<Void, Never>?
+    private var userResumeBlockedUntil: Date?
+    private static let postPauseGraceInterval: TimeInterval = 2.5
     @Published var isLaunchOnLoginEnabled: Bool = false  // Phase 5G
     @Published var launchOnLoginStatusMessage: String?
     @Published var launchOnLoginErrorMessage: String?
+    // MARK: - Phase 7A Power Policy
+    @Published var pauseOnBattery: Bool = false
+    @Published var pauseOnLowBattery: Bool = true
+    @Published var lowBatteryThreshold: Int = 20
+    @Published var powerPolicyStatusMessage: String?
+    // MARK: - Phase 7B Performance
+    @Published var performanceProfile: PerformanceProfile = .balanced
+    // MARK: - Phase 7C Diagnostics
+    @Published private(set) var estimatedCPUPercent: Double = 0
+    @Published private(set) var currentCPUPercent: Double = 0
+    @Published private(set) var instantCPUPercent: Double = 0
+    @Published private(set) var isCPUMeasurementReady = false
+    @Published var performanceSuggestion: PerformanceSuggestion?
+    @Published private(set) var engineDiagnostics: WallpaperManager.EngineDiagnosticsSnapshot = .init(
+        lifecycleState: .idle,
+        isPlaybackActive: false,
+        performanceProfile: .balanced,
+        sharedSessionAttachments: 0,
+        decodePathCount: 0,
+        heroSharesDesktopDecode: false,
+        coalesceTip: nil,
+        displayRows: [],
+        powerPolicyMessage: nil,
+        anyDisplayVisible: false
+    )
+    private let performanceMonitor = PerformanceMonitor()
+    private var recentCPUSamples: [Double] = []
+    private var lastDiagnosticsRefreshAt: Date?
+    private var isDiagnosticsPanelVisible = false
+    private var diagnosticsRefreshScheduled = false
+    private var lastSuggestedProfile: PerformanceProfile?
+    private var performanceSuggestionSnoozedUntil: Date?
+    private static let performanceSuggestionSnoozeSeconds: TimeInterval = 3600
     /// Always true — app uses per-display sources; "apply to all" duplicates the same file per screen.
     @Published private(set) var usePerDisplay: Bool = true
     @Published var focusedDisplayID: CGDirectDisplayID?
@@ -53,6 +98,10 @@ final class AppViewModel: ObservableObject {
     private var settingsKeyBySignature: [DisplayConfigurationMigrator.DisplaySignature: String] = [:]
     private var screenConfigurationTask: Task<Void, Never>?
     private let screenConfigurationDebounceNs: UInt64 = 150_000_000
+    private let heroPreviewVisibility = AppPreviewVisibilityMonitor()
+    /// Bumped when app/window visibility changes so hero pause state refreshes in SwiftUI (Home tab only).
+    @Published private(set) var heroPreviewVisibilityRevision = 0
+    private(set) var isMainShellOnHomeTab = true
 
     init() {
         self.wallpaperManager = WallpaperManager()
@@ -63,6 +112,10 @@ final class AppViewModel: ObservableObject {
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
         self.isLaunchOnLoginEnabled = settings.launchOnLoginEnabled
+        self.pauseOnBattery = settings.pauseOnBattery
+        self.pauseOnLowBattery = settings.pauseOnLowBattery
+        self.lowBatteryThreshold = settings.lowBatteryThreshold
+        self.performanceProfile = settings.performanceProfile
         ensurePerDisplayMode()
     }
 
@@ -78,6 +131,10 @@ final class AppViewModel: ObservableObject {
         self.isMuted = settings.isMuted
         self.scalingMode = settings.scalingMode
         self.isLaunchOnLoginEnabled = settings.launchOnLoginEnabled
+        self.pauseOnBattery = settings.pauseOnBattery
+        self.pauseOnLowBattery = settings.pauseOnLowBattery
+        self.lowBatteryThreshold = settings.lowBatteryThreshold
+        self.performanceProfile = settings.performanceProfile
         ensurePerDisplayMode()
     }
 
@@ -270,6 +327,63 @@ final class AppViewModel: ObservableObject {
         return previewURL(forDisplayID: targetID)
     }
 
+    /// P1b / 7E: Pause live hero when unfocused or occluded. Max Quality keeps hero on all tabs when allowed.
+    func shouldPauseHeroPreview(isOnHomeTab: Bool) -> Bool {
+        if !isOnHomeTab {
+            if performanceProfile == .maxQuality {
+                if heroPreviewVisibility.isAppHidden { return true }
+                if performanceProfile.pausesWhenOccluded, heroPreviewVisibility.isMainWindowOccluded {
+                    return true
+                }
+                return false
+            }
+            return true
+        }
+
+        if heroPreviewVisibility.isAppHidden {
+            return true
+        }
+
+        // Max Quality: ignore brief isAppActive flicker from embedded controls (7C.2).
+        if performanceProfile != .maxQuality, !heroPreviewVisibility.isAppActive {
+            return true
+        }
+
+        if performanceProfile.pausesWhenOccluded, heroPreviewVisibility.isMainWindowOccluded {
+            return true
+        }
+
+        return false
+    }
+
+    /// Phase 7D: Hero can attach to desktop AVPlayer when previewing the same file (no second decode).
+    func heroPreviewCanShareDesktopDecode(for url: URL?) -> Bool {
+        guard let url else { return false }
+        return wallpaperManager.canUnifyHeroPreview(with: url, focusedDisplayID: focusedDisplayID)
+    }
+
+    @discardableResult
+    func attachHeroPreviewLayer(in containerView: NSView, url: URL) -> Bool {
+        wallpaperManager.attachHeroPreviewLayer(
+            in: containerView,
+            url: url,
+            focusedDisplayID: focusedDisplayID
+        )
+    }
+
+    func updateHeroPreviewLayerFrame(in containerView: NSView) {
+        wallpaperManager.updateHeroPreviewLayerFrame(in: containerView)
+    }
+
+    func detachHeroPreviewLayer() {
+        wallpaperManager.detachHeroPreviewLayers()
+    }
+
+    /// Tracks main shell tab so visibility churn on management tabs does not relayout the hero.
+    func setMainShellOnHomeTab(_ onHome: Bool) {
+        isMainShellOnHomeTab = onHome
+    }
+
     func applyPerDisplayWallpaper(displayID: CGDirectDisplayID, sourceString: String) async {
         let trimmed = sourceString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -294,25 +408,8 @@ final class AppViewModel: ObservableObject {
         settings.perDisplaySources[key] = trimmed
         let sourceURL = primaryURL
 
-        // For file URLs, save/refresh the bookmark
         if sourceURL.isFileURL {
-            do {
-                if sourceURL.startAccessingSecurityScopedResource() {
-                    defer { sourceURL.stopAccessingSecurityScopedResource() }
-
-                    let bookmark = try sourceURL.bookmarkData(
-                        options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
-                        includingResourceValuesForKeys: nil,
-                        relativeTo: nil
-                    )
-                    settings.perDisplayBookmarks[key] = bookmark
-                    logger.debug("Saved per-display bookmark for display \(displayID)")
-                } else {
-                    logger.warning("Failed to access security-scoped resource for bookmarking display \(displayID)")
-                }
-            } catch {
-                logger.warning("Failed to save per-display bookmark for display \(displayID): \(error.localizedDescription)")
-            }
+            persistPerDisplayBookmark(displayID: displayID, url: sourceURL)
         }
 
         let scaling = perDisplayScalingMode(for: displayID)
@@ -345,8 +442,13 @@ final class AppViewModel: ObservableObject {
             ) {
             case .success:
                 recordPerDisplaySettingsKey(for: displayID)
+                if url.isFileURL {
+                    persistPerDisplayBookmark(displayID: displayID, url: url)
+                }
                 statusMessage = "Applied to \(displayStatusLabel(for: displayID)): \(url.lastPathComponent)"
                 errorMessage = nil
+                notifyDisplaySourcesChanged()
+                syncPlaybackStateFromEngine()
                 return
             case .failure(let error):
                 lastError = error
@@ -381,11 +483,98 @@ final class AppViewModel: ObservableObject {
             await applyPerDisplayWallpaper(displayID: displayID, sourceString: url.absoluteString)
         }
 
+        await wallpaperManager.coalesceSharedVideoPlaybackIfNeeded(for: url.standardizedFileURL)
+
         focusedDisplayID = displayIDs.first
         let displayCount = displayIDs.count
         statusMessage = "Applied to \(displayCount) display\(displayCount == 1 ? "" : "s")"
         errorMessage = nil
         notifyDisplaySourcesChanged()
+    }
+
+    /// Normalized filesystem path or trimmed string for stable collection bookmark keys.
+    private func canonicalSourceKey(for source: String) -> String {
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        if trimmed.hasPrefix("/") {
+            return URL(fileURLWithPath: trimmed).standardizedFileURL.path
+        }
+        if let url = URL(string: trimmed), url.isFileURL {
+            return url.standardizedFileURL.path
+        }
+        if let url = URL(string: trimmed), url.scheme == nil, url.path.hasPrefix("/") {
+            return URL(fileURLWithPath: url.path).standardizedFileURL.path
+        }
+        return trimmed
+    }
+
+    private func sourceFilename(for source: String) -> String? {
+        let key = canonicalSourceKey(for: source)
+        if key.hasPrefix("/") {
+            let name = URL(fileURLWithPath: key).lastPathComponent
+            return name.isEmpty ? nil : name
+        }
+        if let url = URL(string: source.trimmingCharacters(in: .whitespacesAndNewlines)), !url.lastPathComponent.isEmpty {
+            return url.lastPathComponent
+        }
+        return nil
+    }
+
+    /// Looks up collection bookmark data by exact key, canonical path, or matching filename.
+    private func lookupCollectionBookmark(
+        in bookmarks: [String: Data],
+        for source: String
+    ) -> (matchedKey: String, data: Data)? {
+        if let data = bookmarks[source] {
+            return (source, data)
+        }
+        let canonical = canonicalSourceKey(for: source)
+        if canonical != source, let data = bookmarks[canonical] {
+            return (canonical, data)
+        }
+        for (key, data) in bookmarks where canonicalSourceKey(for: key) == canonical {
+            return (key, data)
+        }
+        guard let filename = sourceFilename(for: source), !filename.isEmpty else { return nil }
+        for (key, data) in bookmarks where sourceFilename(for: key) == filename {
+            return (key, data)
+        }
+        return nil
+    }
+
+    /// Copies bookmark from an old collection key to the current per-display source string.
+    private func healCollectionBookmarkKey(
+        collectionName: String,
+        source: String,
+        matchedKey: String,
+        bookmarkData: Data
+    ) {
+        guard matchedKey != source else { return }
+        var bookmarks = settings.collectionBookmarks[collectionName] ?? [:]
+        bookmarks[source] = bookmarkData
+        settings.collectionBookmarks[collectionName] = bookmarks
+        logger.info("Re-keyed collection '\(collectionName)' bookmark from '\(matchedKey)' to current source")
+    }
+
+    private func persistPerDisplayBookmark(displayID: CGDirectDisplayID, url: URL) {
+        guard url.isFileURL else { return }
+        let key = String(displayID)
+        do {
+            guard url.startAccessingSecurityScopedResource() else {
+                logger.warning("Failed to access security-scoped resource for bookmarking display \(displayID)")
+                return
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+            let bookmark = try url.bookmarkData(
+                options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+            settings.perDisplayBookmarks[key] = bookmark
+            logger.debug("Saved per-display bookmark for display \(displayID)")
+        } catch {
+            logger.warning("Failed to save per-display bookmark for display \(displayID): \(error.localizedDescription)")
+        }
     }
 
     private func resolvedSourceURL(from source: String, collectionName: String? = nil) -> URL? {
@@ -397,26 +586,37 @@ final class AppViewModel: ObservableObject {
             logger.debug("Resolving collection source: collection=\(collectionName), source=\(trimmed)")
             if let collectionBookmarks = settings.collectionBookmarks[collectionName] {
                 logger.debug("  Available bookmarks in collection: \(collectionBookmarks.keys.joined(separator: ", "))")
-                if let bookmarkData = collectionBookmarks[trimmed] {
-                    logger.debug("  Found bookmark for source, attempting restoration...")
+                if let match = lookupCollectionBookmark(in: collectionBookmarks, for: trimmed) {
+                    logger.debug("  Found bookmark for source (key=\(match.matchedKey)), attempting restoration...")
                     var isStale = false
                     do {
                         let resolvedURL = try URL(
-                            resolvingBookmarkData: bookmarkData,
+                            resolvingBookmarkData: match.data,
                             options: [.withSecurityScope],
                             relativeTo: nil,
                             bookmarkDataIsStale: &isStale
                         )
                         logger.debug("  Successfully restored bookmark: \(resolvedURL.path), stale=\(isStale)")
 
+                        healCollectionBookmarkKey(
+                            collectionName: collectionName,
+                            source: trimmed,
+                            matchedKey: match.matchedKey,
+                            bookmarkData: match.data
+                        )
+
                         if isStale {
                             do {
+                                guard resolvedURL.startAccessingSecurityScopedResource() else {
+                                    return resolvedURL
+                                }
+                                defer { resolvedURL.stopAccessingSecurityScopedResource() }
                                 let refreshedBookmark = try resolvedURL.bookmarkData(
                                     options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
                                     includingResourceValuesForKeys: nil,
                                     relativeTo: nil
                                 )
-                                var updatedBookmarks = collectionBookmarks
+                                var updatedBookmarks = settings.collectionBookmarks[collectionName] ?? [:]
                                 updatedBookmarks[trimmed] = refreshedBookmark
                                 settings.collectionBookmarks[collectionName] = updatedBookmarks
                                 logger.debug("  Refreshed stale bookmark")
@@ -478,22 +678,209 @@ final class AppViewModel: ObservableObject {
         guard !hasStarted else { return }
         hasStarted = true
 
-        await loadSavedCollections()
+        loadSavedCollections()
         refreshSetupState()
 
         await wallpaperManager.setMuted(isMuted)
         await wallpaperManager.setScalingMode(scalingMode)
         await wallpaperManager.setRendererMode(rendererMode)
+        await wallpaperManager.setPerformanceProfile(performanceProfile)
 
         seedSettingsKeyBySignatureFromConnectedScreens()
         updateDisplaySignatureSnapshot()
         await wallpaperManager.startMonitoring()
 
         wallpaperManager.onScreenConfigurationChanged = { [weak self] in
-            await self?.handleDisplayConfigurationChanged()
+            self?.handleDisplayConfigurationChanged()
+        }
+
+        wallpaperManager.onPowerPolicyChanged = { [weak self] in
+            self?.syncPlaybackStateFromEngine()
         }
 
         await restorePersistedWallpapersOnLaunch()
+        notifyDisplaySourcesChanged()
+        syncPlaybackStateFromEngine()
+
+        heroPreviewVisibility.onChange = { [weak self] in
+            guard let self, self.isMainShellOnHomeTab else { return }
+            self.heroPreviewVisibilityRevision += 1
+        }
+        heroPreviewVisibility.start()
+
+        startPerformanceMonitoring()
+        refreshEngineDiagnostics()
+    }
+
+    // MARK: - Phase 7C Performance Monitoring
+
+    private func startPerformanceMonitoring() {
+        performanceMonitor.onSample = { [weak self] metrics in
+            self?.applyPerformanceSample(metrics)
+        }
+        performanceMonitor.start()
+    }
+
+    func setDiagnosticsPanelVisible(_ visible: Bool) {
+        isDiagnosticsPanelVisible = visible
+        if visible {
+            scheduleEngineDiagnosticsRefresh()
+        }
+    }
+
+    private func applyPerformanceSample(_ metrics: PerformanceCPUMetrics) {
+        isCPUMeasurementReady = metrics.isReady
+        if metrics.isReady {
+            instantCPUPercent = metrics.instantPercent
+            currentCPUPercent = metrics.smoothedPercent
+            estimatedCPUPercent = metrics.averagePercent
+        }
+
+        if metrics.isReady {
+            recentCPUSamples.append(metrics.smoothedPercent)
+            if recentCPUSamples.count > 60 {
+                recentCPUSamples.removeFirst(recentCPUSamples.count - 60)
+            }
+            evaluatePerformanceSuggestion()
+        }
+
+        let shouldRefreshDiagnostics: Bool
+        if isDiagnosticsPanelVisible {
+            if let lastRefresh = lastDiagnosticsRefreshAt {
+                shouldRefreshDiagnostics = Date().timeIntervalSince(lastRefresh) >= 1
+            } else {
+                shouldRefreshDiagnostics = true
+            }
+        } else if let lastRefresh = lastDiagnosticsRefreshAt {
+            shouldRefreshDiagnostics = Date().timeIntervalSince(lastRefresh) >= 5
+        } else {
+            shouldRefreshDiagnostics = true
+        }
+
+        if shouldRefreshDiagnostics {
+            scheduleEngineDiagnosticsRefresh()
+        }
+    }
+
+    private func scheduleEngineDiagnosticsRefresh() {
+        guard !diagnosticsRefreshScheduled else { return }
+        diagnosticsRefreshScheduled = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.diagnosticsRefreshScheduled = false
+            self.refreshEngineDiagnostics()
+        }
+    }
+
+    private func refreshEngineDiagnostics() {
+        engineDiagnostics = wallpaperManager.diagnosticsSnapshot()
+        lastDiagnosticsRefreshAt = Date()
+    }
+
+    private func evaluatePerformanceSuggestion() {
+        guard !settings.dismissPerformanceSuggestions else {
+            performanceSuggestion = nil
+            return
+        }
+
+        if let snoozedUntil = performanceSuggestionSnoozedUntil, Date() < snoozedUntil {
+            performanceSuggestion = nil
+            return
+        }
+
+        let policy = PerformanceSuggestionPolicy.thresholds(
+            useTestMode: settings.useTestPerformanceSuggestionThresholds
+        )
+
+        let suggestedProfile: PerformanceProfile?
+        let threshold: Double
+        switch performanceProfile {
+        case .maxQuality:
+            threshold = policy.maxToBalanced
+            suggestedProfile = .balanced
+        case .balanced:
+            guard PerformanceSuggestionPolicy.balancedSuggestionsEnabled else {
+                performanceSuggestion = nil
+                return
+            }
+            threshold = policy.balancedToBatterySaver
+            suggestedProfile = .batterySaver
+        case .batterySaver:
+            performanceSuggestion = nil
+            return
+        }
+
+        let window = Array(recentCPUSamples.suffix(policy.sustainedSampleWindow))
+        guard window.count >= policy.sustainedSampleWindow else {
+            performanceSuggestion = nil
+            return
+        }
+
+        let aboveCount = window.filter { $0 > threshold }.count
+        let required = Int(ceil(Double(policy.sustainedSampleWindow) * policy.sustainedFraction))
+        guard aboveCount >= required else {
+            performanceSuggestion = nil
+            return
+        }
+
+        guard lastSuggestedProfile != suggestedProfile else { return }
+
+        let message = "Wallpaper CPU has averaged \(String(format: "%.0f", estimatedCPUPercent))% recently. Switch to \(suggestedProfile!.displayName) to reduce usage."
+        performanceSuggestion = PerformanceSuggestion(message: message, suggestedProfile: suggestedProfile!)
+        lastSuggestedProfile = suggestedProfile
+    }
+
+    func applySuggestedPerformanceProfile() {
+        guard let suggestion = performanceSuggestion else { return }
+        updatePerformanceProfile(suggestion.suggestedProfile)
+        performanceSuggestion = nil
+        performanceSuggestionSnoozedUntil = nil
+        lastSuggestedProfile = nil
+    }
+
+    func dismissPerformanceSuggestion(permanently: Bool = false) {
+        performanceSuggestion = nil
+        if permanently {
+            settings.dismissPerformanceSuggestions = true
+            performanceSuggestionSnoozedUntil = nil
+            logger.info("Performance suggestions permanently dismissed")
+        } else {
+            performanceSuggestionSnoozedUntil = Date().addingTimeInterval(
+                Self.performanceSuggestionSnoozeSeconds
+            )
+        }
+    }
+
+    var useTestPerformanceSuggestionThresholds: Bool {
+        get { settings.useTestPerformanceSuggestionThresholds }
+        set { settings.useTestPerformanceSuggestionThresholds = newValue }
+    }
+
+    func restartWallpaperEngine() async {
+        isApplyingWallpaper = true
+        defer { isApplyingWallpaper = false }
+
+        let resumeAfter = await wallpaperManager.restartEngine()
+        await reapplyPersistedPerDisplayWallpapers()
+        if resumeAfter {
+            await wallpaperManager.resume(reason: .reconciliation, userInitiated: false, source: .system)
+        }
+        syncPlaybackStateFromEngine()
+        refreshEngineDiagnostics()
+        statusMessage = "Wallpaper engine restarted."
+        errorMessage = nil
+    }
+
+    func resetToSafeDefault() async {
+        updatePerformanceProfile(.balanced)
+        await pauseWallpaperPlayback(source: .system)
+        performanceSuggestion = nil
+        lastSuggestedProfile = nil
+        performanceSuggestionSnoozedUntil = nil
+        recentCPUSamples.removeAll()
+        errorMessage = nil
+        statusMessage = "Reset to safe default — Balanced profile, playback paused."
+        refreshEngineDiagnostics()
     }
 
     /// Migrates per-display settings after hotplug and reapplies wallpapers to all connected displays.
@@ -585,7 +972,7 @@ final class AppViewModel: ObservableObject {
             logger.info("Re-keyed per-display settings for \(mapping.count) display(s) after configuration change")
             notifyDisplaySourcesChanged()
             for (oldKey, newKey) in mapping {
-                guard let oldID = UInt32(oldKey), let newID = UInt32(newKey),
+                guard let oldID = UInt32(oldKey), UInt32(newKey) != nil,
                       let signature = previousSnapshots[CGDirectDisplayID(oldID)] else { continue }
                 settingsKeyBySignature[signature] = newKey
             }
@@ -660,22 +1047,40 @@ final class AppViewModel: ObservableObject {
         let displayIDs = orderedConnectedDisplayIDs()
         guard !displayIDs.isEmpty else { return }
 
+        if wallpaperManager.isGloballyPaused {
+            logger.info("reapplyPersistedPerDisplayWallpapers while globally paused (autoPlay=false expected)")
+        }
+
         isApplyingWallpaper = true
         defer { isApplyingWallpaper = false }
 
         var appliedCount = 0
         var errors: [String] = []
 
+        var appliedFileURLs: [URL] = []
         for displayID in displayIDs {
             if await applyPlaybackToDisplay(displayID: displayID) {
                 appliedCount += 1
+                if let url = resolvePlaybackURL(for: displayID), url.isFileURL {
+                    appliedFileURLs.append(url.standardizedFileURL)
+                }
             } else if !perDisplaySource(for: displayID).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 errors.append("Display \(displayID)")
             }
         }
 
+        for url in Dictionary(grouping: appliedFileURLs, by: \.path).values.compactMap(\.first) {
+            await wallpaperManager.coalesceSharedVideoPlaybackIfNeeded(for: url)
+        }
+
         await refreshDisplayState()
         notifyDisplaySourcesChanged()
+
+        if appliedCount > 0 {
+            await startDesktopPlaybackAfterLaunchIfAllowed()
+        }
+
+        syncPlaybackStateFromEngine()
 
         if appliedCount > 0 {
             statusMessage = "Wallpaper applied to \(appliedCount) display\(appliedCount == 1 ? "" : "s")."
@@ -707,6 +1112,9 @@ final class AppViewModel: ObservableObject {
         ) {
         case .success:
             recordPerDisplaySettingsKey(for: displayID)
+            if url.isFileURL {
+                persistPerDisplayBookmark(displayID: displayID, url: url)
+            }
             return true
         case .failure(let error):
             logger.warning("applyPlaybackToDisplay failed for \(displayID): \(error.errorDescription ?? "unknown")")
@@ -814,6 +1222,8 @@ final class AppViewModel: ObservableObject {
     }
 
     func stop() async {
+        heroPreviewVisibility.stop()
+        performanceMonitor.stop()
         await wallpaperManager.stop()
         endAccessingSelectedVideoURL()
         hasStarted = false
@@ -841,6 +1251,20 @@ final class AppViewModel: ObservableObject {
         guard rendererMode == .video else { return }
         guard let url = restoreSelectedVideoReference() else { return }
         await applyWallpaper(url: url)
+        await startDesktopPlaybackAfterLaunchIfAllowed()
+        syncPlaybackStateFromEngine()
+    }
+
+    /// Starts desktop playback after cold launch when power policy allows.
+    private func startDesktopPlaybackAfterLaunchIfAllowed() async {
+        await wallpaperManager.reevaluatePowerPolicy()
+        if wallpaperManager.isPowerPolicyRequiringPause() {
+            logger.info("Launch auto-play skipped — power policy requires pause")
+            return
+        }
+        guard !wallpaperManager.isPlaybackActive else { return }
+        logger.info("Launch auto-play — starting desktop playback after restore")
+        await wallpaperManager.resume(reason: .reconciliation, userInitiated: false, source: .system)
     }
 
     private func restoreSelectedVideoReference() -> URL? {
@@ -968,14 +1392,95 @@ final class AppViewModel: ObservableObject {
     }
     
     // MARK: - Menu Bar Actions (Phase 5F)
-    
-    func togglePlayback() async {
-        isPlaying.toggle()
-        if isPlaying {
-            await applyWallpaperFromSelection()
-        } else {
-            await wallpaperManager.stop()
+
+    /// Single entry point for toolbar/menu play-pause; serializes rapid presses and reads engine state inside the chain.
+    func handlePlayPauseButtonPressed(source: WallpaperManager.PlaybackCommandSource = .toolbar) {
+        let intent = wallpaperManager.isPlaybackActive ? "pause" : "resume"
+        logger.info(
+            "Play/Pause pressed intent=\(intent, privacy: .public) source=\(source.rawValue, privacy: .public) playbackActive=\(self.wallpaperManager.isPlaybackActive) uiPlaying=\(self.isPlaying) inFlight=\(self.playbackCommandInFlight)"
+        )
+        let previous = playbackCommandTask
+        playbackCommandTask = Task { @MainActor [weak self] in
+            await previous?.value
+            guard let self else { return }
+            if self.wallpaperManager.isPlaybackActive {
+                await self.pauseWallpaperPlayback(source: source)
+            } else {
+                await self.resumeWallpaperPlayback(source: source)
+            }
         }
+    }
+
+    func pauseWallpaperPlayback(source: WallpaperManager.PlaybackCommandSource = .toolbar) async {
+        logger.info("pauseWallpaperPlayback started source=\(source.rawValue, privacy: .public) playbackActive=\(self.wallpaperManager.isPlaybackActive)")
+        guard !playbackCommandInFlight else {
+            logger.info("pauseWallpaperPlayback skipped — command already in flight")
+            return
+        }
+        playbackCommandInFlight = true
+        isPlaybackCommandInFlight = true
+        defer {
+            playbackCommandInFlight = false
+            isPlaybackCommandInFlight = false
+            syncPlaybackStateFromEngine()
+            logger.info("pauseWallpaperPlayback finished playbackActive=\(self.wallpaperManager.isPlaybackActive) isPlaying=\(self.isPlaying) chromePaused=\(self.shouldShowPausedChrome) inFlight=false")
+        }
+        await wallpaperManager.pause(userInitiated: true, source: source)
+        beginPostPauseGrace()
+    }
+
+    func resumeWallpaperPlayback(source: WallpaperManager.PlaybackCommandSource = .toolbar) async {
+        logger.info("resumeWallpaperPlayback started source=\(source.rawValue, privacy: .public) playbackActive=\(self.wallpaperManager.isPlaybackActive)")
+        if let blockedUntil = userResumeBlockedUntil, Date() < blockedUntil {
+            let remainingMs = max(0, Int(blockedUntil.timeIntervalSince(Date()) * 1000))
+            logger.info("Resume ignored — post-pause grace (remainingMs=\(max(0, remainingMs)) source=\(source.rawValue, privacy: .public))")
+            syncPlaybackStateFromEngine()
+            return
+        }
+        guard !playbackCommandInFlight else {
+            logger.info("resumeWallpaperPlayback skipped — command already in flight")
+            return
+        }
+        playbackCommandInFlight = true
+        isPlaybackCommandInFlight = true
+        defer {
+            playbackCommandInFlight = false
+            isPlaybackCommandInFlight = false
+            syncPlaybackStateFromEngine()
+            logger.info("resumeWallpaperPlayback finished playbackActive=\(self.wallpaperManager.isPlaybackActive) isPlaying=\(self.isPlaying) chromePaused=\(self.shouldShowPausedChrome) inFlight=false")
+        }
+        guard !wallpaperManager.isPlaybackActive else {
+            logger.info("resumeWallpaperPlayback skipped — desktop playback already active")
+            return
+        }
+        clearPostPauseGrace()
+        await wallpaperManager.resume(reason: .user, userInitiated: true, source: source)
+    }
+
+    func togglePlayback() async {
+        handlePlayPauseButtonPressed(source: .toggle)
+        await playbackCommandTask?.value
+    }
+
+    private func beginPostPauseGrace() {
+        userResumeBlockedUntil = Date().addingTimeInterval(Self.postPauseGraceInterval)
+        isInPostPauseGrace = true
+        postPauseGraceTask?.cancel()
+        postPauseGraceTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.postPauseGraceInterval))
+            guard let self, !Task.isCancelled else { return }
+            if let blockedUntil = self.userResumeBlockedUntil, Date() >= blockedUntil {
+                self.userResumeBlockedUntil = nil
+                self.isInPostPauseGrace = false
+            }
+        }
+    }
+
+    private func clearPostPauseGrace() {
+        postPauseGraceTask?.cancel()
+        postPauseGraceTask = nil
+        userResumeBlockedUntil = nil
+        isInPostPauseGrace = false
     }
     
     func toggleMute() async {
@@ -1001,11 +1506,73 @@ final class AppViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 500_000_000)
         updateLaunchOnLoginStatus()
     }
+
+    // MARK: - Phase 7A Power Policy
+
+    func updatePauseOnBattery(_ enabled: Bool) {
+        pauseOnBattery = enabled
+        settings.pauseOnBattery = enabled
+        Task { await applyPowerPolicySettings() }
+    }
+
+    func updatePauseOnLowBattery(_ enabled: Bool) {
+        pauseOnLowBattery = enabled
+        settings.pauseOnLowBattery = enabled
+        Task { await applyPowerPolicySettings() }
+    }
+
+    func updateLowBatteryThreshold(_ value: Int) {
+        let clamped = min(100, max(1, value))
+        lowBatteryThreshold = clamped
+        settings.lowBatteryThreshold = clamped
+        Task { await applyPowerPolicySettings() }
+    }
+
+    private func applyPowerPolicySettings() async {
+        await wallpaperManager.reevaluatePowerPolicy()
+        syncPlaybackStateFromEngine()
+    }
+
+    // MARK: - Phase 7B Performance
+
+    func updatePerformanceProfile(_ profile: PerformanceProfile) {
+        settings.performanceProfile = profile
+        Task { @MainActor in
+            performanceProfile = profile
+            await wallpaperManager.setPerformanceProfile(profile)
+        }
+    }
+
+    func syncPowerPolicyStatus() {
+        syncPlaybackStateFromEngine()
+    }
+
+    /// Keeps UI play/pause and pause banners aligned with engine state (transport vs chrome split).
+    func syncPlaybackStateFromEngine() {
+        let previousPlaying = isPlaying
+        let previousChrome = shouldShowPausedChrome
+        powerPolicyStatusMessage = wallpaperManager.powerPolicyStatusMessage
+        isGloballyPaused = wallpaperManager.isGloballyPaused
+        shouldShowPausedChrome = wallpaperManager.shouldShowPausedChrome
+        isPlaying = wallpaperManager.isPlaybackActive
+        if previousPlaying != isPlaying || previousChrome != shouldShowPausedChrome {
+            logger.info(
+                """
+                Playback state snapshot: lifecycle=\(String(describing: self.wallpaperManager.lifecycleState)) \
+                isPlaybackActive=\(self.wallpaperManager.isPlaybackActive) userPaused=\(self.wallpaperManager.isUserPausedForDiagnostics) \
+                policyPaused=\(self.wallpaperManager.isPausedForPowerPolicyForDiagnostics) \
+                policyOverride=\(self.wallpaperManager.userOverrodePowerPolicyPause) \
+                isPlaying=\(self.isPlaying) chromePaused=\(self.shouldShowPausedChrome) \
+                desktopRates=[\(self.wallpaperManager.desktopPlaybackSnapshot())]
+                """
+            )
+        }
+    }
     
     // MARK: - Phase 6A Collection Methods
     
     /// Load saved collections from settings on init/start
-    func loadSavedCollections() async {
+    func loadSavedCollections() {
         refreshCollectionState()
     }
 
@@ -1272,10 +1839,11 @@ final class AppViewModel: ObservableObject {
         sourceKey: String,
         displayIDs: [CGDirectDisplayID]
     ) {
-        guard let bookmark = settings.collectionBookmarks[collectionName]?[sourceKey] else { return }
+        guard let collectionBookmarks = settings.collectionBookmarks[collectionName],
+              let match = lookupCollectionBookmark(in: collectionBookmarks, for: sourceKey) else { return }
         var bookmarks = settings.perDisplayBookmarks
         for displayID in displayIDs {
-            bookmarks[String(displayID)] = bookmark
+            bookmarks[String(displayID)] = match.data
         }
         settings.perDisplayBookmarks = bookmarks
     }
@@ -1288,10 +1856,17 @@ final class AppViewModel: ObservableObject {
         let key = String(displayID)
         settings.perDisplaySources[key] = source.url
 
-        if let bookmark = settings.collectionBookmarks[collectionName]?[source.url] {
+        if let collectionBookmarks = settings.collectionBookmarks[collectionName],
+           let match = lookupCollectionBookmark(in: collectionBookmarks, for: source.url) {
             var bookmarks = settings.perDisplayBookmarks
-            bookmarks[key] = bookmark
+            bookmarks[key] = match.data
             settings.perDisplayBookmarks = bookmarks
+            healCollectionBookmarkKey(
+                collectionName: collectionName,
+                source: source.url,
+                matchedKey: match.matchedKey,
+                bookmarkData: match.data
+            )
         } else if let url = resolvedSourceURL(from: source.url, collectionName: collectionName), url.isFileURL {
             selectPerDisplaySource(displayID, at: url)
             settings.perDisplaySources[key] = source.url

@@ -23,6 +23,12 @@ final class SettingsStore {
         static let lastUsedCollectionName = "lastUsedCollectionName"  // Phase 6A: Most recently used collection
         static let savedSetups = "savedSetups"  // Phase 6B: Saved desktop state snapshots
         static let currentSetupName = "currentSetupName"  // Phase 6B: Currently active setup name
+        static let pauseOnBattery = "pauseOnBattery"  // Phase 7A
+        static let pauseOnLowBattery = "pauseOnLowBattery"  // Phase 7A
+        static let lowBatteryThreshold = "lowBatteryThreshold"  // Phase 7A
+        static let performanceProfile = "performanceProfile"  // Phase 7B
+        static let dismissPerformanceSuggestions = "dismissPerformanceSuggestions"  // Phase 7C
+        static let useTestPerformanceSuggestionThresholds = "useTestPerformanceSuggestionThresholds"  // Phase 7C.1
     }
 
     private init() {
@@ -107,6 +113,18 @@ final class SettingsStore {
             savedSetups = [:]
         }
         currentSetupName = UserDefaults.standard.string(forKey: Keys.currentSetupName)
+        pauseOnBattery = UserDefaults.standard.object(forKey: Keys.pauseOnBattery) as? Bool ?? false
+        pauseOnLowBattery = UserDefaults.standard.object(forKey: Keys.pauseOnLowBattery) as? Bool ?? true
+        let storedThreshold = UserDefaults.standard.object(forKey: Keys.lowBatteryThreshold) as? Int
+        lowBatteryThreshold = storedThreshold ?? 20
+        if let raw = UserDefaults.standard.string(forKey: Keys.performanceProfile),
+           let profile = PerformanceProfile(rawValue: raw) {
+            performanceProfile = profile
+        } else {
+            performanceProfile = .balanced
+        }
+        dismissPerformanceSuggestions = UserDefaults.standard.bool(forKey: Keys.dismissPerformanceSuggestions)
+        useTestPerformanceSuggestionThresholds = UserDefaults.standard.bool(forKey: Keys.useTestPerformanceSuggestionThresholds)
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -150,6 +168,45 @@ final class SettingsStore {
 
     var launchOnLoginEnabled: Bool {  // Phase 5G: Launch-on-login preference
         didSet { UserDefaults.standard.set(launchOnLoginEnabled, forKey: Keys.launchOnLogin) }
+    }
+
+    /// Phase 7A: Pause wallpapers when running on battery power.
+    var pauseOnBattery: Bool {
+        didSet { UserDefaults.standard.set(pauseOnBattery, forKey: Keys.pauseOnBattery) }
+    }
+
+    /// Phase 7A: Pause when internal battery is below `lowBatteryThreshold`.
+    var pauseOnLowBattery: Bool {
+        didSet { UserDefaults.standard.set(pauseOnLowBattery, forKey: Keys.pauseOnLowBattery) }
+    }
+
+    /// Phase 7A: Battery percentage threshold (1–100).
+    var lowBatteryThreshold: Int {
+        didSet {
+            let clamped = min(100, max(1, lowBatteryThreshold))
+            if clamped != lowBatteryThreshold {
+                lowBatteryThreshold = clamped
+                return
+            }
+            UserDefaults.standard.set(lowBatteryThreshold, forKey: Keys.lowBatteryThreshold)
+        }
+    }
+
+    /// Phase 7B: Engine performance preset (visibility pause + decode tuning per profile).
+    var performanceProfile: PerformanceProfile {
+        didSet { UserDefaults.standard.set(performanceProfile.rawValue, forKey: Keys.performanceProfile) }
+    }
+
+    /// Phase 7C: User opted out of automatic performance profile suggestions.
+    var dismissPerformanceSuggestions: Bool {
+        didSet { UserDefaults.standard.set(dismissPerformanceSuggestions, forKey: Keys.dismissPerformanceSuggestions) }
+    }
+
+    /// Phase 7C.1: Lower suggestion thresholds for manual testing (Release builds).
+    var useTestPerformanceSuggestionThresholds: Bool {
+        didSet {
+            UserDefaults.standard.set(useTestPerformanceSuggestionThresholds, forKey: Keys.useTestPerformanceSuggestionThresholds)
+        }
     }
 
     // Per-display mapping: displayID (as string) -> scaling mode

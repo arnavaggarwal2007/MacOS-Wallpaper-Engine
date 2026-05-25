@@ -68,46 +68,51 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 - Settings persist across relaunch and are honored immediately on change.
 - No crashes or hangs when power source changes repeatedly (e.g., plugging/unplugging rapidly).
 
+**7A playback UX (complete 2026-05-22):** Frozen-frame desktop pause (no black screen), launch auto-play when policy allows, hero preview follows global pause, intent logging. Regression: [`docs/PHASE_7A_POWER_REGRESSION.md`](docs/PHASE_7A_POWER_REGRESSION.md).
+
+**7B prerequisite:** Documentation gate complete (KB + repo docs synced); baseline in [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md).
+
 ***
 
 ### Phase 7B — Engine Efficiency + Performance Profiles
 
-**Scope:** (1) **Reduce real resource usage** in the playback and preview stack; (2) expose **PerformanceProfile** presets (Max Quality / Balanced / Battery Saver) that apply FPS caps and policies. Compare all changes to the baseline in `docs/V1_SIGNOFF.md`.[^3][^5][^2]
+**Status:** **Complete** (2026-05-23). Phase 7C (diagnostics UI) is next.
 
-**Engine efficiency (core optimization):**
+**Scope:** (1) **Reduce real resource usage** in the playback and preview stack; (2) expose **PerformanceProfile** presets (Max Quality / Balanced / Battery Saver). Compare all changes to the baseline in `docs/V1_SIGNOFF.md`.[^3][^5][^2]
 
-- **VideoRenderer / WallpaperManager:** hardware decode path audit; FPS caps per profile; reduce reconciliation/timer churn.
-- **Pause when not visible:** pause `AVPlayer` when wallpaper fully occluded or inactive Space (Wallux-style); research window occlusion APIs in week 1.
-- **Multi-display:** evaluate shared `AVPlayer` vs N players when the same file is on all displays.
-- **UI/preview cost:** avoid double-decode (desktop engine + `AppWallpaperBackground` hero); static frame or single pipeline when engine is playing.
-- **WebRenderer:** pause/minimize WKWebView cost on Battery profile; fix `@MainActor` isolation (Swift 6-safe).
+**Delivered in 7B:**
+
+- **Pause when not visible:** `DesktopVisibilityTracker` + per-display pause (P3/P4-A); shared session pauses when all attached displays occluded.
+- **Multi-display:** `SharedVideoPlaybackSession` — one AVPlayer, N layers when same file (P2-fix); launch-restore coalesce (7B closeout).
+- **UI/preview cost:** Live hero + `AppPreviewVisibilityMonitor` (P1b); async carousel thumbnails (P4-B).
+- **WebRenderer:** Visibility pause + Battery Saver `stopLoading` (P4-C).
+- **Profiles:** Max Quality / Balanced / Battery Saver in Settings; visibility pause differs by profile.
 - **Document:** `docs/PERFORMANCE_TUNING.md` + KB `ADR-005-Performance-Engine-Strategy`.
 
-**Profiles:**
+**Deferred (not 7B):**
 
-- `PerformanceProfile` + `PerformanceProfileConfig` in `SettingsStore` (max resolution hook, fps cap, allowOnBattery).
-- `WallpaperManager` passes config to `DisplayController` / renderers on apply.
-- Default **Balanced:** throttle FPS on battery before hard pause (coordinate with 7A).
+| Item | Status | Phase |
+|------|--------|-------|
+| Seek-timer FPS caps | Rejected permanently | — |
+| Static hero | Rejected permanently | — |
+| Unified hero + desktop single decode | Deferred | 8+ |
+| 4K downscale on Battery Saver | Deferred | 8B+ |
+| Manual frame stepping / new FPS mechanism | Deferred | 9+ / research |
+| CPU history graphs | Deferred | 10 |
 
-**Implementation Steps (7B):**
+**Success Criteria (7B) — met:**
 
-1. **Baseline comparison setup (Days 1–2)** — Reproduce V1_SIGNOFF scenarios; pick one reference 1080p H.264 clip.
-2. **Engine efficiency pass (Days 3–12)** — Items above; measure after each major change.
-3. **Profile wiring (Days 13–16)** — Enum, config, renderer integration.
-4. **Settings UI (Days 17–18)** — Performance profile selector in Settings tab (not legacy ContentView).
-5. **Testing (Days 19–21)** — Activity Monitor + Instruments; target measurable improvement vs V1 baseline (aspirational laptop goal: &lt;5% CPU on Balanced, 1×1080p).
-
-**Success Criteria (7B):**
-
-- Steady-state CPU measurably below V1 baseline on Balanced (same test clip/displays).
-- Profiles produce visible CPU/smoothness differences.
+- Steady-state CPU measurably below V1 baseline on Balanced (2.5% vs 5.9% same-file 2 disp).
+- Profiles produce visible CPU differences (Max Quality +0.5–1.3% vs Balanced in P6).
 - No regressions in collections, setups, or multi-display apply.
 
 ***
 
 ### Phase 7C — Auto‑Tuning and Performance Diagnostics
 
-**Scope:** Add basic auto‑tuning heuristics and a lightweight diagnostics panel to help users understand and control performance.
+**Status:** **Complete** (2026-05-23). Phase 8 (local library) is next.
+
+**Scope:** Auto‑tuning heuristics and a lightweight diagnostics panel to help users understand and control performance — **not** further decode optimization.
 
 **Key Design Points:**
 

@@ -11,6 +11,10 @@ final class VideoRenderer: Renderer {
     private var videoGravity: AVLayerVideoGravity = .resizeAspectFill
     private var isAccessingSecurityScopedResource = false
     private var activeVideoURL: URL?
+    private var allowsPlaybackAdvance = true
+    private var performanceProfile: PerformanceProfile = .balanced
+    private var heroPreviewLayer: AVPlayerLayer?
+    private weak var heroPreviewContainer: NSView?
 
     func start(in containerView: NSView) async -> Result<Void, WallpaperError> {
         self.containerView = containerView
@@ -24,7 +28,9 @@ final class VideoRenderer: Renderer {
 
         // Step 1: Create AVPlayer instance
         let player = AVPlayer()
-        player.isMuted = true  // Default: muted playback
+        player.isMuted = true
+        player.actionAtItemEnd = .pause
+        player.automaticallyWaitsToMinimizeStalling = true
         self.player = player
 
         // Step 2: Create AVPlayerLayer and attach to container view
@@ -48,7 +54,8 @@ final class VideoRenderer: Renderer {
     }
 
     // CHUNK 1: Load video URL into player (called before/during start)
-    func loadVideo(url: URL) async -> Result<Void, WallpaperError> {
+    func loadVideo(url: URL, autoPlay: Bool = true) async -> Result<Void, WallpaperError> {
+        allowsPlaybackAdvance = autoPlay
         activeVideoURL = url
         isAccessingSecurityScopedResource = url.startAccessingSecurityScopedResource()
 
@@ -81,7 +88,8 @@ final class VideoRenderer: Renderer {
 
         // Create AVPlayerItem from URL
         let playerItem = AVPlayerItem(asset: asset)
-        
+        PerformanceProfileConfiguration.apply(to: playerItem, profile: performanceProfile)
+
         // Replace current item in player and begin playback
         guard let player = player else {
             logger.error("AVPlayer not initialized")
@@ -90,9 +98,15 @@ final class VideoRenderer: Renderer {
 
         updatePlaybackObserver(for: playerItem)
         player.replaceCurrentItem(with: playerItem)
-        player.play()
-
-        logger.info("Video loaded and playback started: \(url.lastPathComponent)")
+        await MainActor.run {
+            if autoPlay {
+                startContinuousPlaybackIfAllowed()
+                logger.info("Video loaded and playback started: \(url.lastPathComponent) profile=\(self.performanceProfile.rawValue, privacy: .public)")
+            } else {
+                player.pause()
+                logger.info("Video loaded paused: \(url.lastPathComponent)")
+            }
+        }
         return .success(())
     }
 
@@ -101,8 +115,185 @@ final class VideoRenderer: Renderer {
         logger.debug("VideoRenderer stopped")
     }
 
-    func pause() async { player?.pause() }
-    func resume() async { player?.play() }
+    func pause() async {
+        allowsPlaybackAdvance = false
+        await applyLayerFrameBeforePause()
+        await MainActor.run {
+            guard let player else {
+                logger.warning("VideoRenderer pause: no player instance")
+                return
+            }
+            player.currentItem?.cancelPendingSeeks()
+            player.pause()
+            player.rate = 0
+        }
+        let rate = await MainActor.run { player?.rate ?? -1 }
+        if isActivelyPlaying {
+            logger.warning("VideoRenderer pause completed but rate still > 0 (rate=\(rate)); seeking to hold frame")
+            await MainActor.run {
+                guard let player, player.currentItem != nil else { return }
+                let time = player.currentTime()
+                player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+                player.pause()
+                player.rate = 0
+            }
+        } else {
+            logger.info("Desktop pause verified rate=\(rate)")
+        }
+        await MainActor.run {
+            ensurePlayerAttachedToLayer()
+            logger.info("Desktop pause: holding frame (layer attached) rate=\(self.player?.rate ?? -1)")
+        }
+        scheduleNonBlockingPrerollAtZero()
+    }
+
+    func resume() async {
+        allowsPlaybackAdvance = true
+        let rate = await MainActor.run { () -> Float in
+            ensurePlayerAttachedToLayer()
+            startContinuousPlaybackIfAllowed()
+            return player?.rate ?? -1
+        }
+        logger.info("Desktop resume: playback started rate=\(rate) profile=\(self.performanceProfile.rawValue, privacy: .public)")
+    }
+
+    func applyPerformanceProfile(_ profile: PerformanceProfile) async {
+        performanceProfile = profile
+        await MainActor.run {
+            if let item = player?.currentItem {
+                PerformanceProfileConfiguration.apply(to: item, profile: profile)
+            }
+            if allowsPlaybackAdvance {
+                startContinuousPlaybackIfAllowed()
+            }
+        }
+        logger.info("VideoRenderer performance profile=\(profile.rawValue, privacy: .public)")
+    }
+
+    /// Continuous hardware decode when allowed; visibility policy pauses via DisplayController (P3).
+    private func startContinuousPlaybackIfAllowed() {
+        guard allowsPlaybackAdvance, let player else { return }
+        player.play()
+    }
+
+    /// Exposed for WallpaperManager desktop playback diagnostics.
+    var currentPlaybackRate: Float {
+        player?.rate ?? 0
+    }
+
+    private func ensurePlayerAttachedToLayer() {
+        guard let player, let playerLayer else { return }
+        if playerLayer.player !== player {
+            playerLayer.player = player
+            logger.debug("Desktop playback: AVPlayer attached to layer")
+        }
+    }
+
+    private func applyLayerFrameBeforePause() async {
+        let needsDeferredLayout = await MainActor.run { () -> Bool in
+            guard let containerView else { return false }
+            let bounds = containerView.bounds
+            if !bounds.isEmpty {
+                applyPlayerLayerFrame(in: containerView)
+                return false
+            }
+            return true
+        }
+        guard needsDeferredLayout else { return }
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let containerView = self.containerView else {
+                    continuation.resume()
+                    return
+                }
+                if containerView.bounds.isEmpty {
+                    containerView.layoutSubtreeIfNeeded()
+                }
+                self.applyPlayerLayerFrame(in: containerView)
+                continuation.resume()
+            }
+        }
+    }
+
+    /// Best-effort frame commit; must not block the pause command path (preroll can hang on some assets).
+    private func scheduleNonBlockingPrerollAtZero() {
+        DispatchQueue.main.async { [weak self] in
+            guard let player = self?.player else { return }
+            player.preroll(atRate: 0) { [weak self] finished in
+                let rate = self?.player?.rate ?? -1
+                self?.logger.debug("Desktop preroll(atRate:0) finished=\(finished) rate=\(rate)")
+            }
+        }
+    }
+
+    private func applyPlayerLayerFrame(in containerView: NSView) {
+        let bounds = containerView.bounds
+        guard let playerLayer else { return }
+        if bounds.isEmpty {
+            logger.warning("Pausing with zero container bounds: \(String(describing: bounds))")
+        } else {
+            playerLayer.frame = bounds
+            logger.debug("Player layer frame set before pause: \(bounds.width)x\(bounds.height)")
+        }
+    }
+
+    /// True when AVPlayer is advancing (used to verify pause stuck).
+    var isActivelyPlaying: Bool {
+        guard allowsPlaybackAdvance, let player else { return false }
+        return player.rate > 0.01
+    }
+
+    func matchesHeroPreviewURL(_ url: URL) -> Bool {
+        guard let activeVideoURL, player?.currentItem != nil else { return false }
+        let activePath = activeVideoURL.isFileURL
+            ? activeVideoURL.standardizedFileURL.resolvingSymlinksInPath().path
+            : activeVideoURL.absoluteString
+        let targetPath = url.isFileURL
+            ? url.standardizedFileURL.resolvingSymlinksInPath().path
+            : url.absoluteString
+        return activePath == targetPath
+    }
+
+    @discardableResult
+    func attachHeroPreviewLayer(in containerView: NSView, videoGravity: AVLayerVideoGravity = .resizeAspectFill) -> Bool {
+        guard let player else { return false }
+
+        if containerView.bounds.isEmpty {
+            containerView.layoutSubtreeIfNeeded()
+        }
+        let bounds = containerView.bounds
+        guard !bounds.isEmpty else { return false }
+
+        if heroPreviewContainer === containerView, let layer = heroPreviewLayer {
+            layer.frame = bounds
+            return true
+        }
+
+        detachHeroPreviewLayer()
+
+        let layer = AVPlayerLayer(player: player)
+        layer.videoGravity = videoGravity
+        layer.frame = bounds
+
+        containerView.wantsLayer = true
+        guard let contentLayer = containerView.layer else { return false }
+        contentLayer.addSublayer(layer)
+        heroPreviewLayer = layer
+        heroPreviewContainer = containerView
+        return true
+    }
+
+    func updateHeroPreviewLayerFrame(in containerView: NSView) {
+        guard heroPreviewContainer === containerView, let layer = heroPreviewLayer else { return }
+        layer.frame = containerView.bounds
+    }
+
+    func detachHeroPreviewLayer() {
+        heroPreviewLayer?.removeFromSuperlayer()
+        heroPreviewLayer = nil
+        heroPreviewContainer = nil
+    }
     
     // MARK: - Reconciliation Query Methods (Chunk 4D)
     func isMuted() async -> Bool {
@@ -151,6 +342,7 @@ final class VideoRenderer: Renderer {
     }
 
     func dispose() async {
+        detachHeroPreviewLayer()
         player?.pause()
         if let observer = endObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -180,8 +372,9 @@ final class VideoRenderer: Renderer {
             object: playerItem,
             queue: .main
         ) { [weak self] _ in
-            self?.player?.seek(to: .zero)
-            self?.player?.play()
+            guard let self, self.allowsPlaybackAdvance else { return }
+            self.player?.seek(to: .zero)
+            self.player?.play()
         }
     }
 
@@ -193,3 +386,5 @@ final class VideoRenderer: Renderer {
         activeVideoURL = nil
     }
 }
+
+extension VideoRenderer: DesktopVideoPreviewProviding {}

@@ -46,7 +46,7 @@ final class MenuBarController: NSObject, ObservableObject {
         let playPauseItem = NSMenuItem(
             title: "Pause",
             action: #selector(handlePlayPauseAction),
-            keyEquivalent: "p"
+            keyEquivalent: ""
         )
         playPauseItem.target = self
         menu.addItem(playPauseItem)
@@ -91,10 +91,8 @@ final class MenuBarController: NSObject, ObservableObject {
     
     @objc private func handlePlayPauseAction() {
         guard let viewModel = viewModel else { return }
-        Task {
-            await viewModel.togglePlayback()
-        }
-        logger.debug("Play/Pause toggled from menu")
+        viewModel.handlePlayPauseButtonPressed(source: .menuBar)
+        logger.debug("Play/Pause from menu (isPlaying=\(viewModel.isPlaying))")
     }
     
     @objc private func handleMuteAction() {

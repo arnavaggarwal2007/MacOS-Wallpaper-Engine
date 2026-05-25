@@ -1,9 +1,9 @@
 # Version 1 Sign-Off
 
-**Date:** 2026-05-21  
-**Build:** `main` @ `1cfe02f` (CI regression green)  
-**Scope:** Phases 1–6B + UI final vision (Phases 0–4)  
-**Gate:** Required before Version 2 (Phase 7+) implementation  
+**Date:** 2026-05-22 (updated)  
+**Build:** Debug local build 2026-05-22; prior CI `main` @ `1cfe02f`  
+**Scope:** Phases 1–6B + UI final vision (Phases 0–4) + Phase 7A  
+**Gate:** V1 complete; 7A playback UX signed off; **Phase 7B complete** (2026-05-23); **Phase 7C complete** (2026-05-23); Phase 8 next  
 
 ---
 
@@ -14,10 +14,13 @@
 | Automated build & smoke | **Pass** | `chunk7_smoke.sh` + GitHub Actions universal Debug/Release |
 | UI revamp validation | **Pass** | User verified May 20, 2026; merged to `main` |
 | Functional matrix (manual) | **Pass (reported)** | Owner confirmed app working in daily use; spot-check sections below |
-| Performance baseline | **Recorded** | See table in [§ Performance baseline](#performance-baseline) |
-| Hotplug / launch / setup persistence | **Fixed** | See [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) |
+| Phase 7B engine efficiency | **Pass** | P0–P4 complete; see [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) |
+| Phase 7C diagnostics UI | **Pass** | CPU monitor, suggestion banner, Settings diagnostics, engine restart |
+| Hotplug / launch / setup persistence | **Pass** | See [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) |
+| Phase 7A power policy | **Pass** | [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) |
+| Phase 7A playback UX | **Pass** | 2026-05-22 — launch auto-play, frozen-frame pause, hero preview sync; matrix rows 10–11, 15–16 |
 
-**Recommendation:** Proceed with **doc consolidation** and **Phase 7A** planning. Complete performance baseline measurements in parallel (1 hour, Activity Monitor) so Phase 7B has before/after numbers.
+**Recommendation:** V1 + **7A + 7B + 7C complete**. Phase **8** (local library) next. Results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md).
 
 ---
 
@@ -25,7 +28,8 @@
 
 | Check | Command | Result | Date |
 |-------|---------|--------|------|
-| Debug smoke build | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_smoke.sh` | Pass (universal x86_64 + arm64) | 2026-05-21 |
+| Debug smoke build | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_smoke.sh` | Pass (universal x86_64 + arm64) | 2026-05-22 |
+| Local Debug build (7A playback UX) | Xcode Debug scheme | Pass | 2026-05-22 |
 | CI regression | GitHub Actions `chunk7_regression.yml` on `1cfe02f` | Pass | 2026-05-21 |
 | Swift concurrency (CI) | Xcode 16.4 universal build | Pass (MenuBar + thumbnail fixes) | 2026-05-21 |
 
@@ -47,7 +51,7 @@ Legend: **P** = Pass, **D** = Defer / not tested, **F** = Fail.
 | Scaling modes (fill/fit/stretch) | P | |
 | Wallpaper persists after relaunch | P | Security-scoped bookmarks |
 | Screen lock / sleep pause & resume | P | Chunks 4A–4D |
-| Multi-display connect/disconnect | P | |
+| Multi-display connect/disconnect | P | Full hotplug matrix — [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) |
 | Per-display independent sources | P | Always per-display model |
 | Spaces / Mission Control | P | |
 | Missing file / error handling | P | |
@@ -74,7 +78,7 @@ Legend: **P** = Pass, **D** = Defer / not tested, **F** = Fail.
 | Choose Wallpaper + Apply (focused display) | P | Phase 3 |
 | Collections tab CRUD + apply | P | |
 | Setups tab save/restore/delete | P | |
-| Settings tab (renderer, scaling, login) | P | |
+| Settings tab (renderer, scaling, login, battery & power) | P | Phase 7A |
 | Management tabs: blur/scrim readability | P | |
 | Legacy ContentView removed | P | Phase 4d |
 
@@ -124,7 +128,7 @@ Record **before** Version 2 Phase 7 optimization. Use the same test clip and dis
 
 - No automated XCTest suite; regression is build + smoke + manual.
 - WebRenderer / VideoRenderer Swift 6 concurrency **warnings** on Xcode 16.4 (not errors).
-- Resource usage not yet competitive with Wallspace/Wallux marketing claims — **Phase 7B** addresses this.
+- Resource usage improved vs V1 baseline on Balanced (see [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)); Phase **7C** adds diagnostics UI.
 - No local library index, quick modes, lock screen — **Version 2**.
 
 ---
@@ -144,3 +148,5 @@ Record **before** Version 2 Phase 7 optimization. Use the same test clip and dis
 - [`docs/UI_REFERENCE.md`](UI_REFERENCE.md) — UI spec
 - [`PRODUCTION_TEST_CHECKLIST.md`](../PRODUCTION_TEST_CHECKLIST.md) — full matrix
 - [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) — next phases
+- [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) — 7A playback + power matrix
+- [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) — 7B baseline and experiment log

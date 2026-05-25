@@ -2,17 +2,20 @@ import SwiftUI
 import AppKit
 
 struct HeroWallpaperView: View {
+    @EnvironmentObject private var appModel: AppViewModel
     let title: String
     let subtitle: String
     let image: NSImage?
     let badge: String
     let metadata: [String]
     let videoURL: URL?
+    var usesUnifiedDesktopDecode: Bool = false
     let isFullWindowBackground: Bool
     let dynamicAspectRatio: CGFloat?
     var isPlaybackPaused: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
+    @State private var unifiedAttachFailed = false
 
     var body: some View {
         ZStack(alignment: isFullWindowBackground ? .topLeading : .bottomLeading) {
@@ -111,17 +114,71 @@ struct HeroWallpaperView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
         .accessibilityHint(subtitle)
+        .onChange(of: videoURL?.absoluteString) { _, _ in
+            unifiedAttachFailed = false
+        }
+    }
+
+    @ViewBuilder
+    private func unifiedHeroFallback(videoURL: URL) -> some View {
+        if let image {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .antialiased(true)
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            VideoPreviewView(
+                videoURL: videoURL,
+                shouldLoop: true,
+                isMuted: true,
+                isPlaybackPaused: false
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .id("fallback-\(videoURL.absoluteString)")
+            .onAppear {
+                if SettingsStore.shared.debugDiagnosticsEnabled {
+                    print("HeroWallpaperView: unified attach failed — independent decode fallback \(videoURL.path)")
+                }
+            }
+        }
     }
 
     private var heroImage: some View {
         Group {
             if let videoURL = videoURL, isVideoFile(videoURL) {
-                VideoPreviewView(
-                    videoURL: videoURL,
-                    shouldLoop: true,
-                    isMuted: true,
-                    isPlaybackPaused: isPlaybackPaused
-                )
+                if usesUnifiedDesktopDecode, !isPlaybackPaused {
+                    if unifiedAttachFailed {
+                        unifiedHeroFallback(videoURL: videoURL)
+                    } else {
+                        UnifiedVideoPreviewView(
+                            appModel: appModel,
+                            videoURL: videoURL,
+                            isPlaybackPaused: false,
+                            onAttachStateChanged: { attached in
+                                if !attached {
+                                    unifiedAttachFailed = true
+                                }
+                            }
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .id("unified-\(videoURL.absoluteString)")
+                    }
+                } else if usesUnifiedDesktopDecode, isPlaybackPaused, let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(.high)
+                        .antialiased(true)
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if !isPlaybackPaused {
+                    VideoPreviewView(
+                        videoURL: videoURL,
+                        shouldLoop: true,
+                        isMuted: true,
+                        isPlaybackPaused: isPlaybackPaused
+                    )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .id(videoURL.absoluteString)
                     .onAppear {
@@ -129,6 +186,16 @@ struct HeroWallpaperView: View {
                             print("HeroWallpaperView: video preview \(videoURL.path)")
                         }
                     }
+                } else if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(.high)
+                        .antialiased(true)
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    heroPlaceholder
+                }
             } else if let image {
                 Image(nsImage: image)
                     .resizable()
@@ -142,27 +209,31 @@ struct HeroWallpaperView: View {
                         }
                     }
             } else {
-                ZStack {
-                    LinearGradient(
-                        colors: [
-                            DesignTokens.Colors.primary.opacity(0.55),
-                            DesignTokens.Colors.cardBackground,
-                            Color.black.opacity(0.72)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                heroPlaceholder
+            }
+        }
+    }
 
-                    Image(systemName: "display.2")
-                        .font(.system(size: 52, weight: .light))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onAppear {
-                    if SettingsStore.shared.debugDiagnosticsEnabled {
-                        print("HeroWallpaperView: placeholder")
-                    }
-                }
+    private var heroPlaceholder: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    DesignTokens.Colors.primary.opacity(0.55),
+                    DesignTokens.Colors.cardBackground,
+                    Color.black.opacity(0.72)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Image(systemName: "display.2")
+                .font(.system(size: 52, weight: .light))
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            if SettingsStore.shared.debugDiagnosticsEnabled {
+                print("HeroWallpaperView: placeholder")
             }
         }
     }

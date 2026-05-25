@@ -32,8 +32,21 @@ struct TabbedMainView: View {
         }
     }
 
+    private var isOnHomeTab: Bool {
+        selectedTab == .home
+    }
+
     private var backgroundIntensity: AppWallpaperBackground.Intensity {
-        selectedTab == .home ? .hero : .management
+        isOnHomeTab ? .hero : .management
+    }
+
+    private var shouldPauseHeroPreviewPlayback: Bool {
+        _ = appModel.heroPreviewVisibilityRevision
+        if appModel.performanceProfile == .maxQuality {
+            return appModel.shouldPauseHeroPreview(isOnHomeTab: isOnHomeTab)
+        }
+        guard isOnHomeTab else { return true }
+        return appModel.shouldPauseHeroPreview(isOnHomeTab: true)
     }
 
     var body: some View {
@@ -41,6 +54,8 @@ struct TabbedMainView: View {
             AppWallpaperBackground(
                 intensity: backgroundIntensity,
                 pausePlayback: pauseWallpaperPreview
+                    || appModel.shouldShowPausedChrome
+                    || shouldPauseHeroPreviewPlayback
             )
 
             Group {
@@ -61,8 +76,29 @@ struct TabbedMainView: View {
             MainTabBar(selectedTab: $selectedTab)
                 .padding(.top, 10)
                 .padding(.horizontal, DesignTokens.Spacing.medium)
+
+            if let suggestion = appModel.performanceSuggestion {
+                VStack {
+                    Spacer()
+                    PerformanceSuggestionBanner(
+                        suggestion: suggestion,
+                        onApply: { appModel.applySuggestedPerformanceProfile() },
+                        onDismiss: { appModel.dismissPerformanceSuggestion() },
+                        onDismissPermanently: { appModel.dismissPerformanceSuggestion(permanently: true) }
+                    )
+                    .padding(.bottom, 56)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.25), value: appModel.performanceSuggestion)
+            }
         }
         .onWallpaperPreviewPauseChange { pauseWallpaperPreview = $0 }
+        .onAppear {
+            appModel.setMainShellOnHomeTab(isOnHomeTab)
+        }
+        .onChange(of: selectedTab) { _, newTab in
+            appModel.setMainShellOnHomeTab(newTab == .home)
+        }
         .frame(minWidth: 800, minHeight: 600)
     }
 }

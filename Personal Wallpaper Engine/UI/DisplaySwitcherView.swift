@@ -4,6 +4,7 @@ import AppKit
 struct DisplaySwitcherView: View {
     let selectedDisplayID: Binding<CGDirectDisplayID?>
     let displays: [DisplayCard]
+    let isGloballyPaused: Bool
     let onSelect: (CGDirectDisplayID) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -15,7 +16,7 @@ struct DisplaySwitcherView: View {
                         .font(DesignTokens.Typography.title)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
 
-                    Text("Switch the hero preview to any connected screen.")
+                    Text("Play and pause affect wallpapers on every display. Cards switch the hero preview only.")
                         .font(DesignTokens.Typography.subtitle)
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                 }
@@ -85,7 +86,7 @@ struct DisplaySwitcherView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(display.title)
-        .accessibilityHint("Switch hero preview to \(display.badge)")
+        .accessibilityHint("Switch hero preview to \(display.badge). Play and pause affect all displays.")
     }
 
     @ViewBuilder
@@ -122,6 +123,20 @@ struct DisplaySwitcherView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
+
+            if isGloballyPaused {
+                ZStack {
+                    Color.black.opacity(0.42)
+                    VStack(spacing: 6) {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Paused")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white.opacity(0.92))
+                }
+            }
 
             VStack {
                 HStack {

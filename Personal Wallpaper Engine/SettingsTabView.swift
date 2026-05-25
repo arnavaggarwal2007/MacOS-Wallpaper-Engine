@@ -120,6 +120,89 @@ struct SettingsTabView: View {
                     }
                 }
 
+                GlassCardView(title: "Performance") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        settingRow(
+                            title: "Performance Profile",
+                            caption: appModel.performanceProfile.caption,
+                            icon: "gauge.with.dots.needle.33percent"
+                        ) {
+                            Picker(
+                                "Performance Profile",
+                                selection: Binding(
+                                    get: { appModel.performanceProfile },
+                                    set: { appModel.updatePerformanceProfile($0) }
+                                )
+                            ) {
+                                ForEach(PerformanceProfile.allCases) { profile in
+                                    Text(profile.displayName).tag(profile)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                        Text("Balanced pauses decode when wallpaper windows aren't visible; Max Quality keeps live hero on every tab (dimmed on Settings).")
+                            .font(.caption)
+                            .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    }
+                }
+
+                EngineDiagnosticsSection()
+
+                GlassCardView(title: "Battery & Power") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Toggle(
+                            isOn: Binding(
+                                get: { appModel.pauseOnBattery },
+                                set: { appModel.updatePauseOnBattery($0) }
+                            )
+                        ) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Label("Pause on Battery", systemImage: "battery.100")
+                                    .font(DesignTokens.Typography.subtitle)
+                                Text("Stops wallpaper playback while unplugged (MacBook).")
+                                    .font(.caption)
+                                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                            }
+                        }
+
+                        Toggle(
+                            isOn: Binding(
+                                get: { appModel.pauseOnLowBattery },
+                                set: { appModel.updatePauseOnLowBattery($0) }
+                            )
+                        ) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Label("Pause on Low Battery", systemImage: "battery.25")
+                                    .font(DesignTokens.Typography.subtitle)
+                                Text("Pauses when charge falls below the threshold.")
+                                    .font(.caption)
+                                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                            }
+                        }
+
+                        HStack {
+                            Text("Low battery threshold")
+                                .font(DesignTokens.Typography.subtitle)
+                            Spacer()
+                            Stepper(
+                                "\(appModel.lowBatteryThreshold)%",
+                                value: Binding(
+                                    get: { appModel.lowBatteryThreshold },
+                                    set: { appModel.updateLowBatteryThreshold($0) }
+                                ),
+                                in: 5...50,
+                                step: 5
+                            )
+                            .labelsHidden()
+                            Text("\(appModel.lowBatteryThreshold)%")
+                                .font(DesignTokens.Typography.subtitle)
+                                .monospacedDigit()
+                                .frame(width: 44, alignment: .trailing)
+                        }
+                        .disabled(!appModel.pauseOnLowBattery)
+                    }
+                }
+
                 GlassCardView(title: "System") {
                     VStack(alignment: .leading, spacing: 12) {
                         Toggle(
@@ -197,6 +280,9 @@ struct SettingsTabView: View {
             }
             if let error = appModel.launchOnLoginErrorMessage {
                 statusBanner(title: error, systemImage: "exclamationmark.circle.fill", tint: .red)
+            }
+            if let message = appModel.powerPolicyStatusMessage {
+                statusBanner(title: message, systemImage: "bolt.slash.fill", tint: .orange)
             }
         }
     }

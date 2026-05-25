@@ -159,7 +159,7 @@ struct CollectionsTabView: View {
         }
         .frame(minWidth: 800, minHeight: 600)
         .task {
-            await appModel.loadSavedCollections()
+            appModel.loadSavedCollections()
         }
         .sheet(isPresented: $isCollectionEditorPresented) {
             let selectedName = editingCollectionName.flatMap { appModel.savedCollections[$0] }

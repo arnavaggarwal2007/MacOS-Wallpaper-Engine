@@ -34,8 +34,9 @@ struct DisplaySelectionModal: View {
             VStack(alignment: .leading, spacing: 12) {
                 Button(action: selectAllDisplays) {
                     HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: "square.grid.2x2")
                             .font(.title3)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Apply to All Displays")
@@ -143,10 +144,6 @@ struct DisplaySelectionModal: View {
         }
         .padding(24)
         .frame(minWidth: 420, minHeight: 500)
-        .onAppear {
-            // Pre-select all displays by default
-            selectedDisplayIDs = Set(displayOptions.map { $0.displayID })
-        }
     }
     
     private func selectAllDisplays() {

@@ -18,6 +18,9 @@ final class DisplayController {
     private var lastMutedState: Bool = true
     private var lastScalingMode: VideoScalingMode = .resizeAspectFill
 
+    var loadedVideoURL: URL? { lastLoadedVideoURL }
+    var currentScalingMode: VideoScalingMode { lastScalingMode }
+
     // MARK: - Resize Handling (Chunk 4C)
     private var resizeObserver: NSObjectProtocol?
     private var resizeTask: Task<Void, Never>?
@@ -25,6 +28,37 @@ final class DisplayController {
     private var lastFrameSize: CGSize = .zero
 
     var displayID: CGDirectDisplayID { screen.displayID }
+
+    /// Desktop wallpaper window used for P3 visibility tracking.
+    var desktopWindow: NSWindow? { window }
+
+    private var pausedForVisibilityPolicy = false
+
+    /// User-facing log label: `3 (Display 1, T24v-20)` — not raw `CGDirectDisplayID` alone.
+    static func logLabel(for displayID: CGDirectDisplayID) -> String {
+        let screens = NSScreen.screens.sorted { $0.frame.origin.x < $1.frame.origin.x }
+        guard let index = screens.firstIndex(where: { $0.displayID == displayID }) else {
+            return String(displayID)
+        }
+        let name = screens[index].localizedName
+        return "\(displayID) (Display \(index + 1), \(name))"
+    }
+
+    var isUsingSharedVideoRenderer: Bool {
+        renderer is SharedVideoLayerRenderer
+    }
+
+    var heroPreviewProvider: (any DesktopVideoPreviewProviding)? {
+        renderer as? DesktopVideoPreviewProviding
+    }
+
+    var isPausedForVisibilityPolicy: Bool { pausedForVisibilityPolicy }
+
+    /// True when a renderer exists and can accept pause/resume.
+    var isRendererActive: Bool {
+        guard let renderer else { return false }
+        return renderer.isValid()
+    }
 
     private let boundSignature: DisplayConfigurationMigrator.DisplaySignature
 
@@ -119,8 +153,10 @@ final class DisplayController {
         url: URL,
         isMuted: Bool,
         scalingMode: VideoScalingMode,
-        rendererMode: WallpaperRendererMode
+        rendererMode: WallpaperRendererMode,
+        autoPlay: Bool? = nil
     ) async -> Result<Void, WallpaperError> {
+        let shouldAutoPlay = autoPlay ?? (manager?.shouldAdvanceDesktopPlayback ?? false)
         guard contentView != nil else {
             logger.error("Content view not available for playback")
             return .failure(.windowCreationFailed(reason: "No content view"))
@@ -168,37 +204,45 @@ final class DisplayController {
             logger.info("Web playback started for display \(self.displayID)")
             return .success(())
         } else {
-            // Video path (local file)
-            let renderer = VideoRenderer()
-            let initResult = await renderer.start(in: contentView)
+            let videoRenderer = manager?.makeVideoRenderer(for: displayID, url: url, rendererMode: rendererMode)
+                ?? VideoRenderer()
+            let initResult = await videoRenderer.start(in: contentView)
 
-            // Check initialization succeeded
             guard case .success = initResult else {
-                logger.error("Failed to initialize VideoRenderer")
+                logger.error("Failed to initialize video renderer")
                 return initResult
             }
 
-            await renderer.setMuted(isMuted)
-            await renderer.setScalingMode(scalingMode)
+            await videoRenderer.setMuted(isMuted)
+            await videoRenderer.setScalingMode(scalingMode)
 
-            // Load video into the initialized renderer
-            let videoResult = await renderer.loadVideo(url: url)
+            let videoResult: Result<Void, WallpaperError>
+            if let shared = videoRenderer as? SharedVideoLayerRenderer {
+                videoResult = await shared.loadVideo(url: url, autoPlay: shouldAutoPlay)
+            } else if let standalone = videoRenderer as? VideoRenderer {
+                videoResult = await standalone.loadVideo(url: url, autoPlay: shouldAutoPlay)
+            } else {
+                videoResult = .failure(.rendererInitializationFailed(reason: "Unknown video renderer type"))
+            }
 
-            // If video loading failed, dispose renderer and return error
             guard case .success = videoResult else {
                 logger.error("Failed to load video: \(url.lastPathComponent)")
-                await renderer.dispose()
+                await videoRenderer.dispose()
                 return videoResult
             }
 
-            // Keep renderer alive for this display
-            self.renderer = renderer
+            self.renderer = videoRenderer
+            await applyPerformanceProfile(SettingsStore.shared.performanceProfile)
             self.lastLoadedVideoURL = url
             self.lastMutedState = isMuted
             self.lastScalingMode = scalingMode
             self.lastRendererMode = .video
             self.recoveryCount = 0
-            logger.info("Playback started for display \(self.displayID)")
+            if shouldAutoPlay {
+                logger.info("Playback started for display \(Self.logLabel(for: self.displayID)) shared=\(videoRenderer is SharedVideoLayerRenderer)")
+            } else {
+                logger.info("Playback loaded paused for display \(Self.logLabel(for: self.displayID)) shared=\(videoRenderer is SharedVideoLayerRenderer)")
+            }
             return .success(())
         }
     }
@@ -220,11 +264,48 @@ final class DisplayController {
 
     // MARK: - Lifecycle Control (Chunk 4A)
     func pause() async {
+        logger.debug("DisplayController pause display=\(Self.logLabel(for: self.displayID))")
+        syncWindowGeometry(for: currentScreen())
+        pausedForVisibilityPolicy = false
         await renderer?.pause()
+    }
+
+    /// P3: Pause decode when desktop is not visible — does not change global lifecycle / chrome.
+    func pauseForVisibilityPolicy() async {
+        guard isRendererActive else { return }
+        guard !pausedForVisibilityPolicy else { return }
+        pausedForVisibilityPolicy = true
+        await renderer?.pause()
+        logger.info("Desktop visibility pause display=\(Self.logLabel(for: self.displayID))")
+    }
+
+    func resumeFromVisibilityPolicy() async {
+        guard pausedForVisibilityPolicy else { return }
+        pausedForVisibilityPolicy = false
+        guard let renderer, renderer.isValid() else { return }
+        await renderer.resume()
+        logger.info("Desktop visibility resume display=\(Self.logLabel(for: self.displayID))")
+    }
+
+    /// True when the video renderer is still advancing after a pause request.
+    var isRendererStillPlaying: Bool {
+        if let shared = renderer as? SharedVideoLayerRenderer {
+            return shared.isActivelyPlaying
+        }
+        return (renderer as? VideoRenderer)?.isActivelyPlaying ?? false
+    }
+
+    /// Current AVPlayer rate for diagnostics (0 when paused).
+    var desktopPlaybackRate: Float {
+        if let shared = renderer as? SharedVideoLayerRenderer {
+            return shared.currentPlaybackRate
+        }
+        return (renderer as? VideoRenderer)?.currentPlaybackRate ?? 0
     }
 
     // MARK: - Resume with Fallback Recovery (Chunk 4B)
     func resume() async {
+        pausedForVisibilityPolicy = false
         // First, check if renderer is still valid
         guard let renderer = renderer, renderer.isValid() else {
             logger.warning("Renderer invalid on resume attempt - attempting recovery on display \(self.displayID)")
@@ -234,7 +315,17 @@ final class DisplayController {
         
         // Renderer is valid, attempt resume
         await renderer.resume()
-        logger.debug("Resumed playback on display \(self.displayID)")
+        logger.info("Resumed playback on display \(self.displayID)")
+    }
+
+    func applyPerformanceProfile(_ profile: PerformanceProfile) async {
+        if let video = renderer as? VideoRenderer {
+            await video.applyPerformanceProfile(profile)
+        } else if let shared = renderer as? SharedVideoLayerRenderer {
+            await shared.applyPerformanceProfile(profile)
+        } else if let web = renderer as? WebRenderer {
+            await web.applyPerformanceProfile(profile)
+        }
     }
     
     /// Attempt to recover by re-initializing the renderer with the last known video
@@ -340,6 +431,16 @@ final class DisplayController {
         window?.orderOut(nil)
         window = nil
         contentView = nil
+    }
+
+    /// Disposes the active renderer but keeps the desktop window (Phase 7C engine restart).
+    func disposeRendererForRestart() async {
+        pausedForVisibilityPolicy = false
+        if let renderer = renderer {
+            await renderer.dispose()
+            self.renderer = nil
+        }
+        lastLoadedVideoURL = nil
     }
 
     func orderToBack() async {
@@ -449,7 +550,14 @@ final class DisplayController {
         
         // Restart playback if we have a video URL
         if let url = savedURL {
-            let result = await startPlayback(url: url, isMuted: savedMuted, scalingMode: savedScaling, rendererMode: rendererMode)
+            let shouldAutoPlay = manager?.shouldAdvanceDesktopPlayback ?? false
+            let result = await startPlayback(
+                url: url,
+                isMuted: savedMuted,
+                scalingMode: savedScaling,
+                rendererMode: rendererMode,
+                autoPlay: shouldAutoPlay
+            )
             
             switch result {
             case .success:

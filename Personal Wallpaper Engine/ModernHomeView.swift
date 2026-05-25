@@ -18,6 +18,7 @@ struct ModernHomeView: View {
     @State private var isDisplaysPanelVisible = false
     @State private var pauseWallpaperPreview = false
     @State private var cachedDisplayCards: [DisplayCard] = []
+    @State private var thumbnailLoadsInFlight: Set<String> = []
 
     var body: some View {
         ScrollViewReader { scrollProxy in
@@ -90,7 +91,7 @@ struct ModernHomeView: View {
         .wallpaperPreviewPause(pauseWallpaperPreview)
         .frame(minWidth: 800, minHeight: 600)
         .task {
-            await appModel.loadSavedCollections()
+            appModel.loadSavedCollections()
             await appModel.loadSavedSetups()
             appModel.ensurePerDisplayMode()
             syncSelectedDisplayIfNeeded()
@@ -98,23 +99,29 @@ struct ModernHomeView: View {
         .task(id: NSScreen.screens.map(\.displayID)) {
             migrateSelectedDisplayAfterScreenChange()
             syncSelectedDisplayIfNeeded()
-            rebuildDisplayCardsCache()
+            scheduleRebuildDisplayCardsCache()
         }
         .onChange(of: selectedDisplayID) { _, newValue in
-            appModel.focusedDisplayID = newValue
-            rebuildDisplayCardsCache()
+            Task { @MainActor in
+                appModel.focusedDisplayID = newValue
+                rebuildDisplayCardsCache()
+            }
         }
         .onChange(of: appModel.focusedDisplayID) { _, newValue in
-            if selectedDisplayID != newValue {
-                selectedDisplayID = newValue
+            Task { @MainActor in
+                if selectedDisplayID != newValue {
+                    selectedDisplayID = newValue
+                }
             }
         }
         .onChange(of: appModel.displaySourcesVersion) { _, _ in
-            transientPerDisplayPreviewURL = nil
-            rebuildDisplayCardsCache()
+            Task { @MainActor in
+                transientPerDisplayPreviewURL = nil
+                rebuildDisplayCardsCache()
+            }
         }
         .onAppear {
-            rebuildDisplayCardsCache()
+            scheduleRebuildDisplayCardsCache()
         }
         .fileImporter(
             isPresented: $isFileImporterPresented,
@@ -256,8 +263,38 @@ struct ModernHomeView: View {
         return max(size.height - reserved, 280)
     }
 
+    private func scheduleRebuildDisplayCardsCache() {
+        Task { @MainActor in
+            rebuildDisplayCardsCache()
+        }
+    }
+
     private func rebuildDisplayCardsCache() {
         cachedDisplayCards = buildDisplayCards()
+        prefetchMissingThumbnails()
+    }
+
+    private func prefetchMissingThumbnails() {
+        for screen in NSScreen.screens {
+            guard let url = perDisplayPreviewURL(for: screen.displayID), url.isFileURL else { continue }
+            scheduleThumbnailLoad(for: url)
+        }
+    }
+
+    private func scheduleThumbnailLoad(for url: URL) {
+        if VideoWallpaperThumbnail.cachedImage(for: url) != nil { return }
+        let key = url.standardizedFileURL.path
+        guard !thumbnailLoadsInFlight.contains(key) else { return }
+        thumbnailLoadsInFlight.insert(key)
+
+        Task {
+            let image = await VideoWallpaperThumbnail.imageAsync(for: url)
+            await MainActor.run {
+                thumbnailLoadsInFlight.remove(key)
+                guard image != nil else { return }
+                cachedDisplayCards = buildDisplayCards()
+            }
+        }
     }
 
     private func displaysScrollHint(scrollProxy: ScrollViewProxy) -> some View {
@@ -547,6 +584,7 @@ struct ModernHomeView: View {
                         }
                     ),
                     displays: displayCards,
+                    isGloballyPaused: appModel.shouldShowPausedChrome,
                     onSelect: { displayID in
                         selectedDisplayID = displayID
                         appModel.focusedDisplayID = displayID
@@ -610,38 +648,12 @@ struct ModernHomeView: View {
             return image
         }
 
-        let asset = AVURLAsset(url: url)
-        let generator = AVAssetImageGenerator(asset: asset)
-        generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 1920, height: 1920)
-
-        let requestedTime = NSValue(time: .zero)
-        let semaphore = DispatchSemaphore(value: 0)
-        var generatedImage: NSImage?
-        var generationError: Error?
-
-        generator.generateCGImagesAsynchronously(forTimes: [requestedTime]) { _, cgImage, _, result, error in
-            defer { semaphore.signal() }
-
-            guard result == .succeeded, let cgImage else {
-                generationError = error
-                return
-            }
-
-            let imageSize = NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
-            generatedImage = NSImage(cgImage: cgImage, size: imageSize)
+        if let cached = VideoWallpaperThumbnail.cachedImage(for: url) {
+            return cached
         }
 
-        semaphore.wait()
-
-        if let generatedImage {
-            return generatedImage
-        }
-
-        if let generationError {
-            uiDebugLog("thumbnail generation failed - \(generationError.localizedDescription)")
-        }
-        return nil
+        scheduleThumbnailLoad(for: url)
+        return NSWorkspace.shared.icon(for: .movie)
     }
 }
 
