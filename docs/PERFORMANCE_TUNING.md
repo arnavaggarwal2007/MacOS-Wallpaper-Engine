@@ -2,7 +2,7 @@
 
 **Purpose:** Track CPU/GPU/battery measurements and optimization experiments. Baseline copied from [`V1_SIGNOFF.md`](V1_SIGNOFF.md); all 7B changes compare against the same scenarios.
 
-**Status:** Phase 7 **complete** (7A–7G, 2026-06-01). Phase 8 next.
+**Status:** Phase 7 **complete and signed off** (7A–7G, 2026-06-01). Release benchmark matrix recorded. Phase 8 next.
 
 **Reference clip (7B A/B):** 1080p H.264 MP4 — use the same file for every row (e.g. a typical wallpaper loop).
 
@@ -89,9 +89,10 @@ Copied from V1 sign-off (pre–7B engine work).
 |------|-----------|------|
 | **P2 multi-display** | One `AVPlayer` → N desktop layers (`SharedVideoPlaybackSession`) | Same file on all displays |
 | **Standalone desktop** | One `AVPlayer` per display | Different files per display |
-| **Hero preview** | Separate `AVPlayer` in `VideoPreviewView` | App focused on Home (P1b pauses when unfocused) |
+| **Hero preview (7D)** | `AVPlayerLayer` on existing desktop player via `UnifiedVideoPreviewView` | Same file as focused display decode |
+| **Hero fallback** | Separate `AVPlayer` in `VideoPreviewView` | Unified attach unavailable or attach failed |
 
-P2 reduces **desktop** CPU (2.5% same-file 2 disp). Hero + desktop on 1 display Home is still double decode (~3.5% with P1b).
+P2 reduces **desktop** CPU. **7D** removes double decode when hero URL matches desktop path.
 
 Launch/hotplug restore now coalesces after batch apply (7B closeout).
 
@@ -162,18 +163,46 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 
 Run in **Release** build; Activity Monitor Very Often, 60s sample after 30s settle. Record Diagnostics instant / smoothed / `ps` / AM per profile.
 
-**2026-06-01 Release run:** Measured on Release scheme (dual-display MacBook). Format per cell: instant / smoothed / ps / AM (%).
-
-| # | Scenario | Max | Balanced | Battery | Notes |
-|---|----------|-----|----------|---------|-------|
-| 1 | 2 disp, same 1080p, Apply to All, unfocused, visible | 14.60 / 14.17 / 13.5 / 13.9 | 14.32 / 13.75 / 12.9 / 13.1 | 13.4 / 13.8 / 7.47 / 13.6 | Coalesced; hero policy pause Balanced/Battery |
-| 2 | Same + Home focused | 14.0 / 13.0 / 12.27 / 10.5 | 11.0 / 12.0 / 11.43 / 9.7 | 10.0 / 11.0 / 11.47 / 9.9 | Unified hero + coalesced |
-| 3 | 2 disp, different files, one 4K, unfocused | 10.54 / 11.21 / 9.8 / 11.6 | 10.24 / 10.76 / 6.53 / 10.4 | 10.07 / 10.50 / 7.01 / 10.3 | Dual decode stress |
-| 4 | Both displays covered, unfocused | 12.13 / 11.75 / 12.0 / 13.3 | 7.9 / 6.67 / 6.4 / 8.6 | 5.49 / 5.68 / 4.57 / 8.9 | Max still decodes; Balanced/Battery reduced |
+See **Phase 7 Closeout — Release benchmark matrix** below for the canonical 12-cell results (2026-06-01 Release run).
 
 ```bash
 while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; done
 ```
+
+---
+
+## Phase 7 Closeout — Release benchmark matrix (2026-06-01)
+
+**Build:** Release scheme. **Hardware:** dual-display MacBook. **Protocol:** 30s settle, 60s sample; AM Very Often (1 sec).
+
+| Row | Scenario | Profile | Instant % | Smoothed % | ps % | AM % |
+|-----|----------|---------|-----------|------------|------|------|
+| **1** | 2 disp, same 1080p, coalesced, app unfocused, desktops visible | Max Quality | 14.60 | 14.17 | 13.5 | 13.9 |
+| **1** | ↑ | Balanced | 14.32 | 13.75 | 12.9 | 13.1 |
+| **1** | ↑ | Battery Saver | 13.40 | 13.80 | 7.47 | 13.6 |
+| **2** | Same wallpaper, app focused, Home tab | Max Quality | 14.00 | 13.00 | 12.27 | 10.5 |
+| **2** | ↑ | Balanced | 11.00 | 12.00 | 11.43 | 9.7 |
+| **2** | ↑ | Battery Saver | 10.00 | 11.00 | 11.47 | 9.9 |
+| **3** | 2 disp, different files, one 4K, unfocused, visible | Max Quality | 10.54 | 11.21 | 9.8 | 11.6 |
+| **3** | ↑ | Balanced | 10.24 | 10.76 | 6.53 | 10.4 |
+| **3** | ↑ | Battery Saver | 10.07 | 10.50 | 7.01 | 10.3 |
+| **4** | Both displays fully covered, unfocused | Max Quality | 12.13 | 11.75 | 12.0 | 13.3 |
+| **4** | ↑ | Balanced | 7.90 | 6.67 | 6.4 | 8.6 |
+| **4** | ↑ | Battery Saver | 5.49 | 5.68 | 4.57 | 8.9 |
+
+### Summary by scenario (smoothed %)
+
+| # | Scenario | Max | Balanced | Battery |
+|---|----------|-----|----------|---------|
+| 1 | Coalesced 1080p, unfocused | 14.17 | 13.75 | 13.80 |
+| 2 | Coalesced 1080p, Home focused | 13.00 | 12.00 | 11.00 |
+| 3 | Dual decode / 4K mix, unfocused | 11.21 | 10.76 | 10.50 |
+| 4 | Both displays covered, unfocused | 11.75 | 6.67 | 5.68 |
+
+**Notes:**
+- Row 1 unfocused coalesced reads higher than 7B desktop-only Debug (~2.5%) because Release + dual-display + engine idle decode still active; Balanced/Battery hero policy-paused but desktop decode continues.
+- Row 2: profile gap visible on focused Home (Max 13% vs Balanced 12% vs Battery 11% smoothed).
+- Row 4: Balanced/Battery drop vs Max when covered; not zero in Release (visibility pause reduces, Max still decodes).
 
 ---
 
@@ -313,14 +342,14 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 - **SwiftUI:** Defer `heroPreviewVisibilityRevision`, post-restore `@Published` sync, and CPU sample UI updates off view-update pass.
 - **Acceptance:** ≤1 `Hero preview attached…` log per URL on focus bounce; no layout recursion warning; no startup state-during-update warnings.
 
-### Profile CPU gap expectations (post-7E)
+### Profile CPU gap expectations (Release 2026-06-01)
 
 | Scenario | Max Quality | Balanced | Battery Saver | Primary lever |
 |----------|-------------|----------|---------------|---------------|
-| 2 disp, same 1080p, coalesced, unfocused | ~baseline | ~baseline | ~baseline | Same source resolution |
-| 2 disp, 4K coalesced, unfocused | Full 4K decode | 1080p cap | 1080p + bitrate cap | `preferredMaximumResolution` |
-| Home focused, same file | Unified decode (1 player) | Unified + static mgmt tabs | Same | 7D hero layer |
-| Both covered, unfocused | >0% | 0% | 0% | Occlusion pause |
+| 2 disp, same 1080p, coalesced, unfocused | 14.17% sm | 13.75% sm | 13.80% sm | Desktop decode; hero paused Bal/Bat |
+| 2 disp, same 1080p, Home focused | 13.00% sm | 12.00% sm | 11.00% sm | Unified hero + coalesce |
+| 2 disp, different files + 4K, unfocused | 11.21% sm | 10.76% sm | 10.50% sm | Dual decode; 1080p cap Bal/Bat |
+| Both covered, unfocused | 11.75% sm | 6.67% sm | 5.68% sm | Visibility pause; Max no occlusion pause |
 
 ---
 

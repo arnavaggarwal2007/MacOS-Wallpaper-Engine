@@ -18,7 +18,7 @@
 | Phase 7C diagnostics UI | **Pass** | CPU monitor, suggestion banner, Settings diagnostics, engine restart |
 | Phase 7D unified hero decode | **Pass** | Hero layer on desktop AVPlayer when same file |
 | Phase 7E profile differentiation | **Pass** | 1080p cap Balanced/Battery; Max live all tabs |
-| Phase 7G closeout | **Pass** | Hero attach stability, doc/benchmark sign-off 2026-06-01 |
+| Phase 7G closeout | **Pass** | Hero attach stability; **Release 12-row benchmark matrix** in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § Phase 7 Closeout (2026-06-01) |
 | Hotplug / launch / setup persistence | **Pass** | See [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) |
 | Phase 7A power policy | **Pass** | [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) |
 | Phase 7A playback UX | **Pass** | 2026-05-22 — launch auto-play, frozen-frame pause, hero preview sync; matrix rows 10–11, 15–16 |

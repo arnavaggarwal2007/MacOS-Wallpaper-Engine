@@ -83,9 +83,10 @@ Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`)
 | Phase 6A (wallpaper collections) | Complete |
 | Phase 6B (desktop setups) | Complete |
 | UI final vision (4 tabs, app-wide background, glass tabs) | Complete — merged to `main` May 2026 |
-| Version 2 Phase 7 (performance & power) | Next — see `version2_developmental_roadmap.md` |
-| Version 2 Phases 8–10 (library, quick modes, lock screen research) | Planned |
+| Version 2 Phase 7 (performance, power, diagnostics — 7A–7G) | Complete — signed off 2026-06-01; see `docs/PERFORMANCE_TUNING.md` |
+| Version 2 Phase 8 (local library) | Next — see `version2_developmental_roadmap.md` |
+| Version 2 Phases 9–10 (quick modes, lock screen research) | Planned |
 
 ## Status
 
-**May 21, 2026:** V1 sign-off doc added; documentation consolidated under `docs/`. CI regression green on `main`. Complete performance baseline table in `docs/V1_SIGNOFF.md` before Phase 7B engine optimization.
+**June 1, 2026:** Phase 7 complete (7A–7G). Release benchmark matrix in `docs/PERFORMANCE_TUNING.md`. PR #5 merged to `main`. Phase 8A (local library) next.
