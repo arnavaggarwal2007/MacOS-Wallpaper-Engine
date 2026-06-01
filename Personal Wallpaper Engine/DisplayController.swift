@@ -1,6 +1,7 @@
 import AppKit
 import os.log
 
+@MainActor
 final class DisplayController {
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "DisplayController")
     private let screen: NSScreen
@@ -27,7 +28,7 @@ final class DisplayController {
     private let resizeDebounceInterval: UInt64 = 100_000_000  // 0.1 seconds in nanoseconds
     private var lastFrameSize: CGSize = .zero
 
-    var displayID: CGDirectDisplayID { screen.displayID }
+    nonisolated let displayID: CGDirectDisplayID
 
     /// Desktop wallpaper window used for P3 visibility tracking.
     var desktopWindow: NSWindow? { window }
@@ -66,6 +67,7 @@ final class DisplayController {
     var displayName: String? { screen.localizedName }
 
     init(screen: NSScreen, manager: WallpaperManager?) {
+        self.displayID = screen.displayID
         self.screen = screen
         self.manager = manager
         self.boundSignature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
@@ -156,7 +158,12 @@ final class DisplayController {
         rendererMode: WallpaperRendererMode,
         autoPlay: Bool? = nil
     ) async -> Result<Void, WallpaperError> {
-        let shouldAutoPlay = autoPlay ?? (manager?.shouldAdvanceDesktopPlayback ?? false)
+        let shouldAutoPlay: Bool
+        if let autoPlay {
+            shouldAutoPlay = autoPlay
+        } else {
+            shouldAutoPlay = manager?.shouldAdvanceDesktopPlayback ?? false
+        }
         guard contentView != nil else {
             logger.error("Content view not available for playback")
             return .failure(.windowCreationFailed(reason: "No content view"))

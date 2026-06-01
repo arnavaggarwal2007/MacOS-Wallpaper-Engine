@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import os.log
 
+@MainActor
 final class VideoRenderer: Renderer {
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "VideoRenderer")
     private var player: AVPlayer?

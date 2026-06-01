@@ -29,16 +29,19 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: PreviewContainerView, coordinator: Coordinator) {
-        coordinator.appModel?.detachHeroPreviewLayer()
-        coordinator.containerView = nil
-        coordinator.isAttached = false
-        coordinator.attachedURLKey = nil
+        MainActor.assumeIsolated {
+            coordinator.appModel?.detachHeroPreviewLayer()
+            coordinator.containerView = nil
+            coordinator.isAttached = false
+            coordinator.attachedURLKey = nil
+        }
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
+    @MainActor
     final class Coordinator {
         weak var appModel: AppViewModel?
         weak var containerView: PreviewContainerView?
