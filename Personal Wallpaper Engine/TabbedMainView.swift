@@ -5,6 +5,7 @@ struct TabbedMainView: View {
     @EnvironmentObject private var appModel: AppViewModel
     @State private var selectedTab: MainTab = .home
     @State private var pauseWallpaperPreview = false
+    @State private var pauseHeroPreviewForPolicy = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum MainTab: Hashable {
@@ -40,8 +41,7 @@ struct TabbedMainView: View {
         isOnHomeTab ? .hero : .management
     }
 
-    private var shouldPauseHeroPreviewPlayback: Bool {
-        _ = appModel.heroPreviewVisibilityRevision
+    private func recomputeHeroPreviewPausePolicy() -> Bool {
         if appModel.performanceProfile == .maxQuality {
             return appModel.shouldPauseHeroPreview(isOnHomeTab: isOnHomeTab)
         }
@@ -55,7 +55,7 @@ struct TabbedMainView: View {
                 intensity: backgroundIntensity,
                 pausePlayback: pauseWallpaperPreview
                     || appModel.shouldShowPausedChrome
-                    || shouldPauseHeroPreviewPlayback
+                    || pauseHeroPreviewForPolicy
             )
 
             Group {
@@ -95,9 +95,17 @@ struct TabbedMainView: View {
         .onWallpaperPreviewPauseChange { pauseWallpaperPreview = $0 }
         .onAppear {
             appModel.setMainShellOnHomeTab(isOnHomeTab)
+            pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
         }
         .onChange(of: selectedTab) { _, newTab in
             appModel.setMainShellOnHomeTab(newTab == .home)
+            pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
+        }
+        .onChange(of: appModel.heroPreviewVisibilityRevision) { _, _ in
+            pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
+        }
+        .onChange(of: appModel.performanceProfile) { _, _ in
+            pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
         }
         .frame(minWidth: 800, minHeight: 600)
     }

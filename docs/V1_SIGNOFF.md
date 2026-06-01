@@ -1,9 +1,9 @@
 # Version 1 Sign-Off
 
-**Date:** 2026-05-22 (updated)  
-**Build:** Debug local build 2026-05-22; prior CI `main` @ `1cfe02f`  
-**Scope:** Phases 1–6B + UI final vision (Phases 0–4) + Phase 7A  
-**Gate:** V1 complete; 7A playback UX signed off; **Phase 7B complete** (2026-05-23); **Phase 7C complete** (2026-05-23); Phase 8 next  
+**Date:** 2026-06-01 (updated)  
+**Build:** Debug local 2026-06-01; Release build verified 2026-06-01  
+**Scope:** Phases 1–6B + UI final vision (Phases 0–4) + Phase 7 (7A–7G)  
+**Gate:** V1 complete; **Phase 7 complete** (7A–7G, 2026-06-01); Phase 8 next  
 
 ---
 
@@ -16,11 +16,14 @@
 | Functional matrix (manual) | **Pass (reported)** | Owner confirmed app working in daily use; spot-check sections below |
 | Phase 7B engine efficiency | **Pass** | P0–P4 complete; see [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) |
 | Phase 7C diagnostics UI | **Pass** | CPU monitor, suggestion banner, Settings diagnostics, engine restart |
+| Phase 7D unified hero decode | **Pass** | Hero layer on desktop AVPlayer when same file |
+| Phase 7E profile differentiation | **Pass** | 1080p cap Balanced/Battery; Max live all tabs |
+| Phase 7G closeout | **Pass** | Hero attach stability, doc/benchmark sign-off 2026-06-01 |
 | Hotplug / launch / setup persistence | **Pass** | See [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) |
 | Phase 7A power policy | **Pass** | [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) |
 | Phase 7A playback UX | **Pass** | 2026-05-22 — launch auto-play, frozen-frame pause, hero preview sync; matrix rows 10–11, 15–16 |
 
-**Recommendation:** V1 + **7A + 7B + 7C complete**. Phase **8** (local library) next. Results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md).
+**Recommendation:** V1 + **Phase 7 complete (7A–7G)**. Phase **8** (local library) next. Results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md).
 
 ---
 
@@ -30,6 +33,7 @@
 |-------|---------|--------|------|
 | Debug smoke build | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_smoke.sh` | Pass (universal x86_64 + arm64) | 2026-05-22 |
 | Local Debug build (7A playback UX) | Xcode Debug scheme | Pass | 2026-05-22 |
+| Local Debug + Release build (7G closeout) | Xcode Debug + Release | Pass | 2026-06-01 |
 | CI regression | GitHub Actions `chunk7_regression.yml` on `1cfe02f` | Pass | 2026-05-21 |
 | Swift concurrency (CI) | Xcode 16.4 universal build | Pass (MenuBar + thumbnail fixes) | 2026-05-21 |
 

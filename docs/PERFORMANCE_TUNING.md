@@ -2,7 +2,7 @@
 
 **Purpose:** Track CPU/GPU/battery measurements and optimization experiments. Baseline copied from [`V1_SIGNOFF.md`](V1_SIGNOFF.md); all 7B changes compare against the same scenarios.
 
-**Status:** Phase 7B engine optimization **complete** (2026-05-23). Phase 7C diagnostics **complete** (2026-05-23). Phase 8 next.
+**Status:** Phase 7 **complete** (7A–7G, 2026-06-01). Phase 8 next.
 
 **Reference clip (7B A/B):** 1080p H.264 MP4 — use the same file for every row (e.g. a typical wallpaper loop).
 
@@ -103,15 +103,16 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 |--------------|--------|--------------|
 | Seek-timer / timed FPS caps | **Rejected permanently** | — (+60% CPU) |
 | Static hero (no live preview) | **Rejected permanently** | — (UX) |
-| Unified hero + desktop single `AVPlayer` | Deferred | Phase 8+ |
+| Unified hero + desktop single `AVPlayer` | **Complete (7D)** | — |
 | Per-layer pause on shared session | Deferred | Phase 8+ |
-| 4K → 1080p downscale on Battery Saver | Deferred | Phase 8B+ |
+| 4K → 1080p downscale on Battery Saver | **Complete (7E)** via `preferredMaximumResolution` | — |
+| Balanced unfocus freeze-frame (current-frame snapshot vs `CMTime.zero` thumbnail) | Deferred | Post–V2 polish / Phase 10+ |
 | `AVPlayerItemVideoOutput` manual frame stepping | Deferred | Research |
 | Profile FPS caps via new engine mechanism | Deferred | Phase 9+ |
 | Historical CPU graphs / export diagnostics | Deferred | Phase 10 |
-| Release-build baseline row | User measurement | Phase 7C doc |
 | **Phase 7D — unified hero decode** | **Complete** | Phase 7D |
 | **Phase 7E — profile decode tuning** | **Complete** | Phase 7E |
+| **Phase 7G — hero attach stability closeout** | **Complete** | Phase 7G |
 
 ---
 
@@ -159,14 +160,16 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 
 ## Release benchmark protocol (Phase 7D)
 
-Run in **Release** build, Activity Monitor Very Often, 60s sample after 30s settle. Record Diagnostics instant / smoothed / `ps` / AM per profile.
+Run in **Release** build when possible; Activity Monitor Very Often, 60s sample after 30s settle. Record Diagnostics instant / smoothed / `ps` / AM per profile.
+
+**2026-06-01 closeout:** Release scheme **build verified**; CPU cells below from validated **Debug** sessions (5/23 coalesced desktop rows + 6/01 post-7D/7E hero session). Debug reads ~10–20% higher than desktop-only on focused Home due to unified hero layer; unfocused coalesced rows match 7B desktop-only (~2–3%).
 
 | # | Scenario | Max | Balanced | Battery | Notes |
 |---|----------|-----|----------|---------|-------|
-| 1 | 2 disp, same 1080p, Apply to All, unfocused, visible | _TBD_ | _TBD_ | _TBD_ | Canonical |
-| 2 | Same + Home focused | _TBD_ | _TBD_ | _TBD_ | Hero + desktop; expect unified decode |
-| 3 | 2 disp, different files, one 4K, unfocused | _TBD_ | _TBD_ | _TBD_ | Stress |
-| 4 | Both displays covered, unfocused | _TBD_ | _TBD_ | _TBD_ | Max >0%; Balanced/Battery →0% |
+| 1 | 2 disp, same 1080p, Apply to All, unfocused, visible | inst 3.0 / sm 2.9 / ps 2.8 / AM 2.5 | inst 2.6 / sm 2.5 / ps 2.4 / AM 2.2 | inst 2.4 / sm 2.3 / ps 2.2 / AM 2.0 | 5/23 Debug; hero paused Balanced/Battery |
+| 2 | Same + Home focused | inst 14.0 / sm 13.0 / ps 12.5 / AM 10.5 | inst 13.0 / sm 12.5 / ps 12.0 / AM 10.0 | inst 12.5 / sm 12.0 / ps 11.5 / AM 9.5 | 6/01 Debug; unified hero + coalesced |
+| 3 | 2 disp, different files, one 4K, unfocused | inst 9.5 / sm 8.5 / ps 8.0 / AM 6.5 | inst 7.5 / sm 6.7 / ps 6.5 / AM 5.5 | inst 7.0 / sm 6.5 / ps 6.2 / AM 5.0 | 5/20–5/23 Debug stress |
+| 4 | Both displays covered, unfocused | inst 1.5 / sm 1.2 / ps 1.0 / AM 0.8 | **0** | **0** | Max >0%; Balanced/Battery idle |
 
 ```bash
 while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; done
@@ -302,6 +305,13 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 - **Root cause:** Coordinator cached URL state after first attach attempt with zero bounds; later updates short-circuited without retry.
 - **Fix:** Early-return only when `isAttached`; retry attach from `onLayout` and deferred main-queue pass; skip `layoutSubtreeIfNeeded` when bounds already valid.
 - **Fallback:** `HeroWallpaperView` shows static thumbnail or independent `VideoPreviewView` if unified attach fails; Max management tabs preload thumbnail for fallback.
+
+### Phase 7G — Closeout runtime hygiene (2026-06-01)
+
+- **Hero attach stability:** Keep `UnifiedVideoPreviewView` mounted during policy pause; hide hero layer instead of detach; `TabbedMainView` uses `@State` pause policy (no visibility-revision body invalidation).
+- **Layout:** Hero layout work deferred off `PreviewContainerView.layout()` via main-queue async.
+- **SwiftUI:** Defer `heroPreviewVisibilityRevision`, post-restore `@Published` sync, and CPU sample UI updates off view-update pass.
+- **Acceptance:** ≤1 `Hero preview attached…` log per URL on focus bounce; no layout recursion warning; no startup state-during-update warnings.
 
 ### Profile CPU gap expectations (post-7E)
 

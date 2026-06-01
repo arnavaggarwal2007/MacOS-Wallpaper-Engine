@@ -4,6 +4,8 @@
 
 **Pause behavior:** Pausing stops desktop `AVPlayer` playback and leaves the **current video frame visible** (frozen video on the last rendered frame). Play/pause is **global** — all connected displays pause and resume together. In-app hero preview pauses when globally paused; carousel tiles show a “Paused” scrim; a compact banner under the Home utility bar appears when paused.
 
+**Hero visibility (Phase 7E+, no re-run of this matrix):** Max Quality keeps live hero on all tabs (dimmed blur/scrim on Settings/Collections/Setups). Balanced/Battery pause live hero when unfocused/occluded and use static thumbnail on management tabs. Global pause (toolbar) still pauses hero on all profiles.
+
 **Launch / previews:** Per-display and collection bookmarks must resolve on cold start (no `No bookmark found` + `not readable` for configured sources). Home display carousel should show thumbnails without tapping Apply. On launch, desktops **auto-play** when power policy allows (AC / no battery pause rule); otherwise stay paused with policy chrome.
 
 **Power debounce:** AC/battery events are debounced (~400ms) so brief plug flicker does not instantly resume after pause.

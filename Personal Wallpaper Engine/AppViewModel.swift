@@ -379,6 +379,10 @@ final class AppViewModel: ObservableObject {
         wallpaperManager.detachHeroPreviewLayers()
     }
 
+    func setHeroPreviewLayerHidden(_ hidden: Bool) {
+        wallpaperManager.setHeroPreviewLayerHidden(hidden)
+    }
+
     /// Tracks main shell tab so visibility churn on management tabs does not relayout the hero.
     func setMainShellOnHomeTab(_ onHome: Bool) {
         isMainShellOnHomeTab = onHome
@@ -699,17 +703,23 @@ final class AppViewModel: ObservableObject {
         }
 
         await restorePersistedWallpapersOnLaunch()
-        notifyDisplaySourcesChanged()
-        syncPlaybackStateFromEngine()
+        Task { @MainActor in
+            notifyDisplaySourcesChanged()
+            syncPlaybackStateFromEngine()
+        }
 
         heroPreviewVisibility.onChange = { [weak self] in
             guard let self, self.isMainShellOnHomeTab else { return }
-            self.heroPreviewVisibilityRevision += 1
+            Task { @MainActor in
+                self.heroPreviewVisibilityRevision += 1
+            }
         }
         heroPreviewVisibility.start()
 
         startPerformanceMonitoring()
-        refreshEngineDiagnostics()
+        Task { @MainActor in
+            refreshEngineDiagnostics()
+        }
     }
 
     // MARK: - Phase 7C Performance Monitoring
@@ -729,6 +739,12 @@ final class AppViewModel: ObservableObject {
     }
 
     private func applyPerformanceSample(_ metrics: PerformanceCPUMetrics) {
+        Task { @MainActor [weak self] in
+            self?.applyPerformanceSampleDeferred(metrics)
+        }
+    }
+
+    private func applyPerformanceSampleDeferred(_ metrics: PerformanceCPUMetrics) {
         isCPUMeasurementReady = metrics.isReady
         if metrics.isReady {
             instantCPUPercent = metrics.instantPercent

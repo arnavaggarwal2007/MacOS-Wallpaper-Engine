@@ -289,6 +289,10 @@ final class VideoRenderer: Renderer {
         layer.frame = containerView.bounds
     }
 
+    func setHeroPreviewLayerHidden(_ hidden: Bool) {
+        heroPreviewLayer?.isHidden = hidden
+    }
+
     func detachHeroPreviewLayer() {
         heroPreviewLayer?.removeFromSuperlayer()
         heroPreviewLayer = nil

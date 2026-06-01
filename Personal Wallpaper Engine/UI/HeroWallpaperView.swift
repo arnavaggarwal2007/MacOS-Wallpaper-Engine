@@ -148,30 +148,33 @@ struct HeroWallpaperView: View {
     private var heroImage: some View {
         Group {
             if let videoURL = videoURL, isVideoFile(videoURL) {
-                if usesUnifiedDesktopDecode, !isPlaybackPaused {
+                if usesUnifiedDesktopDecode {
                     if unifiedAttachFailed {
                         unifiedHeroFallback(videoURL: videoURL)
                     } else {
-                        UnifiedVideoPreviewView(
-                            appModel: appModel,
-                            videoURL: videoURL,
-                            isPlaybackPaused: false,
-                            onAttachStateChanged: { attached in
-                                if !attached {
-                                    unifiedAttachFailed = true
+                        ZStack {
+                            UnifiedVideoPreviewView(
+                                appModel: appModel,
+                                videoURL: videoURL,
+                                isPlaybackPaused: isPlaybackPaused,
+                                onAttachStateChanged: { attached in
+                                    if !attached {
+                                        unifiedAttachFailed = true
+                                    }
                                 }
+                            )
+                            if isPlaybackPaused, let image {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .interpolation(.high)
+                                    .antialiased(true)
+                                    .scaledToFill()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
-                        )
+                        }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .id("unified-\(videoURL.absoluteString)")
                     }
-                } else if usesUnifiedDesktopDecode, isPlaybackPaused, let image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.high)
-                        .antialiased(true)
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if !isPlaybackPaused {
                     VideoPreviewView(
                         videoURL: videoURL,
