@@ -14,7 +14,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         view.wantsLayer = true
         context.coordinator.containerView = view
         view.onLayout = { [weak coordinator = context.coordinator] in
-            coordinator?.handleLayout()
+            coordinator?.scheduleLayoutWork()
         }
         return view
     }
@@ -48,16 +48,14 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         var isAttached = false
         var attachedURLKey: String?
         private var pendingDeferredAttach = false
+        private var pendingLayoutWork = false
 
         func syncAttachState() {
             guard let appModel, let container = containerView, let url = videoURL else { return }
 
             if isPlaybackPaused {
                 if isAttached {
-                    appModel.detachHeroPreviewLayer()
-                    isAttached = false
-                    attachedURLKey = nil
-                    reportAttachState(false)
+                    appModel.setHeroPreviewLayerHidden(true)
                 }
                 return
             }
@@ -66,6 +64,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
             if isAttached,
                attachedURLKey == urlKey,
                containerView === container {
+                appModel.setHeroPreviewLayerHidden(false)
                 appModel.updateHeroPreviewLayerFrame(in: container)
                 return
             }
@@ -78,9 +77,20 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
             attemptAttach()
         }
 
-        func handleLayout() {
+        func scheduleLayoutWork() {
+            guard !pendingLayoutWork else { return }
+            pendingLayoutWork = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.pendingLayoutWork = false
+                self.handleLayoutDeferred()
+            }
+        }
+
+        private func handleLayoutDeferred() {
             guard !isPlaybackPaused else { return }
             if isAttached, let container = containerView {
+                appModel?.setHeroPreviewLayerHidden(false)
                 appModel?.updateHeroPreviewLayerFrame(in: container)
                 return
             }
@@ -100,6 +110,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
             isAttached = attached
             if attached {
                 attachedURLKey = url.absoluteString
+                appModel.setHeroPreviewLayerHidden(false)
                 reportAttachState(true)
             } else {
                 attachedURLKey = nil

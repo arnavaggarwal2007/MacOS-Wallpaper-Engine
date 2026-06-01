@@ -8,5 +8,6 @@ protocol DesktopVideoPreviewProviding: AnyObject {
     @discardableResult
     func attachHeroPreviewLayer(in containerView: NSView, videoGravity: AVLayerVideoGravity) -> Bool
     func updateHeroPreviewLayerFrame(in containerView: NSView)
+    func setHeroPreviewLayerHidden(_ hidden: Bool)
     func detachHeroPreviewLayer()
 }

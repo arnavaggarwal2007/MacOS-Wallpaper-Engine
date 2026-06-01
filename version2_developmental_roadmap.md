@@ -95,8 +95,9 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 |------|--------|-------|
 | Seek-timer FPS caps | Rejected permanently | — |
 | Static hero | Rejected permanently | — |
-| Unified hero + desktop single decode | Deferred | 8+ |
-| 4K downscale on Battery Saver | Deferred | 8B+ |
+| Unified hero + desktop single decode | **Complete (7D)** | — |
+| 1080p cap on Balanced/Battery | **Complete (7E)** | — |
+| Balanced unfocus freeze-frame polish | Deferred | Post–V2 / Phase 10+ |
 | Manual frame stepping / new FPS mechanism | Deferred | 9+ / research |
 | CPU history graphs | Deferred | 10 |
 
@@ -110,7 +111,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ### Phase 7C — Auto‑Tuning and Performance Diagnostics
 
-**Status:** **Complete** (2026-05-23). Phase 8 (local library) is next.
+**Status:** **Complete** (2026-05-23). Extensions **7D–7G complete** (2026-06-01). Phase 8 (local library) is next.
 
 **Scope:** Auto‑tuning heuristics and a lightweight diagnostics panel to help users understand and control performance — **not** further decode optimization.
 

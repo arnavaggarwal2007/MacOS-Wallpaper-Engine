@@ -2,7 +2,7 @@
 
 **Purpose:** Track CPU/GPU/battery measurements and optimization experiments. Baseline copied from [`V1_SIGNOFF.md`](V1_SIGNOFF.md); all 7B changes compare against the same scenarios.
 
-**Status:** Phase 7B engine optimization **complete** (2026-05-23). Phase 7C diagnostics **complete** (2026-05-23). Phase 8 next.
+**Status:** Phase 7 **complete** (7A–7G, 2026-06-01). Phase 8 next.
 
 **Reference clip (7B A/B):** 1080p H.264 MP4 — use the same file for every row (e.g. a typical wallpaper loop).
 
@@ -61,9 +61,9 @@ Copied from V1 sign-off (pre–7B engine work).
 | 2 displays, both covered, focused | AC | Balanced | 4 | 5/23 | Debug | Hero still live |
 | 1 display, covered, unfocused | AC | Balanced | **0** | 5/23 | Debug | |
 | 1 display, covered, focused | AC | Balanced | 4.3 | 5/23 | Debug | Hero still live |
-| Max Quality vs Balanced, both covered | AC | _TBD_ | _TBD_ | — | Release recommended | |
-| Reference scenario Release row | AC | Balanced | _TBD_ | — | Release | 2 disp same 1080p unfocused |
-| Release canonical per profile | AC | Max / Balanced / Battery | _TBD_ | — | Release | 2 disp same 1080p unfocused; user measurement |
+| Max Quality vs Balanced, both covered | AC | Max 11.75% sm | Bal 6.67% sm | — | Release 2026-06-01 | Row 4 matrix |
+| Reference scenario Release row | AC | Balanced | 13.75% sm | 2026-06-01 | Release | 2 disp same 1080p unfocused (row 1) |
+| Release canonical per profile | AC | Max 14.17 / Bal 13.75 / Bat 13.8 | sm smoothed | 2026-06-01 | Release | 2 disp same 1080p unfocused (row 1) |
 | 2 disp, 4K + different file, unfocused | AC | Max Quality | 9–12 (instant) | 5/20 | Debug | 2× decode; stress, not canonical |
 
 ### P6 evening session (5/23, Debug, often 4K clips)
@@ -103,15 +103,16 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 |--------------|--------|--------------|
 | Seek-timer / timed FPS caps | **Rejected permanently** | — (+60% CPU) |
 | Static hero (no live preview) | **Rejected permanently** | — (UX) |
-| Unified hero + desktop single `AVPlayer` | Deferred | Phase 8+ |
+| Unified hero + desktop single `AVPlayer` | **Complete (7D)** | — |
 | Per-layer pause on shared session | Deferred | Phase 8+ |
-| 4K → 1080p downscale on Battery Saver | Deferred | Phase 8B+ |
+| 4K → 1080p downscale on Battery Saver | **Complete (7E)** via `preferredMaximumResolution` | — |
+| Balanced unfocus freeze-frame (current-frame snapshot vs `CMTime.zero` thumbnail) | Deferred | Post–V2 polish / Phase 10+ |
 | `AVPlayerItemVideoOutput` manual frame stepping | Deferred | Research |
 | Profile FPS caps via new engine mechanism | Deferred | Phase 9+ |
 | Historical CPU graphs / export diagnostics | Deferred | Phase 10 |
-| Release-build baseline row | User measurement | Phase 7C doc |
 | **Phase 7D — unified hero decode** | **Complete** | Phase 7D |
 | **Phase 7E — profile decode tuning** | **Complete** | Phase 7E |
+| **Phase 7G — hero attach stability closeout** | **Complete** | Phase 7G |
 
 ---
 
@@ -159,14 +160,16 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 
 ## Release benchmark protocol (Phase 7D)
 
-Run in **Release** build, Activity Monitor Very Often, 60s sample after 30s settle. Record Diagnostics instant / smoothed / `ps` / AM per profile.
+Run in **Release** build; Activity Monitor Very Often, 60s sample after 30s settle. Record Diagnostics instant / smoothed / `ps` / AM per profile.
+
+**2026-06-01 Release run:** Measured on Release scheme (dual-display MacBook). Format per cell: instant / smoothed / ps / AM (%).
 
 | # | Scenario | Max | Balanced | Battery | Notes |
 |---|----------|-----|----------|---------|-------|
-| 1 | 2 disp, same 1080p, Apply to All, unfocused, visible | _TBD_ | _TBD_ | _TBD_ | Canonical |
-| 2 | Same + Home focused | _TBD_ | _TBD_ | _TBD_ | Hero + desktop; expect unified decode |
-| 3 | 2 disp, different files, one 4K, unfocused | _TBD_ | _TBD_ | _TBD_ | Stress |
-| 4 | Both displays covered, unfocused | _TBD_ | _TBD_ | _TBD_ | Max >0%; Balanced/Battery →0% |
+| 1 | 2 disp, same 1080p, Apply to All, unfocused, visible | 14.60 / 14.17 / 13.5 / 13.9 | 14.32 / 13.75 / 12.9 / 13.1 | 13.4 / 13.8 / 7.47 / 13.6 | Coalesced; hero policy pause Balanced/Battery |
+| 2 | Same + Home focused | 14.0 / 13.0 / 12.27 / 10.5 | 11.0 / 12.0 / 11.43 / 9.7 | 10.0 / 11.0 / 11.47 / 9.9 | Unified hero + coalesced |
+| 3 | 2 disp, different files, one 4K, unfocused | 10.54 / 11.21 / 9.8 / 11.6 | 10.24 / 10.76 / 6.53 / 10.4 | 10.07 / 10.50 / 7.01 / 10.3 | Dual decode stress |
+| 4 | Both displays covered, unfocused | 12.13 / 11.75 / 12.0 / 13.3 | 7.9 / 6.67 / 6.4 / 8.6 | 5.49 / 5.68 / 4.57 / 8.9 | Max still decodes; Balanced/Battery reduced |
 
 ```bash
 while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; done
@@ -302,6 +305,13 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 - **Root cause:** Coordinator cached URL state after first attach attempt with zero bounds; later updates short-circuited without retry.
 - **Fix:** Early-return only when `isAttached`; retry attach from `onLayout` and deferred main-queue pass; skip `layoutSubtreeIfNeeded` when bounds already valid.
 - **Fallback:** `HeroWallpaperView` shows static thumbnail or independent `VideoPreviewView` if unified attach fails; Max management tabs preload thumbnail for fallback.
+
+### Phase 7G — Closeout runtime hygiene (2026-06-01)
+
+- **Hero attach stability:** Keep `UnifiedVideoPreviewView` mounted during policy pause; hide hero layer instead of detach; `TabbedMainView` uses `@State` pause policy (no visibility-revision body invalidation).
+- **Layout:** Hero layout work deferred off `PreviewContainerView.layout()` via main-queue async.
+- **SwiftUI:** Defer `heroPreviewVisibilityRevision`, post-restore `@Published` sync, and CPU sample UI updates off view-update pass.
+- **Acceptance:** ≤1 `Hero preview attached…` log per URL on focus bounce; no layout recursion warning; no startup state-during-update warnings.
 
 ### Profile CPU gap expectations (post-7E)
 

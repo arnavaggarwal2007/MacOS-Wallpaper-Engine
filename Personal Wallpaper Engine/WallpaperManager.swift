@@ -955,6 +955,7 @@ final class WallpaperManager {
            activeHeroURLPath == urlPath,
            activeHeroPreviewProvider === provider {
             provider.updateHeroPreviewLayerFrame(in: containerView)
+            provider.setHeroPreviewLayerHidden(false)
             return true
         }
 
@@ -983,6 +984,10 @@ final class WallpaperManager {
     func updateHeroPreviewLayerFrame(in containerView: NSView) {
         guard activeHeroContainerID == ObjectIdentifier(containerView) else { return }
         activeHeroPreviewProvider?.updateHeroPreviewLayerFrame(in: containerView)
+    }
+
+    func setHeroPreviewLayerHidden(_ hidden: Bool) {
+        activeHeroPreviewProvider?.setHeroPreviewLayerHidden(hidden)
     }
 
     func detachHeroPreviewLayers() {
