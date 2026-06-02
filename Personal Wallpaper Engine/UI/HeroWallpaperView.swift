@@ -13,6 +13,8 @@ struct HeroWallpaperView: View {
     let isFullWindowBackground: Bool
     let dynamicAspectRatio: CGFloat?
     var isPlaybackPaused: Bool = false
+    /// Global desktop pause — reuse visible desktop-held AVPlayerLayer (no static snapshot).
+    var isGlobalDesktopPaused: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
     @State private var unifiedAttachFailed = false
@@ -119,15 +121,29 @@ struct HeroWallpaperView: View {
         }
     }
 
+    private var policyPausePlaceholder: some View {
+        Color.black
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func detachHeroPreviewForPolicyPause() {
+        appModel.detachHeroPreviewLayer()
+    }
+
+    private func heroStaticImage(_ image: NSImage) -> some View {
+        Image(nsImage: image)
+            .resizable()
+            .interpolation(.high)
+            .antialiased(true)
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+    }
+
     @ViewBuilder
     private func unifiedHeroFallback(videoURL: URL) -> some View {
         if let image {
-            Image(nsImage: image)
-                .resizable()
-                .interpolation(.high)
-                .antialiased(true)
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            heroStaticImage(image)
         } else {
             VideoPreviewView(
                 videoURL: videoURL,
@@ -145,33 +161,52 @@ struct HeroWallpaperView: View {
         }
     }
 
+    private var usesPolicyUnifiedPause: Bool {
+        usesUnifiedDesktopDecode && isPlaybackPaused && !isGlobalDesktopPaused
+    }
+
     private var heroImage: some View {
         Group {
             if let videoURL = videoURL, isVideoFile(videoURL) {
                 if usesUnifiedDesktopDecode {
-                    if unifiedAttachFailed {
+                    if isGlobalDesktopPaused {
+                        UnifiedVideoPreviewView(
+                            appModel: appModel,
+                            videoURL: videoURL,
+                            isPlaybackPaused: false,
+                            holdDesktopFrame: true,
+                            onAttachStateChanged: { attached in
+                                if !attached {
+                                    unifiedAttachFailed = true
+                                }
+                            }
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .id("unified-hold-\(videoURL.absoluteString)")
+                    } else if usesPolicyUnifiedPause {
+                        if let image {
+                            heroStaticImage(image)
+                                .id("unified-policy-pause-\(videoURL.absoluteString)")
+                                .onAppear { detachHeroPreviewForPolicyPause() }
+                        } else {
+                            policyPausePlaceholder
+                                .id("unified-policy-wait-\(videoURL.absoluteString)")
+                                .onAppear { detachHeroPreviewForPolicyPause() }
+                        }
+                    } else if unifiedAttachFailed {
                         unifiedHeroFallback(videoURL: videoURL)
                     } else {
-                        ZStack {
-                            UnifiedVideoPreviewView(
-                                appModel: appModel,
-                                videoURL: videoURL,
-                                isPlaybackPaused: isPlaybackPaused,
-                                onAttachStateChanged: { attached in
-                                    if !attached {
-                                        unifiedAttachFailed = true
-                                    }
+                        UnifiedVideoPreviewView(
+                            appModel: appModel,
+                            videoURL: videoURL,
+                            isPlaybackPaused: isPlaybackPaused,
+                            holdDesktopFrame: false,
+                            onAttachStateChanged: { attached in
+                                if !attached {
+                                    unifiedAttachFailed = true
                                 }
-                            )
-                            if isPlaybackPaused, let image {
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .interpolation(.high)
-                                    .antialiased(true)
-                                    .scaledToFill()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
-                        }
+                        )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .id("unified-\(videoURL.absoluteString)")
                     }
@@ -190,22 +225,12 @@ struct HeroWallpaperView: View {
                         }
                     }
                 } else if let image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.high)
-                        .antialiased(true)
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    heroStaticImage(image)
                 } else {
                     heroPlaceholder
                 }
             } else if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .antialiased(true)
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                heroStaticImage(image)
                     .onAppear {
                         if SettingsStore.shared.debugDiagnosticsEnabled {
                             print("HeroWallpaperView: static image")

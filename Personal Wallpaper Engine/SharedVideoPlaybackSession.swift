@@ -214,6 +214,12 @@ final class SharedVideoPlaybackSession {
         matchesURL(url) && player?.currentItem != nil
     }
 
+    /// Playback position for hero pause snapshots (aligned with desktop-held frame).
+    func currentPlaybackTime() -> CMTime? {
+        guard player?.currentItem != nil else { return nil }
+        return player?.currentTime()
+    }
+
     @discardableResult
     func attachHeroPreviewLayer(in containerView: NSView, videoGravity: AVLayerVideoGravity = .resizeAspectFill) -> Bool {
         guard let player else { return false }

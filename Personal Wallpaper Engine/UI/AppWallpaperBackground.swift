@@ -11,6 +11,8 @@ struct AppWallpaperBackground: View {
 
     @EnvironmentObject private var appModel: AppViewModel
     let intensity: Intensity
+    /// User-initiated global desktop pause (toolbar) — hero holds visible AVPlayerLayer frame.
+    var isGlobalDesktopPaused: Bool = false
     var pausePlayback: Bool = false
     @State private var managementThumbnail: NSImage?
 
@@ -28,7 +30,8 @@ struct AppWallpaperBackground: View {
                     usesUnifiedDesktopDecode: usesUnifiedDesktopDecode,
                     isFullWindowBackground: true,
                     dynamicAspectRatio: aspect,
-                    isPlaybackPaused: pausePlayback
+                    isPlaybackPaused: pausePlayback,
+                    isGlobalDesktopPaused: isGlobalDesktopPaused
                 )
 
                 if appModel.shouldShowPausedChrome {
@@ -66,14 +69,25 @@ struct AppWallpaperBackground: View {
 
     private var managementThumbnailTaskKey: String {
         guard let url = previewURL, needsManagementThumbnail else { return "none" }
+        if intensity == .hero, usesPolicyUnifiedPauseSnapshot {
+            return "policy-pause|\(url.absoluteString)"
+        }
         return url.absoluteString
+    }
+
+    /// Policy/unfocus/scroll pause with unified decode — async snapshot, not global desktop hold.
+    private var usesPolicyUnifiedPauseSnapshot: Bool {
+        intensity == .hero
+            && pausePlayback
+            && !isGlobalDesktopPaused
+            && usesUnifiedDesktopDecode
     }
 
     private var needsManagementThumbnail: Bool {
         if intensity == .management {
             return true
         }
-        if pausePlayback, usesUnifiedDesktopDecode {
+        if usesPolicyUnifiedPauseSnapshot {
             return true
         }
         return false
@@ -83,8 +97,9 @@ struct AppWallpaperBackground: View {
         appModel.focusedDisplayID ?? NSScreen.screens.first?.displayID
     }
 
+    /// Applied wallpaper on focused display (ignores library transient preview).
     private var previewURL: URL? {
-        appModel.heroPreviewURL(forDisplayID: focusedDisplayID)
+        appModel.shellHeroPreviewURL(forDisplayID: focusedDisplayID)
     }
 
     /// Live video on Home; Max Quality keeps live hero on all tabs (7E). Balanced uses static thumbnail on management tabs.
@@ -108,13 +123,13 @@ struct AppWallpaperBackground: View {
         return appModel.heroPreviewCanShareDesktopDecode(for: url)
     }
 
-    /// Static fallback for unified hero pause or non-video sources.
+    /// Static fallback for policy unified pause or non-video sources (not used for global desktop hold).
     private var heroFallbackImage: NSImage? {
         if intensity == .management {
             return managementThumbnail ?? staticPreviewImage
         }
-        if usesUnifiedDesktopDecode, pausePlayback {
-            return managementThumbnail ?? staticPreviewImage
+        if usesPolicyUnifiedPauseSnapshot {
+            return managementThumbnail
         }
         return staticPreviewImage
     }
@@ -137,19 +152,23 @@ struct AppWallpaperBackground: View {
 
     @MainActor
     private func loadManagementThumbnailIfNeeded() async {
+        managementThumbnail = nil
+
         guard let url = previewURL else {
-            managementThumbnail = nil
             return
         }
         guard needsManagementThumbnail else {
-            managementThumbnail = nil
             return
         }
         guard VideoWallpaperThumbnail.isVideoFile(url) else {
-            managementThumbnail = nil
             return
         }
-        managementThumbnail = await VideoWallpaperThumbnail.imageAsync(for: url)
+
+        if usesPolicyUnifiedPauseSnapshot {
+            managementThumbnail = await appModel.captureHeroPauseSnapshot(for: url)
+        } else {
+            managementThumbnail = await VideoWallpaperThumbnail.imageAsync(for: url)
+        }
     }
 }
 

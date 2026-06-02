@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import Foundation
 import os
 import SwiftUI
@@ -343,6 +344,13 @@ final class AppViewModel: ObservableObject {
         return previewURL(forDisplayID: targetID)
     }
 
+    /// Shell-level hero background — applied wallpaper on the display only (no library transient preview).
+    func shellHeroPreviewURL(forDisplayID displayID: CGDirectDisplayID?) -> URL? {
+        let targetID = displayID ?? focusedDisplayID ?? NSScreen.screens.first?.displayID
+        guard let targetID else { return nil }
+        return resolvePlaybackURL(for: targetID)
+    }
+
     /// P1b / 7E: Pause live hero when unfocused or occluded. Max Quality keeps hero on all tabs when allowed.
     func shouldPauseHeroPreview(isOnHomeTab: Bool) -> Bool {
         if !isOnHomeTab {
@@ -376,6 +384,15 @@ final class AppViewModel: ObservableObject {
     func heroPreviewCanShareDesktopDecode(for url: URL?) -> Bool {
         guard let url else { return false }
         return wallpaperManager.canUnifyHeroPreview(with: url, focusedDisplayID: focusedDisplayID)
+    }
+
+    /// Still frame at desktop decode position for unified hero pause (not t=0 poster).
+    func captureHeroPauseSnapshot(for url: URL) async -> NSImage? {
+        let time = wallpaperManager.currentHeroPreviewPlaybackTime(
+            for: url,
+            focusedDisplayID: focusedDisplayID
+        ) ?? .zero
+        return await VideoWallpaperThumbnail.imageAsync(for: url, at: time)
     }
 
     @discardableResult

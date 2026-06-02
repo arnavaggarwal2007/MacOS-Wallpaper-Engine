@@ -930,6 +930,20 @@ final class WallpaperManager {
         heroPreviewProvider(for: url, focusedDisplayID: focusedDisplayID) != nil
     }
 
+    /// Current decode time for the hero preview file (shared session or per-display renderer).
+    func currentHeroPreviewPlaybackTime(for url: URL, focusedDisplayID: CGDirectDisplayID?) -> CMTime? {
+        guard let provider = heroPreviewProvider(for: url, focusedDisplayID: focusedDisplayID) else {
+            return nil
+        }
+        if let shared = provider as? SharedVideoPlaybackSession {
+            return shared.currentPlaybackTime()
+        }
+        if let renderer = provider as? VideoRenderer {
+            return renderer.currentPlaybackTime()
+        }
+        return nil
+    }
+
     @discardableResult
     func attachHeroPreviewLayer(
         in containerView: NSView,

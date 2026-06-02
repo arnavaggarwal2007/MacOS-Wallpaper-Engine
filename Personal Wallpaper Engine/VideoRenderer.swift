@@ -247,6 +247,12 @@ final class VideoRenderer: Renderer {
         return player.rate > 0.01
     }
 
+    /// Playback position for hero pause snapshots (aligned with desktop-held frame).
+    func currentPlaybackTime() -> CMTime? {
+        guard player?.currentItem != nil else { return nil }
+        return player?.currentTime()
+    }
+
     func matchesHeroPreviewURL(_ url: URL) -> Bool {
         guard let activeVideoURL, player?.currentItem != nil else { return false }
         let activePath = activeVideoURL.isFileURL

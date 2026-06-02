@@ -14,7 +14,13 @@ if [[ "${CODE_SIGNING_ALLOWED:-YES}" == "NO" ]]; then
   )
 fi
 
-exec xcodebuild \
-  -destination 'generic/platform=macOS' \
-  "${XCODEBUILD_CI_SETTINGS[@]}" \
-  "$@"
+if ((${#XCODEBUILD_CI_SETTINGS[@]} > 0)); then
+  exec xcodebuild \
+    -destination 'generic/platform=macOS' \
+    "${XCODEBUILD_CI_SETTINGS[@]}" \
+    "$@"
+else
+  exec xcodebuild \
+    -destination 'generic/platform=macOS' \
+    "$@"
+fi

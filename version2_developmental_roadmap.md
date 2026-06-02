@@ -111,7 +111,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ### Phase 7C — Auto‑Tuning and Performance Diagnostics
 
-**Status:** **Complete** (2026-05-23). Extensions **7D–7G complete** (2026-06-01). Phase 8 (local library) is next.
+**Status:** **Complete** (2026-05-23). Extensions **7D–7G complete** (2026-06-01). Phase 8 complete; Phase 9 is next.
 
 **Scope:** Auto‑tuning heuristics and a lightweight diagnostics panel to help users understand and control performance — **not** further decode optimization.
 

@@ -107,7 +107,7 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 | Unified hero + desktop single `AVPlayer` | **Complete (7D)** | — |
 | Per-layer pause on shared session | Deferred | Phase 8+ |
 | 4K → 1080p downscale on Battery Saver | **Complete (7E)** via `preferredMaximumResolution` | — |
-| Balanced unfocus freeze-frame (current-frame snapshot vs `CMTime.zero` thumbnail) | Deferred | Post–V2 polish / Phase 10+ |
+| Hero pause freeze-frame (current-time snapshot vs `CMTime.zero` overlay) | **Complete** | Post–Phase 8 polish (2026-06-02) |
 | `AVPlayerItemVideoOutput` manual frame stepping | Deferred | Research |
 | Profile FPS caps via new engine mechanism | Deferred | Phase 9+ |
 | Historical CPU graphs / export diagnostics | Deferred | Phase 10 |
@@ -341,6 +341,13 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 - **Layout:** Hero layout work deferred off `PreviewContainerView.layout()` via main-queue async.
 - **SwiftUI:** Defer `heroPreviewVisibilityRevision`, post-restore `@Published` sync, and CPU sample UI updates off view-update pass.
 - **Acceptance:** ≤1 `Hero preview attached…` log per URL on focus bounce; no layout recursion warning; no startup state-during-update warnings.
+
+### Hero pause freeze-frame (2026-06-02, v2)
+
+- **v1 gap:** Async snapshot + nil-image window still mounted hidden `AVPlayerLayer`; `AVAssetImageGenerator` crop ≠ `resizeAspectFill`; `transientPreviewURL` could disagree with desktop decode; dual-display different files showed split seam.
+- **Global user pause (`shouldShowPausedChrome`):** Shell hero uses `shellHeroPreviewURL` (applied wallpaper only); **visible** unified `AVPlayerLayer` via `holdDesktopFrame` — no generator snapshot.
+- **Policy/unfocus/scroll pause:** Static snapshot at `player.currentTime()` with generator tolerances; black placeholder until loaded; `detachHeroPreviewLayer` — never hidden layer + bitmap stack.
+- **Dual display:** Hero reflects focused display’s applied file; different files per display is expected unless coalesced.
 
 ### Profile CPU gap expectations (Release 2026-06-01)
 

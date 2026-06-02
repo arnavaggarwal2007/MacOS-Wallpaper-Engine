@@ -7,6 +7,8 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
     let appModel: AppViewModel
     let videoURL: URL
     var isPlaybackPaused: Bool
+    /// Global desktop pause: keep hero layer visible at the held desktop frame.
+    var holdDesktopFrame: Bool = false
     var onAttachStateChanged: ((Bool) -> Void)?
 
     func makeNSView(context: Context) -> PreviewContainerView {
@@ -24,6 +26,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         context.coordinator.containerView = nsView
         context.coordinator.videoURL = videoURL
         context.coordinator.isPlaybackPaused = isPlaybackPaused
+        context.coordinator.holdDesktopFrame = holdDesktopFrame
         context.coordinator.onAttachStateChanged = onAttachStateChanged
         context.coordinator.syncAttachState()
     }
@@ -47,6 +50,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         weak var containerView: PreviewContainerView?
         var videoURL: URL?
         var isPlaybackPaused = false
+        var holdDesktopFrame = false
         var onAttachStateChanged: ((Bool) -> Void)?
         var isAttached = false
         var attachedURLKey: String?
@@ -56,10 +60,26 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         func syncAttachState() {
             guard let appModel, let container = containerView, let url = videoURL else { return }
 
-            if isPlaybackPaused {
+            if isPlaybackPaused, !holdDesktopFrame {
                 if isAttached {
                     appModel.setHeroPreviewLayerHidden(true)
                 }
+                return
+            }
+
+            if holdDesktopFrame {
+                if isAttached,
+                   attachedURLKey == url.absoluteString,
+                   containerView === container {
+                    appModel.setHeroPreviewLayerHidden(false)
+                    appModel.updateHeroPreviewLayerFrame(in: container)
+                    return
+                }
+                if attachedURLKey != url.absoluteString {
+                    isAttached = false
+                    attachedURLKey = nil
+                }
+                attemptAttach()
                 return
             }
 
@@ -91,7 +111,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         }
 
         private func handleLayoutDeferred() {
-            guard !isPlaybackPaused else { return }
+            guard !isPlaybackPaused || holdDesktopFrame else { return }
             if isAttached, let container = containerView {
                 appModel?.setHeroPreviewLayerHidden(false)
                 appModel?.updateHeroPreviewLayerFrame(in: container)
@@ -102,7 +122,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
 
         private func attemptAttach() {
             guard let appModel, let container = containerView, let url = videoURL else { return }
-            guard !isPlaybackPaused else { return }
+            guard !isPlaybackPaused || holdDesktopFrame else { return }
 
             if container.bounds.isEmpty {
                 scheduleDeferredAttach()

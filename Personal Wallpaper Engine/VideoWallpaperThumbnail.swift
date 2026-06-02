@@ -1,9 +1,11 @@
 import AppKit
 import AVFoundation
 import Foundation
+import os.log
 
 /// Generates and caches still frames for video wallpaper previews (hero / carousel).
 enum VideoWallpaperThumbnail {
+    private static let logger = Logger(subsystem: "com.local.wallpaper", category: "VideoWallpaperThumbnail")
     private static let cache = NSCache<NSString, NSImage>()
 
     static func isVideoFile(_ url: URL) -> Bool {
@@ -18,33 +20,69 @@ enum VideoWallpaperThumbnail {
         return "\(path)|\(mod)" as NSString
     }
 
+    /// Cache key for pause / mid-timeline snapshots (0.1s buckets; separate from t=0 poster cache).
+    static func pauseCacheKey(for url: URL, at time: CMTime) -> NSString {
+        let base = cacheKey(for: url) as String
+        let seconds = max(0, CMTimeGetSeconds(time))
+        let bucket = (seconds * 10).rounded() / 10
+        return "\(base)|pause|\(bucket)" as NSString
+    }
+
     static func cachedImage(for url: URL) -> NSImage? {
         cache.object(forKey: cacheKey(for: url))
     }
 
     static func image(for url: URL) -> NSImage? {
-        let key = cacheKey(for: url)
+        image(for: url, at: .zero)
+    }
+
+    static func image(for url: URL, at time: CMTime) -> NSImage? {
+        if CMTimeCompare(time, .zero) == 0 {
+            let key = cacheKey(for: url)
+            if let cached = cache.object(forKey: key) {
+                return cached
+            }
+            guard let generated = generateThumbnail(for: url, at: .zero) else { return nil }
+            cache.setObject(generated, forKey: key)
+            return generated
+        }
+
+        let key = pauseCacheKey(for: url, at: time)
         if let cached = cache.object(forKey: key) {
             return cached
         }
-        guard let generated = generateThumbnail(for: url) else { return nil }
+        guard let generated = generateThumbnail(for: url, at: time) else { return nil }
         cache.setObject(generated, forKey: key)
         return generated
     }
 
     static func imageAsync(for url: URL) async -> NSImage? {
-        if let cached = cachedImage(for: url) {
+        await imageAsync(for: url, at: .zero)
+    }
+
+    static func imageAsync(for url: URL, at time: CMTime) async -> NSImage? {
+        if CMTimeCompare(time, .zero) == 0, let cached = cachedImage(for: url) {
             return cached
+        }
+        if CMTimeCompare(time, .zero) != 0 {
+            let key = pauseCacheKey(for: url, at: time)
+            if let cached = cache.object(forKey: key) {
+                return cached
+            }
         }
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
-                let image = image(for: url)
+                let image = image(for: url, at: time)
                 continuation.resume(returning: image)
             }
         }
     }
 
     private static func generateThumbnail(for url: URL) -> NSImage? {
+        generateThumbnail(for: url, at: .zero)
+    }
+
+    private static func generateThumbnail(for url: URL, at time: CMTime) -> NSImage? {
         if !url.isFileURL {
             return nil
         }
@@ -60,8 +98,23 @@ enum VideoWallpaperThumbnail {
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 1920, height: 1920)
+        let tolerance = CMTime(seconds: 0.1, preferredTimescale: 600)
+        generator.requestedTimeToleranceBefore = tolerance
+        generator.requestedTimeToleranceAfter = tolerance
 
-        let requestedTime = NSValue(time: .zero)
+        if let image = generateStill(from: generator, at: time) {
+            return image
+        }
+
+        if CMTimeCompare(time, .zero) != 0 {
+            logger.debug("Pause snapshot failed at t=\(CMTimeGetSeconds(time), privacy: .public)s; falling back to t=0 file=\(url.lastPathComponent, privacy: .public)")
+            return generateStill(from: generator, at: .zero)
+        }
+        return nil
+    }
+
+    private static func generateStill(from generator: AVAssetImageGenerator, at time: CMTime) -> NSImage? {
+        let requestedTime = NSValue(time: time)
         let semaphore = DispatchSemaphore(value: 0)
         var generatedImage: NSImage?
 

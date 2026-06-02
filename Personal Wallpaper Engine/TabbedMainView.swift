@@ -53,6 +53,7 @@ struct TabbedMainView: View {
         ZStack(alignment: .top) {
             AppWallpaperBackground(
                 intensity: backgroundIntensity,
+                isGlobalDesktopPaused: appModel.shouldShowPausedChrome,
                 pausePlayback: pauseWallpaperPreview
                     || appModel.shouldShowPausedChrome
                     || pauseHeroPreviewForPolicy
