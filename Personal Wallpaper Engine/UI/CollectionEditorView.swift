@@ -5,6 +5,7 @@ import os.log
 /// Main SwiftUI view for creating/editing wallpaper collections.
 struct CollectionEditorView: View {
 
+    @EnvironmentObject private var appModel: AppViewModel
     @State private var collectionName: String
     @State private var collectionDescription: String
     @State private var collectionType: WallpaperCollection.CollectionType
@@ -12,7 +13,9 @@ struct CollectionEditorView: View {
     @State private var validationMessage: String?
     @State private var nameValidationMessage: String?
     @State private var browseIndex: Int?
+    @State private var libraryBrowseIndex: Int?
     @State private var isFileImporterPresented = false
+    @State private var isLibraryPickerPresented = false
 
     let originalCollectionName: String?
     let existingCollectionNames: Set<String>
@@ -121,6 +124,10 @@ struct CollectionEditorView: View {
                                                 browseIndex = index
                                                 isFileImporterPresented = true
                                             },
+                                            onLibraryBrowse: {
+                                                libraryBrowseIndex = index
+                                                isLibraryPickerPresented = true
+                                            },
                                             url: Binding(
                                                 get: { sourceDrafts[index].url },
                                                 set: { sourceDrafts[index].url = $0 }
@@ -226,7 +233,10 @@ struct CollectionEditorView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
                 }
+                .scrollClipDisabled(true)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
 
                 HStack {
@@ -291,6 +301,29 @@ struct CollectionEditorView: View {
             case .failure(let error):
                 logger.error("File picker error: \(error.localizedDescription)")
             }
+        }
+        .sheet(isPresented: $isLibraryPickerPresented) {
+            LibraryPickerSheet { item, url in
+                guard let index = libraryBrowseIndex,
+                      sourceDrafts.indices.contains(index) else { return }
+                libraryBrowseIndex = nil
+                sourceDrafts[index].url = url.absoluteString
+                let didStartAccess = url.startAccessingSecurityScopedResource()
+                defer {
+                    if didStartAccess { url.stopAccessingSecurityScopedResource() }
+                }
+                if let bookmark = try? url.bookmarkData(
+                    options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                    includingResourceValuesForKeys: nil,
+                    relativeTo: nil
+                ) {
+                    sourceDrafts[index].bookmark = bookmark
+                    sourceDrafts[index].captureError = nil
+                } else {
+                    sourceDrafts[index].captureError = "Could not capture bookmark for \(item.displayName)"
+                }
+            }
+            .environmentObject(appModel)
         }
         .onChange(of: collectionType) { _, newType in
             guard newType == .simple else { return }
@@ -459,5 +492,6 @@ struct CollectionSourceDraft: Identifiable {
         onCancel: {},
         onSave: { _, _ in }
     )
+    .environmentObject(AppViewModel())
     .frame(width: 650, height: 580)
 }

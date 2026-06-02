@@ -3,7 +3,7 @@
 **Date:** 2026-06-01 (updated)  
 **Build:** Debug local 2026-06-01; Release build verified 2026-06-01  
 **Scope:** Phases 1–6B + UI final vision (Phases 0–4) + Phase 7 (7A–7G)  
-**Gate:** V1 complete; **Phase 7 complete** (7A–7G, 2026-06-01); Phase 8 next  
+**Gate:** V1 complete; **Phase 7 complete** (7A–7G, 2026-06-01); **Phase 8 complete** (8A–8C, 2026-06-01). Phase 9 next.  
 
 ---
 
@@ -23,7 +23,7 @@
 | Phase 7A power policy | **Pass** | [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) |
 | Phase 7A playback UX | **Pass** | 2026-05-22 — launch auto-play, frozen-frame pause, hero preview sync; matrix rows 10–11, 15–16 |
 
-**Recommendation:** V1 + **Phase 7 complete (7A–7G)**. Phase **8** (local library) next. Results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md).
+**Recommendation:** V1 + **Phase 7 complete (7A–7G)** + **Phase 8 complete (8A–8C)**. Phase **9** (quick modes) next. Engine results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md); library regression in [`PHASE_8_LIBRARY.md`](PHASE_8_LIBRARY.md).
 
 ---
 

@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct SettingsTabView: View {
     @EnvironmentObject private var appModel: AppViewModel
     @State private var isFileImporterPresented = false
+    @State private var isLibraryFolderImporterPresented = false
 
     var body: some View {
         ScrollView {
@@ -119,6 +120,8 @@ struct SettingsTabView: View {
                         }
                     }
                 }
+
+                librarySettingsSection
 
                 GlassCardView(title: "Performance") {
                     VStack(alignment: .leading, spacing: 14) {
@@ -241,6 +244,94 @@ struct SettingsTabView: View {
                 Task { await appModel.applyWallpaperFromSelection() }
             case .failure(let error):
                 appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
+            }
+        }
+        .fileImporter(
+            isPresented: $isLibraryFolderImporterPresented,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                Task { await appModel.addLibraryRoot(at: url) }
+            case .failure(let error):
+                appModel.errorMessage = "Folder selection failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private var librarySettingsSection: some View {
+        GlassCardView(title: "Local Library") {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Index folders of MP4/MOV videos for thumbnail browsing on Home and in Collections.")
+                    .font(.caption)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+
+                if appModel.libraryRoots.isEmpty {
+                    Text("No library folders configured.")
+                        .font(DesignTokens.Typography.subtitle)
+                        .foregroundStyle(DesignTokens.Colors.textSecondary)
+                } else {
+                    ForEach(appModel.libraryRoots) { root in
+                        HStack(spacing: 10) {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(DesignTokens.Colors.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(root.displayName)
+                                    .font(DesignTokens.Typography.subtitle)
+                                Text(root.path)
+                                    .font(.caption2)
+                                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Button(role: .destructive) {
+                                Task { await appModel.removeLibraryRoot(id: root.id) }
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Remove folder from library index")
+                        }
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Button { isLibraryFolderImporterPresented = true } label: {
+                        Label("Add Folder…", systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        Task { _ = await appModel.rescanLibrary() }
+                    } label: {
+                        Label("Rescan Library", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(appModel.libraryRoots.isEmpty || appModel.isLibraryScanning)
+                }
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(appModel.libraryItems.filter { !$0.isMissing }.count) videos indexed")
+                            .font(DesignTokens.Typography.subtitle)
+                        if let scanDate = appModel.libraryLastScanDate {
+                            Text("Last scan: \(scanDate.formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption)
+                                .foregroundStyle(DesignTokens.Colors.textSecondary)
+                        }
+                        Text(appModel.libraryCacheSummary())
+                            .font(.caption)
+                            .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    }
+                    Spacer()
+                    Button("Clear Thumbnail Cache") {
+                        appModel.clearLibraryThumbnailCache()
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+                }
             }
         }
     }

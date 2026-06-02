@@ -107,7 +107,9 @@ final class DisplayController {
             object: window,
             queue: .main
         ) { [weak self] _ in
-            self?.handleWindowResize()
+            Task { @MainActor [weak self] in
+                self?.handleWindowResize()
+            }
         }
 
         logGeometryDiagnostics(for: screen, event: "Window created")

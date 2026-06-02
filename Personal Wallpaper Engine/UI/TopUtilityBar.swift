@@ -6,6 +6,7 @@ struct TopUtilityBar: View {
     @State private var buttonHovers: [String: Bool] = [:]
     @Binding var isSidebarVisible: Bool
     var onChooseWallpaper: () -> Void
+    var onBrowseLibrary: (() -> Void)? = nil
 
     private func button(key: String, action: @escaping () -> Void, label: @escaping () -> some View) -> some View {
         Button(action: action) {
@@ -32,6 +33,14 @@ struct TopUtilityBar: View {
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .help("Pick a video for the selected display (or multiple displays)")
+
+                if let onBrowseLibrary {
+                    button(key: "library", action: onBrowseLibrary) {
+                        Label("Browse Library", systemImage: "square.grid.2x2")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .help("Open full library browser")
+                }
 
                 button(key: "play", action: {
                     appModel.handlePlayPauseButtonPressed(source: .toolbar)
@@ -66,13 +75,23 @@ struct TopUtilityBar: View {
                 }
 
                 button(key: "apply", action: {
-                    Task { await appModel.applyWallpaperToFocusedDisplay() }
+                    Task {
+                        if appModel.selectedLibraryItemID != nil {
+                            await appModel.applySelectedLibraryItemToFocusedDisplay()
+                        } else {
+                            await appModel.applyWallpaperToFocusedDisplay()
+                        }
+                    }
                 }) {
                     Label("Apply Now", systemImage: "bolt.fill")
                 }
                 .disabled(appModel.isApplyingWallpaper)
                 .opacity(appModel.isApplyingWallpaper ? 0.5 : 1.0)
-                .help("Apply the wallpaper assigned to the selected display")
+                .help(
+                    appModel.selectedLibraryItemID != nil
+                        ? "Apply the selected library video to the focused display."
+                        : "Apply the wallpaper assigned to the selected display"
+                )
 
                 button(key: "sidebar", action: {
                     withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {

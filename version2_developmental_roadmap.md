@@ -150,6 +150,8 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 **Goal:** Move beyond a plain file picker to a \"mini library\" experience while staying local‑only (no network), capturing some of the curated feel that Wallspace offers.[^2][^3][^6]
 
+**Status:** **Complete** (8A–8C, 2026-06-01). Phase 9 (quick modes) is next.
+
 ### Phase 8 Summary
 
 | Phase | Scope | Duration | Depends On |
@@ -225,7 +227,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 **Implementation Steps (8C):**
 
 1. **Library UI Shell (Days 1–8)**
-    - Add a Library section/tab to ContentView:
+    - Add a Library section to `ModernHomeView` (primary browse) and library picker in `CollectionEditorView` / `CollectionsTabView` — not a fifth tab; see [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md):
         - Grid layout of thumbnails with titles and badges (duration, resolution).
         - Filters for favorites and possibly simple tag search (e.g., by folder name).
 2. **Selection and Apply Flows (Days 9–15)**

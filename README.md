@@ -26,6 +26,7 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 |----------|---------|
 | [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) | V1 gate: functional + performance baseline |
 | [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md) | V1 feature inventory and architecture |
+| [`DESIGN.md`](DESIGN.md) | Design spec (product shape, tokens, copy catalog) |
 | [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) | UI spec (tabs, layout, flows) |
 | [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 (V2) |
 | [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Full manual test matrix |
@@ -84,9 +85,9 @@ Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`)
 | Phase 6B (desktop setups) | Complete |
 | UI final vision (4 tabs, app-wide background, glass tabs) | Complete — merged to `main` May 2026 |
 | Version 2 Phase 7 (performance, power, diagnostics — 7A–7G) | Complete — signed off 2026-06-01; see `docs/PERFORMANCE_TUNING.md` |
-| Version 2 Phase 8 (local library) | Next — see `version2_developmental_roadmap.md` |
-| Version 2 Phases 9–10 (quick modes, lock screen research) | Planned |
+| Version 2 Phase 8 (local library — 8A–8C) | Complete — see [`docs/PHASE_8_LIBRARY.md`](docs/PHASE_8_LIBRARY.md) |
+| Version 2 Phase 9 (quick modes) | Next — see `version2_developmental_roadmap.md` |
 
 ## Status
 
-**June 1, 2026:** Phase 7 complete (7A–7G). Release benchmark matrix in `docs/PERFORMANCE_TUNING.md`. PR #5 merged to `main`. Phase 8A (local library) next.
+**June 1, 2026:** Phase 8 complete (8A–8C local library). Phase 9 (quick modes) next.

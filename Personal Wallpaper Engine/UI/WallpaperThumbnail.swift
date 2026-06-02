@@ -66,7 +66,44 @@ enum WallpaperThumbnailLoader {
             : NSWorkspace.shared.icon(for: .movie)
     }
 
+    /// Async thumbnail load; preferred for video files to avoid QoS inversions from blocking waits.
+    nonisolated static func imageAsync(for url: URL, maxPixelSize: CGFloat = 320) async -> NSImage? {
+        if url.isFileURL {
+            let didStartScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartScope {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            if let thumbnail = await thumbnailForLocalFileAsync(at: url, maxPixelSize: maxPixelSize) {
+                return thumbnail
+            }
+            if let image = NSImage(contentsOf: url), image.size != .zero {
+                return image
+            }
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+
+        let isWeb = url.scheme?.hasPrefix("http") == true
+        return isWeb
+            ? NSWorkspace.shared.icon(for: UTType.internetLocation)
+            : NSWorkspace.shared.icon(for: .movie)
+    }
+
     nonisolated private static func thumbnailForLocalFile(at url: URL, maxPixelSize: CGFloat) -> NSImage? {
+        let fileExtension = url.pathExtension.lowercased()
+        if ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"].contains(fileExtension),
+           let image = NSImage(contentsOf: url),
+           image.size != .zero {
+            return image
+        }
+
+        // Video thumbnails use imageAsync / thumbnailForLocalFileAsync only.
+        return nil
+    }
+
+    nonisolated private static func thumbnailForLocalFileAsync(at url: URL, maxPixelSize: CGFloat) async -> NSImage? {
         let fileExtension = url.pathExtension.lowercased()
         if ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"].contains(fileExtension),
            let image = NSImage(contentsOf: url),
@@ -79,19 +116,17 @@ enum WallpaperThumbnailLoader {
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: maxPixelSize, height: maxPixelSize * 9 / 16)
 
-        let requestedTime = NSValue(time: .zero)
-        let semaphore = DispatchSemaphore(value: 0)
-        var generatedImage: NSImage?
-
-        generator.generateCGImagesAsynchronously(forTimes: [requestedTime]) { _, cgImage, _, result, _ in
-            defer { semaphore.signal() }
-            guard result == .succeeded, let cgImage else { return }
-            let imageSize = NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
-            generatedImage = NSImage(cgImage: cgImage, size: imageSize)
+        return await withCheckedContinuation { continuation in
+            let requestedTime = NSValue(time: .zero)
+            generator.generateCGImagesAsynchronously(forTimes: [requestedTime]) { _, cgImage, _, result, _ in
+                guard result == .succeeded, let cgImage else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let imageSize = NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
+                continuation.resume(returning: NSImage(cgImage: cgImage, size: imageSize))
+            }
         }
-
-        semaphore.wait()
-        return generatedImage
     }
 }
 
@@ -143,11 +178,11 @@ struct WallpaperThumbnailView: View {
                 from: urlString,
                 collectionName: collectionName
             )
-            let url = resolvedURL
-            image = await Task.detached(priority: .utility) {
-                guard let url else { return nil as NSImage? }
-                return WallpaperThumbnailLoader.image(for: url, maxPixelSize: maxPixelSize)
-            }.value
+            guard let resolvedURL else {
+                image = nil
+                return
+            }
+            image = await WallpaperThumbnailLoader.imageAsync(for: resolvedURL, maxPixelSize: maxPixelSize)
         }
     }
 }

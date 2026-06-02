@@ -221,9 +221,11 @@ final class VideoRenderer: Renderer {
     private func scheduleNonBlockingPrerollAtZero() {
         DispatchQueue.main.async { [weak self] in
             guard let player = self?.player else { return }
-            player.preroll(atRate: 0) { [weak self] finished in
-                let rate = self?.player?.rate ?? -1
-                self?.logger.debug("Desktop preroll(atRate:0) finished=\(finished) rate=\(rate)")
+            player.preroll(atRate: 0) { finished in
+                Task { @MainActor [weak self] in
+                    let rate = self?.player?.rate ?? -1
+                    self?.logger.debug("Desktop preroll(atRate:0) finished=\(finished) rate=\(rate)")
+                }
             }
         }
     }
@@ -377,9 +379,11 @@ final class VideoRenderer: Renderer {
             object: playerItem,
             queue: .main
         ) { [weak self] _ in
-            guard let self, self.allowsPlaybackAdvance else { return }
-            self.player?.seek(to: .zero)
-            self.player?.play()
+            Task { @MainActor [weak self] in
+                guard let self, self.allowsPlaybackAdvance else { return }
+                self.player?.seek(to: .zero)
+                self.player?.play()
+            }
         }
     }
 

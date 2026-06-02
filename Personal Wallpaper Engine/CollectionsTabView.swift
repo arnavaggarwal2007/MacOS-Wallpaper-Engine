@@ -163,43 +163,43 @@ struct CollectionsTabView: View {
         }
         .sheet(isPresented: $isCollectionEditorPresented) {
             let selectedName = editingCollectionName.flatMap { appModel.savedCollections[$0] }
-            CardView(title: editingCollectionName == nil ? "Create Collection" : "Edit Collection", style: .elevated) {
-                CollectionEditorView(
-                    initialName: selectedName?.name ?? "",
-                    initialDescription: selectedName?.description ?? "",
-                    initialType: selectedName?.collectionType ?? .simple,
-                    initialSources: selectedName?.sources ?? [],
-                    initialBookmarks: editingCollectionName.map { appModel.bookmarksForCollection(name: $0) } ?? [:],
-                    originalCollectionName: editingCollectionName,
-                    existingCollectionNames: Set(appModel.savedCollections.keys),
-                    onCancel: { isCollectionEditorPresented = false },
-                    onSave: { collection, bookmarks in
-                        Task {
-                            if let editingCollectionName {
-                                _ = await appModel.updateCollection(
-                                    existingName: editingCollectionName,
-                                    newName: collection.name,
-                                    description: collection.description,
-                                    collectionType: collection.collectionType,
-                                    sources: collection.sources,
-                                    bookmarks: bookmarks
-                                )
-                            } else {
-                                _ = await appModel.createCollection(
-                                    name: collection.name,
-                                    description: collection.description,
-                                    collectionType: collection.collectionType,
-                                    sources: collection.sources,
-                                    bookmarks: bookmarks
-                                )
-                            }
-                            self.editingCollectionName = nil
-                            isCollectionEditorPresented = false
+            CollectionEditorView(
+                initialName: selectedName?.name ?? "",
+                initialDescription: selectedName?.description ?? "",
+                initialType: selectedName?.collectionType ?? .simple,
+                initialSources: selectedName?.sources ?? [],
+                initialBookmarks: editingCollectionName.map { appModel.bookmarksForCollection(name: $0) } ?? [:],
+                originalCollectionName: editingCollectionName,
+                existingCollectionNames: Set(appModel.savedCollections.keys),
+                onCancel: { isCollectionEditorPresented = false },
+                onSave: { collection, bookmarks in
+                    Task {
+                        if let editingCollectionName {
+                            _ = await appModel.updateCollection(
+                                existingName: editingCollectionName,
+                                newName: collection.name,
+                                description: collection.description,
+                                collectionType: collection.collectionType,
+                                sources: collection.sources,
+                                bookmarks: bookmarks
+                            )
+                        } else {
+                            _ = await appModel.createCollection(
+                                name: collection.name,
+                                description: collection.description,
+                                collectionType: collection.collectionType,
+                                sources: collection.sources,
+                                bookmarks: bookmarks
+                            )
                         }
+                        self.editingCollectionName = nil
+                        isCollectionEditorPresented = false
                     }
-                )
-            }
-            .frame(minWidth: 640, minHeight: 520)
+                }
+            )
+            .padding(24)
+            .frame(minWidth: 740, minHeight: 560)
+            .presentationSizing(.fitted)
         }
         .alert("Delete Collection", isPresented: $isDeleteCollectionAlertPresented) {
             Button("Delete", role: .destructive) {

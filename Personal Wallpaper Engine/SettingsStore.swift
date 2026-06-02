@@ -29,6 +29,10 @@ final class SettingsStore {
         static let performanceProfile = "performanceProfile"  // Phase 7B
         static let dismissPerformanceSuggestions = "dismissPerformanceSuggestions"  // Phase 7C
         static let useTestPerformanceSuggestionThresholds = "useTestPerformanceSuggestionThresholds"  // Phase 7C.1
+        static let libraryRoots = "libraryRoots"  // Phase 8A
+        static let libraryItems = "libraryItems"  // Phase 8A
+        static let libraryLastScanDate = "libraryLastScanDate"  // Phase 8A
+        static let lastUsedLibraryItemID = "lastUsedLibraryItemID"  // Phase 8A
     }
 
     private init() {
@@ -125,6 +129,24 @@ final class SettingsStore {
         }
         dismissPerformanceSuggestions = UserDefaults.standard.bool(forKey: Keys.dismissPerformanceSuggestions)
         useTestPerformanceSuggestionThresholds = UserDefaults.standard.bool(forKey: Keys.useTestPerformanceSuggestionThresholds)
+        if let data = UserDefaults.standard.data(forKey: Keys.libraryRoots),
+           let decoded = try? JSONDecoder().decode([LibraryRoot].self, from: data) {
+            libraryRoots = decoded
+        } else {
+            libraryRoots = []
+        }
+        if let data = UserDefaults.standard.data(forKey: Keys.libraryItems),
+           let decoded = try? JSONDecoder().decode([LibraryItem].self, from: data) {
+            libraryItems = decoded
+        } else {
+            libraryItems = []
+        }
+        if let scanDate = UserDefaults.standard.object(forKey: Keys.libraryLastScanDate) as? Date {
+            libraryLastScanDate = scanDate
+        } else {
+            libraryLastScanDate = nil
+        }
+        lastUsedLibraryItemID = UserDefaults.standard.string(forKey: Keys.lastUsedLibraryItemID)
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -206,6 +228,50 @@ final class SettingsStore {
     var useTestPerformanceSuggestionThresholds: Bool {
         didSet {
             UserDefaults.standard.set(useTestPerformanceSuggestionThresholds, forKey: Keys.useTestPerformanceSuggestionThresholds)
+        }
+    }
+
+    /// Phase 8A: Security-scoped library root folders.
+    var libraryRoots: [LibraryRoot] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(libraryRoots) {
+                UserDefaults.standard.set(encoded, forKey: Keys.libraryRoots)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.libraryRoots)
+            }
+        }
+    }
+
+    /// Phase 8A: Indexed library catalog (ordered array for stable UI).
+    var libraryItems: [LibraryItem] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(libraryItems) {
+                UserDefaults.standard.set(encoded, forKey: Keys.libraryItems)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.libraryItems)
+            }
+        }
+    }
+
+    /// Phase 8A: Timestamp of the last full library rescan.
+    var libraryLastScanDate: Date? {
+        didSet {
+            if let libraryLastScanDate {
+                UserDefaults.standard.set(libraryLastScanDate, forKey: Keys.libraryLastScanDate)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.libraryLastScanDate)
+            }
+        }
+    }
+
+    /// Phase 8A: Most recently previewed or applied library item.
+    var lastUsedLibraryItemID: String? {
+        didSet {
+            if let lastUsedLibraryItemID {
+                UserDefaults.standard.set(lastUsedLibraryItemID, forKey: Keys.lastUsedLibraryItemID)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.lastUsedLibraryItemID)
+            }
         }
     }
 

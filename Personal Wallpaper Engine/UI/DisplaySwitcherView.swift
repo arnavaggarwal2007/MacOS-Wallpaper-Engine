@@ -2,6 +2,9 @@ import SwiftUI
 import AppKit
 
 struct DisplaySwitcherView: View {
+    private static let previewWidth: CGFloat = 214
+    private static let previewHeight: CGFloat = 104
+
     let selectedDisplayID: Binding<CGDirectDisplayID?>
     let displays: [DisplayCard]
     let isGloballyPaused: Bool
@@ -72,6 +75,7 @@ struct DisplaySwitcherView: View {
             }
             .padding(12)
             .frame(width: 238, alignment: .leading)
+            .clipped()
             .background {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(display.isActive ? DesignTokens.Colors.background.opacity(0.92) : DesignTokens.Colors.background.opacity(0.72))
@@ -97,11 +101,8 @@ struct DisplaySwitcherView: View {
                     .resizable()
                     .interpolation(.high)
                     .antialiased(true)
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-                    .padding(0)
-                    .background(DesignTokens.Colors.background.opacity(0.34))
+                    .aspectRatio(16 / 9, contentMode: .fill)
+                    .frame(width: Self.previewWidth, height: Self.previewHeight)
             } else {
                 LinearGradient(
                     colors: [
@@ -123,6 +124,7 @@ struct DisplaySwitcherView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .allowsHitTesting(false)
 
             if isGloballyPaused {
                 ZStack {
@@ -136,6 +138,7 @@ struct DisplaySwitcherView: View {
                     }
                     .foregroundColor(.white.opacity(0.92))
                 }
+                .allowsHitTesting(false)
             }
 
             VStack {
@@ -152,8 +155,10 @@ struct DisplaySwitcherView: View {
                 Spacer()
             }
             .padding(10)
+            .allowsHitTesting(false)
         }
-        .frame(height: 104)
+        .frame(width: Self.previewWidth, height: Self.previewHeight)
+        .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)

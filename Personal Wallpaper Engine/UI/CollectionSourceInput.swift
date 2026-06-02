@@ -9,6 +9,7 @@ struct CollectionSourceInput: View {
     let isDisplayBound: Bool
     let onDelete: () -> Void
     let onBrowse: () -> Void
+    var onLibraryBrowse: (() -> Void)? = nil
     @Binding var url: String
     @Binding var displayLabel: String?
     @Binding var displayIDFallback: Int?
@@ -59,9 +60,10 @@ struct CollectionSourceInput: View {
                 .accessibilityLabel("Remove source")
 
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         TextField("Source URL", text: $url)
                             .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: .infinity)
 
                         Button(action: onBrowse) {
                             Label("Browse", systemImage: "folder")
@@ -70,7 +72,18 @@ struct CollectionSourceInput: View {
                         .buttonStyle(.bordered)
                         .contentShape(Rectangle())
                         .accessibilityLabel("Browse for source")
+
+                        if let onLibraryBrowse {
+                            Button(action: onLibraryBrowse) {
+                                Label("Library", systemImage: "square.grid.2x2")
+                                    .labelStyle(.titleAndIcon)
+                            }
+                            .buttonStyle(.bordered)
+                            .contentShape(Rectangle())
+                            .accessibilityLabel("Pick from local library")
+                        }
                     }
+                    .padding(2)
 
                     if url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text("Enter a file path or URL, or use Browse to capture a bookmark automatically.")

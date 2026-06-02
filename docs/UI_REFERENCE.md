@@ -46,7 +46,7 @@ Preview-first, native macOS configuration window comparable to [Wallspace](https
 | Content | `TopUtilityBar` (Choose Wallpaper, Apply, sidebar toggle); scroll area with “Scroll for Displays” hint |
 | Overlay | Toggleable right sidebar — display name, wallpaper, collection/setup status, save setup, banners |
 
-**Scroll-reveal:** Display carousel (`DisplaySwitcherView`) mounts only when user scrolls past threshold (performance: no off-screen carousel decode; video pauses while scrolling).
+**Scroll-reveal:** Display carousel (`DisplaySwitcherView`) mounts when user scrolls past threshold; **local library horizontal strip** sits below the carousel (not above). Full library browse opens via **Browse All…** or toolbar **Browse Library** sheet.
 
 **Hit-testing:** Decorative layers must not block clicks; sidebar uses passthrough where configured.
 
@@ -121,13 +121,21 @@ Automated: `chunk7_smoke.sh`, `chunk7_regression.sh` — see [`V1_SIGNOFF.md`](V
 
 ---
 
-## Future UI (Version 2)
+## Version 2 UI (roadmap)
 
-Not in V1:
+**Complete (Phase 7):**
 
-- Local library grid (Phase 8) — integrate Home/Collections, not a fifth tab required
+- Performance profile selector — Settings tab
+- Battery & power policies — Settings tab
+- Diagnostics panel + suggestion banner — Settings + shell (Phase 7C)
+
+**Complete (Phase 8):**
+
+- Local library — Home: horizontal strip below display carousel; full browse via **Browse All…** sheet or toolbar **Browse Library**
+- Collection editor library picker; Settings → Local Library for folder roots
+
+**Planned:**
+
 - Quick mode selector (Phase 9) — Home top bar + menu bar
-- Performance / battery settings (Phase 7) — Settings sections
-- Diagnostics panel (Phase 7C)
 
 Polish-only tweaks remain optional without roadmap phase.

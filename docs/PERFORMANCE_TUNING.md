@@ -2,7 +2,7 @@
 
 **Purpose:** Track CPU/GPU/battery measurements and optimization experiments. Baseline copied from [`V1_SIGNOFF.md`](V1_SIGNOFF.md); all 7B changes compare against the same scenarios.
 
-**Status:** Phase 7 **complete and signed off** (7A–7G, 2026-06-01). Release benchmark matrix recorded. Phase 8 next.
+**Status:** Phase 7 **complete and signed off** (7A–7G, 2026-06-01). Release benchmark matrix recorded. Phase 8 (local library) **complete** (2026-06-01). New tuning work tracks with Phase 9+.
 
 **Reference clip (7B A/B):** 1080p H.264 MP4 — use the same file for every row (e.g. a typical wallpaper loop).
 

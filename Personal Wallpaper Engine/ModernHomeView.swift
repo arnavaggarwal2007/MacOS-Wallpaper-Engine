@@ -11,6 +11,7 @@ struct ModernHomeView: View {
     @State private var selectedDisplayID: CGDirectDisplayID?
     @State private var transientPerDisplayPreviewURL: URL?
     @State private var isSaveSetupModalPresented = false
+    @State private var isLibraryBrowserSheetPresented = false
     @State private var isSidebarVisible = true
     @State private var isDisplaySelectionModalPresented = false
     @State private var pendingVideoURL: URL?
@@ -19,6 +20,7 @@ struct ModernHomeView: View {
     @State private var pauseWallpaperPreview = false
     @State private var cachedDisplayCards: [DisplayCard] = []
     @State private var thumbnailLoadsInFlight: Set<String> = []
+    @State private var displayCardThumbnails: [String: NSImage] = [:]
 
     var body: some View {
         ScrollViewReader { scrollProxy in
@@ -58,7 +60,8 @@ struct ModernHomeView: View {
                 // Layer 1: Floating glass utility bar (fixed at top)
                 TopUtilityBar(
                     isSidebarVisible: $isSidebarVisible,
-                    onChooseWallpaper: { isFileImporterPresented = true }
+                    onChooseWallpaper: { isFileImporterPresented = true },
+                    onBrowseLibrary: { isLibraryBrowserSheetPresented = true }
                 )
                 .padding(.horizontal, 24)
                 .padding(.top, DesignTokens.Surfaces.mainTabBarReservedHeight + 8)
@@ -94,6 +97,10 @@ struct ModernHomeView: View {
             appModel.loadSavedCollections()
             await appModel.loadSavedSetups()
             appModel.ensurePerDisplayMode()
+            appModel.loadLibraryFromSettings()
+            if !appModel.libraryRoots.isEmpty, appModel.libraryItems.isEmpty {
+                _ = await appModel.rescanLibrary()
+            }
             syncSelectedDisplayIfNeeded()
         }
         .task(id: NSScreen.screens.map(\.displayID)) {
@@ -150,6 +157,10 @@ struct ModernHomeView: View {
         .sheet(isPresented: $isSaveSetupModalPresented) {
             SaveSetupModal(viewModel: appModel)
                 .frame(minWidth: 400, minHeight: 520)
+        }
+        .sheet(isPresented: $isLibraryBrowserSheetPresented) {
+            LibraryBrowserSheet()
+                .environmentObject(appModel)
         }
     }
 
@@ -222,6 +233,7 @@ struct ModernHomeView: View {
     }
 
     private static let displaysPanelScrollID = "home-displays-panel"
+    private static let displayCardPreviewMaxPixelSize: CGFloat = 428
 
     /// Reserves scroll space below the fold without rendering the carousel (avoids HUD/drawingGroup glitches).
     private var displaysPanelPlaceholderHeight: CGFloat {
@@ -229,31 +241,33 @@ struct ModernHomeView: View {
     }
 
     private func updateScrollRevealState(offsetY: CGFloat) {
-        let shouldPause = offsetY > 8
-        if shouldPause != pauseWallpaperPreview {
-            pauseWallpaperPreview = shouldPause
-        }
+        Task { @MainActor in
+            let shouldPause = offsetY > 8
+            if shouldPause != pauseWallpaperPreview {
+                pauseWallpaperPreview = shouldPause
+            }
 
-        if offsetY > DesignTokens.Surfaces.homeDisplaysRevealThreshold {
-            if !isDisplaysPanelVisible {
-                withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
-                    isDisplaysPanelVisible = true
+            if offsetY > DesignTokens.Surfaces.homeDisplaysRevealThreshold {
+                if !isDisplaysPanelVisible {
+                    withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+                        isDisplaysPanelVisible = true
+                    }
+                }
+                if showDisplaysScrollHint {
+                    showDisplaysScrollHint = false
+                }
+            } else if offsetY < DesignTokens.Surfaces.homeDisplaysHideThreshold {
+                if isDisplaysPanelVisible {
+                    withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+                        isDisplaysPanelVisible = false
+                    }
+                }
+                if !showDisplaysScrollHint {
+                    showDisplaysScrollHint = true
                 }
             }
-            if showDisplaysScrollHint {
-                showDisplaysScrollHint = false
-            }
-        } else if offsetY < DesignTokens.Surfaces.homeDisplaysHideThreshold {
-            if isDisplaysPanelVisible {
-                withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
-                    isDisplaysPanelVisible = false
-                }
-            }
-            if !showDisplaysScrollHint {
-                showDisplaysScrollHint = true
-            }
+            uiDebugLog("displays scroll offset=\(offsetY) visible=\(isDisplaysPanelVisible)")
         }
-        uiDebugLog("displays scroll offset=\(offsetY) visible=\(isDisplaysPanelVisible)")
     }
 
     /// Spacer keeps the carousel below the fold while total content height still exceeds the viewport.
@@ -282,18 +296,20 @@ struct ModernHomeView: View {
     }
 
     private func scheduleThumbnailLoad(for url: URL) {
-        if VideoWallpaperThumbnail.cachedImage(for: url) != nil { return }
         let key = url.standardizedFileURL.path
+        if displayCardThumbnails[key] != nil { return }
         guard !thumbnailLoadsInFlight.contains(key) else { return }
-        thumbnailLoadsInFlight.insert(key)
 
-        Task {
-            let image = await VideoWallpaperThumbnail.imageAsync(for: url)
-            await MainActor.run {
-                thumbnailLoadsInFlight.remove(key)
-                guard image != nil else { return }
-                cachedDisplayCards = buildDisplayCards()
-            }
+        Task { @MainActor in
+            thumbnailLoadsInFlight.insert(key)
+            let image = await WallpaperThumbnailLoader.imageAsync(
+                for: url,
+                maxPixelSize: Self.displayCardPreviewMaxPixelSize
+            )
+            thumbnailLoadsInFlight.remove(key)
+            guard let image else { return }
+            displayCardThumbnails[key] = image
+            cachedDisplayCards = buildDisplayCards()
         }
     }
 
@@ -489,6 +505,11 @@ struct ModernHomeView: View {
     private func displayPreviewImage(for displayID: CGDirectDisplayID, source: String, resolvedURL: URL?) -> NSImage? {
         if let resolvedURL {
             if resolvedURL.isFileURL {
+                let key = resolvedURL.standardizedFileURL.path
+                if let cached = displayCardThumbnails[key] {
+                    return cached
+                }
+
                 let didStartScope = resolvedURL.startAccessingSecurityScopedResource()
                 defer {
                     if didStartScope {
@@ -496,11 +517,14 @@ struct ModernHomeView: View {
                     }
                 }
 
-                if let thumbnail = thumbnailForLocalFile(at: resolvedURL) {
-                    return thumbnail
+                if VideoWallpaperThumbnail.isVideoFile(resolvedURL) {
+                    return NSWorkspace.shared.icon(for: .movie)
                 }
 
-                if let image = NSImage(contentsOf: resolvedURL), image.size != .zero {
+                if let image = WallpaperThumbnailLoader.image(
+                    for: resolvedURL,
+                    maxPixelSize: Self.displayCardPreviewMaxPixelSize
+                ) {
                     return image
                 }
 
@@ -571,6 +595,35 @@ struct ModernHomeView: View {
         }
     }
 
+    private var homeLibrarySection: some View {
+        GlassCardView(title: "Local Library") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
+                    Text("Quick pick from indexed folders — open Browse All for search and filters.")
+                        .font(DesignTokens.Typography.subtitle)
+                        .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    Spacer(minLength: 8)
+                    Button {
+                        Task { await appModel.applySelectedLibraryItemToFocusedDisplay() }
+                    } label: {
+                        Label("Apply", systemImage: "bolt.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(appModel.selectedLibraryItemID == nil || appModel.isApplyingWallpaper)
+                    .help("Apply the selected library video to the focused display")
+                    Button {
+                        isLibraryBrowserSheetPresented = true
+                    } label: {
+                        Label("Browse All…", systemImage: "square.grid.2x2")
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                LibraryBrowserView(mode: .browse, layout: .strip, showsApplyButton: false)
+            }
+        }
+    }
+
     @ViewBuilder
     private var scrollContentSection: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
@@ -612,6 +665,8 @@ struct ModernHomeView: View {
                         }
                 }
             }
+
+            homeLibrarySection
         }
     }
 
@@ -652,7 +707,6 @@ struct ModernHomeView: View {
             return cached
         }
 
-        scheduleThumbnailLoad(for: url)
         return NSWorkspace.shared.icon(for: .movie)
     }
 }

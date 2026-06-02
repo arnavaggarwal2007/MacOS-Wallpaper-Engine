@@ -76,6 +76,18 @@ final class AppViewModel: ObservableObject {
     @Published var savedSetups: [String: SavedSetup] = [:]
     @Published var selectedSetupName: String?
     
+    // MARK: - Phase 8 Local Library
+    @Published var libraryRoots: [LibraryRoot] = []
+    @Published var libraryItems: [LibraryItem] = []
+    @Published var selectedLibraryItemID: String?
+    @Published var librarySearchText: String = ""
+    @Published var libraryFavoritesOnly: Bool = false
+    @Published var libraryRootFilterID: String?
+    @Published private(set) var isLibraryScanning = false
+    @Published var libraryLastScanDate: Date?
+    /// Temporary hero preview URL when browsing the library before apply.
+    @Published var transientPreviewURL: URL?
+    
     // MARK: - Phase 7 Unified Display State
     @Published var displayWallpaperState: [CGDirectDisplayID: DisplayWallpaperInfo] = [:]
     /// Bumped when per-display sources/bookmarks change so Home previews refresh.
@@ -87,6 +99,7 @@ final class AppViewModel: ObservableObject {
 
     private let wallpaperManager: WallpaperManager
     private let settings: SettingsStore
+    private let localLibraryManager = LocalLibraryManager.shared
     private let loginItemManager = LoginItemManager()  // Phase 5G
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "AppViewModel")
     private var hasStarted = false
@@ -320,8 +333,11 @@ final class AppViewModel: ObservableObject {
         resolvePlaybackURL(for: displayID)
     }
 
-    /// Resolved URL for hero preview — uses the same bookmark/path resolution as wallpaper playback.
+    /// Resolved URL for hero preview — uses transient library preview, then bookmark/path resolution.
     func heroPreviewURL(forDisplayID displayID: CGDirectDisplayID?) -> URL? {
+        if let transientPreviewURL {
+            return transientPreviewURL
+        }
         let targetID = displayID ?? focusedDisplayID ?? NSScreen.screens.first?.displayID
         guard let targetID else { return nil }
         return previewURL(forDisplayID: targetID)
@@ -684,6 +700,7 @@ final class AppViewModel: ObservableObject {
 
         loadSavedCollections()
         refreshSetupState()
+        loadLibraryFromSettings()
 
         await wallpaperManager.setMuted(isMuted)
         await wallpaperManager.setScalingMode(scalingMode)
@@ -2480,6 +2497,157 @@ final class AppViewModel: ObservableObject {
     @MainActor
     func initializeDisplayState() async {
         await refreshDisplayState()
+    }
+
+    // MARK: - Phase 8 Local Library
+
+    func loadLibraryFromSettings() {
+        localLibraryManager.loadFromSettings()
+        libraryRoots = localLibraryManager.roots
+        libraryItems = localLibraryManager.items
+        libraryLastScanDate = settings.libraryLastScanDate
+        selectedLibraryItemID = settings.lastUsedLibraryItemID
+    }
+
+    var filteredLibraryItems: [LibraryItem] {
+        libraryItems.filter { item in
+            if libraryFavoritesOnly, !item.favorited { return false }
+            if let rootID = libraryRootFilterID, item.rootID != rootID { return false }
+            let query = librarySearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if query.isEmpty { return true }
+            let haystack = "\(item.displayName) \(item.rootDisplayName) \(item.filePath)".lowercased()
+            return haystack.contains(query.lowercased())
+        }
+    }
+
+    func addLibraryRoot(at url: URL) async {
+        switch localLibraryManager.addLibraryRoot(at: url) {
+        case .success:
+            libraryRoots = localLibraryManager.roots
+            errorMessage = nil
+            statusMessage = "Added library folder: \(url.lastPathComponent)"
+            _ = await rescanLibrary()
+        case .failure(let error):
+            errorMessage = error.errorDescription
+            statusMessage = nil
+        }
+    }
+
+    func removeLibraryRoot(id: String) async {
+        switch localLibraryManager.removeLibraryRoot(id: id) {
+        case .success:
+            libraryRoots = localLibraryManager.roots
+            libraryItems = localLibraryManager.items
+            if libraryRootFilterID == id {
+                libraryRootFilterID = nil
+            }
+            if let selected = selectedLibraryItemID,
+               libraryItems.first(where: { $0.id == selected }) == nil {
+                selectedLibraryItemID = nil
+                transientPreviewURL = nil
+            }
+            statusMessage = "Removed library folder."
+            errorMessage = nil
+        case .failure(let error):
+            errorMessage = error.errorDescription
+            statusMessage = nil
+        }
+    }
+
+    @discardableResult
+    func rescanLibrary() async -> Result<[LibraryItem], WallpaperError> {
+        isLibraryScanning = true
+        defer { isLibraryScanning = false }
+        let result = await localLibraryManager.rescanLibrary()
+        switch result {
+        case .success(let items):
+            libraryItems = items
+            libraryLastScanDate = settings.libraryLastScanDate
+            statusMessage = "Library scan complete — \(items.filter { !$0.isMissing }.count) videos indexed."
+            errorMessage = nil
+        case .failure(let error):
+            errorMessage = error.errorDescription
+        }
+        return result
+    }
+
+    func toggleLibraryFavorite(itemID: String) {
+        switch localLibraryManager.toggleFavorite(itemID: itemID) {
+        case .success(let item):
+            if let index = libraryItems.firstIndex(where: { $0.id == itemID }) {
+                libraryItems[index] = item
+            }
+        case .failure(let error):
+            errorMessage = error.errorDescription
+        }
+    }
+
+    func previewLibraryItem(_ item: LibraryItem) {
+        guard !item.isMissing else {
+            errorMessage = WallpaperError.libraryItemUnavailable(path: item.filePath).errorDescription
+            return
+        }
+        guard let url = localLibraryManager.resolveURL(for: item) else {
+            errorMessage = WallpaperError.libraryItemUnavailable(path: item.filePath).errorDescription
+            return
+        }
+        selectedLibraryItemID = item.id
+        transientPreviewURL = url
+        localLibraryManager.markLastUsed(itemID: item.id)
+        localLibraryManager.refreshBookmark(for: item.id, url: url)
+        libraryItems = localLibraryManager.items
+        selectVideo(at: url)
+        statusMessage = "Previewing: \(item.displayName)"
+        errorMessage = nil
+    }
+
+    func clearLibraryPreview() {
+        transientPreviewURL = nil
+    }
+
+    func applyLibraryItem(_ item: LibraryItem, displayIDs: [CGDirectDisplayID]) async -> Result<Void, WallpaperError> {
+        guard !item.isMissing else {
+            return .failure(.libraryItemUnavailable(path: item.filePath))
+        }
+        guard let url = localLibraryManager.resolveURL(for: item) else {
+            return .failure(.libraryItemUnavailable(path: item.filePath))
+        }
+        previewLibraryItem(item)
+        let result = await applyWallpaperToDisplays(url: url, displayIDs: displayIDs)
+        if case .success = result {
+            transientPreviewURL = nil
+            notifyDisplaySourcesChanged()
+        }
+        return result
+    }
+
+    func applySelectedLibraryItemToFocusedDisplay() async {
+        guard let itemID = selectedLibraryItemID,
+              let item = libraryItems.first(where: { $0.id == itemID }) else {
+            errorMessage = "Select a library video to apply."
+            return
+        }
+        guard let displayID = focusedDisplayID ?? NSScreen.screens.first?.displayID else {
+            errorMessage = "No display available."
+            return
+        }
+        _ = await applyLibraryItem(item, displayIDs: [displayID])
+    }
+
+    func libraryThumbnail(for item: LibraryItem) async -> NSImage? {
+        await localLibraryManager.thumbnail(for: item)
+    }
+
+    func libraryCacheSummary() -> String {
+        let bytes = localLibraryManager.cacheByteCount()
+        let count = localLibraryManager.cacheEntryCount()
+        let megabytes = Double(bytes) / (1024 * 1024)
+        return String(format: "%d thumbnails · %.1f MB", count, megabytes)
+    }
+
+    func clearLibraryThumbnailCache() {
+        LibraryThumbnailCache.shared.clearAll()
+        statusMessage = "Library thumbnail cache cleared."
     }
 }
 
