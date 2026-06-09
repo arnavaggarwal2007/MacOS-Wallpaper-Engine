@@ -2363,6 +2363,8 @@ final class AppViewModel: ObservableObject {
             transitionToCustomMode()
         }
 
+        evaluateQuickModeDrift(trigger: .setupRestored)
+
         if wallpaperApplicationErrors.isEmpty {
             if appliedDisplays.isEmpty {
                 statusMessage = "Setup '\(name)' settings restored. No wallpapers were configured for connected displays."
@@ -2523,6 +2525,8 @@ final class AppViewModel: ObservableObject {
         
         // Sync preview state after successful apply
         await refreshDisplayState()
+        notifyDisplaySourcesChanged()
+        evaluateQuickModeDrift(trigger: .perDisplaySourceChanged)
         statusMessage = "Wallpaper applied to \(displayIDs.count) display\(displayIDs.count == 1 ? "" : "s")"
         return .success(())
     }
@@ -2619,16 +2623,16 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    func returnToLastCommittedQuickMode() async {
+    func returnToLastCommittedQuickMode(activateApp: Bool = false) async {
         let mode = settings.lastNonCustomQuickMode
         if mode == .pinnedSetup, let name = pinnedSetupName ?? settings.pinnedSetupName {
-            await applyQuickMode(.pinnedSetup, pinnedSetup: name)
+            await applyQuickMode(.pinnedSetup, pinnedSetup: name, activateApp: activateApp)
         } else {
-            await applyQuickMode(mode)
+            await applyQuickMode(mode, activateApp: activateApp)
         }
     }
 
-    func applyQuickMode(_ mode: QuickMode, pinnedSetup: String? = nil) async {
+    func applyQuickMode(_ mode: QuickMode, pinnedSetup: String? = nil, activateApp: Bool = false) async {
         guard mode != .custom else { return }
 
         isQuickModeTransitionActive = true
@@ -2669,16 +2673,18 @@ final class AppViewModel: ObservableObject {
             break
         }
 
-        refreshHeroPreviewAfterQuickMode()
+        refreshHeroPreviewAfterQuickMode(activateApp: activateApp)
     }
 
-    private func refreshHeroPreviewAfterQuickMode() {
+    private func refreshHeroPreviewAfterQuickMode(activateApp: Bool = false) {
         quickModeHeroRecoveryTask?.cancel()
         heroPreviewVisibility.publishImmediately()
         notifyDisplaySourcesChanged()
         heroPreviewAttachToken += 1
         heroPreviewVisibilityRevision += 1
-        NSApp.activate(ignoringOtherApps: true)
+        if activateApp {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         quickModeHeroRecoveryTask = Task { @MainActor [weak self] in
             do {
                 try await Task.sleep(nanoseconds: 350_000_000)
@@ -2717,11 +2723,6 @@ final class AppViewModel: ObservableObject {
 
     func isSetupPinned(_ name: String) -> Bool {
         pinnedSetupName == name
-    }
-
-    func setPinnedSetupName(_ name: String?) {
-        pinnedSetupName = name
-        settings.pinnedSetupName = name
     }
 
     private func commitQuickMode(_ mode: QuickMode) {
@@ -3030,8 +3031,6 @@ final class AppViewModel: ObservableObject {
         statusMessage = "Library thumbnail cache cleared."
     }
 }
-
-// MARK: - System Health Status (Chunk 4E)
 
 // MARK: - System Health Status (Chunk 4E)
 enum SystemHealthStatus {

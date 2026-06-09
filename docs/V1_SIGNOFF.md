@@ -23,8 +23,11 @@
 | Hotplug / launch / setup persistence | **Pass** | See [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) |
 | Phase 7A power policy | **Pass** | [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) |
 | Phase 7A playback UX | **Pass** | 2026-05-22 — launch auto-play, frozen-frame pause, hero preview sync; matrix rows 10–11, 15–16 |
+| Phase 9A quick modes | **Pass (build + code)** | [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) — manual hero/pin rows pending owner |
+| Phase 9B menu bar | **Pass (partial)** | Thumbnail/status confirmed; full matrix in PHASE_9_REGRESSION |
+| Phase 9 post-ship fixes | **Pass (build + code)** | Hero attach token, pin UX, sidebar persistence, Settings cleanup |
 
-**Recommendation:** V1 + **Phase 7 complete (7A–7G)** + **Phase 8 complete (8A–8C)**. Phase **9** (quick modes) next. Engine results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md); library regression in [`PHASE_8_LIBRARY.md`](PHASE_8_LIBRARY.md). Hero pause freeze-frame (2026-06-02): KB `Bug-Hero-Pause-Double-Frame.md`.
+**Recommendation:** V1 + **Phases 7–9 complete (9A–9B, 2026-06-09)**. **Phase 10** (lock-screen research) next. Engine results in [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md); library regression in [`PHASE_8_LIBRARY.md`](PHASE_8_LIBRARY.md); Phase 9 matrix in [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md).
 
 ---
 
@@ -37,6 +40,7 @@
 | Local Debug + Release build (7G closeout) | Xcode Debug + Release | Pass | 2026-06-01 |
 | CI regression | GitHub Actions `chunk7_regression.yml` on `1cfe02f` | Pass | 2026-05-21 |
 | Swift concurrency (CI) | Xcode 16.4 universal build | Pass (MenuBar + thumbnail fixes) | 2026-05-21 |
+| Phase 9 close-out Debug build | `xcodebuild -scheme "Personal Wallpaper Engine" Debug` | Pass | 2026-06-09 |
 
 ---
 
@@ -87,6 +91,18 @@ Legend: **P** = Pass, **D** = Defer / not tested, **F** = Fail.
 | Management tabs: blur/scrim readability | P | |
 | Legacy ContentView removed | P | Phase 4d |
 
+### Phase 9 (quick modes + menu bar)
+
+| Test | Status | Notes |
+|------|--------|-------|
+| Quick Mode selector (Single All, Per Display, Pinned, Custom drift) | P* | *Build + code; hero manual in [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) |
+| Hero stable after Single All / Per Display switch | M | Third-pass attach token fix |
+| Setup pin/unpin + Quick Mode pinned item | M | |
+| Home sidebar default closed + persistence | M | |
+| Menu bar thumbnail + Quick Mode submenus | P* | Thumbnail/status user-confirmed |
+| Settings: no video wallpaper picker | M | Web URL when web renderer |
+| Show Main Window / Preferences activation | M | |
+
 ### Deferred / extended matrix
 
 Full stress, diagnostics-flag, and 1-hour soak tests in `PRODUCTION_TEST_CHECKLIST.md` remain **D** unless you need release-grade assurance. Re-run before App Store distribution.
@@ -134,7 +150,7 @@ Record **before** Version 2 Phase 7 optimization. Use the same test clip and dis
 - No automated XCTest suite; regression is build + smoke + manual.
 - WebRenderer / VideoRenderer Swift 6 concurrency **warnings** on Xcode 16.4 (not errors).
 - Resource usage improved vs V1 baseline on Balanced (see [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)); Phase **7C** adds diagnostics UI.
-- No local library index, quick modes, lock screen — **Version 2**.
+- **Phase 8** local library and **Phase 9** quick modes + menu bar are **shipped** (2026-06-09). Lock-screen integration remains **Phase 10** (research).
 
 ---
 
@@ -154,4 +170,4 @@ Record **before** Version 2 Phase 7 optimization. Use the same test clip and dis
 - [`PRODUCTION_TEST_CHECKLIST.md`](../PRODUCTION_TEST_CHECKLIST.md) — full matrix
 - [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) — next phases
 - [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) — 7A playback + power matrix
-- [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) — 7B baseline and experiment log
+- [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) — Phase 9 manual matrix

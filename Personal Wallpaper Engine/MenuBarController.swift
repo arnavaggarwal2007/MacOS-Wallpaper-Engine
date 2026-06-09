@@ -409,17 +409,23 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
 
     @objc private func handleQuickModeAction(_ sender: NSMenuItem) {
         guard let viewModel, let raw = sender.representedObject as? String, let mode = QuickMode(rawValue: raw) else { return }
-        Task { await viewModel.applyQuickMode(mode) }
+        runAfterMenuDismiss { await viewModel.applyQuickMode(mode, activateApp: true) }
     }
 
     @objc private func handlePinnedSetupAction(_ sender: NSMenuItem) {
         guard let viewModel else { return }
-        Task { await viewModel.applyQuickMode(.pinnedSetup) }
+        runAfterMenuDismiss { await viewModel.applyQuickMode(.pinnedSetup, activateApp: true) }
     }
 
     @objc private func handleReturnToLastModeAction() {
         guard let viewModel else { return }
-        Task { await viewModel.returnToLastCommittedQuickMode() }
+        runAfterMenuDismiss { await viewModel.returnToLastCommittedQuickMode(activateApp: true) }
+    }
+
+    private func runAfterMenuDismiss(_ operation: @escaping () async -> Void) {
+        DispatchQueue.main.async {
+            Task { await operation() }
+        }
     }
 
     @objc private func handlePauseUntilPluggedInAction() {

@@ -331,4 +331,42 @@
 
 ---
 
+## Phase 9 — Quick Modes and Menu Bar (2026-06-09)
+
+**Reference:** [`docs/PHASE_9_QUICK_MODES.md`](docs/PHASE_9_QUICK_MODES.md), [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md)
+
+### Quick Modes (9A)
+
+- [ ] Home toolbar Quick Mode selector shows Single All, Per Display, Pinned Setup
+- [ ] Single All mirrors wallpaper; skips reapply when displays already unified
+- [ ] Per Display commits mode without unnecessary wallpaper churn
+- [ ] Pinned Setup restores pinned setup; unpinned shows "Pin a setup in Setups…"
+- [ ] Manual per-display/collection changes drift to Custom
+- [ ] Return to Last Mode works from Custom
+- [ ] Quick mode persists across relaunch
+
+### Hero preview (post-ship)
+
+- [ ] Single All ↔ Per Display — hero never stays black (scrolled and un-scrolled)
+- [ ] Menu bar Quick Mode switch — hero stable
+
+### Setups pin + sidebar
+
+- [ ] Pin/Unpin on Setups tab; Quick Mode shows one pinned item
+- [ ] Sidebar default closed; persists across tab switch and relaunch
+
+### Menu bar (9B)
+
+- [ ] Thumbnail header 248×160 with full caption and status
+- [ ] Quick Mode, Apply Saved, Recents submenus work
+- [ ] Pause Until Plugged In / Battery Saver shortcuts
+- [ ] Show Main Window / Preferences bring app forward
+
+### Settings scope
+
+- [ ] No video wallpaper picker in Settings (assign on Home)
+- [ ] Web URL + Apply when web renderer selected
+
+---
+
 **End of Checklist**

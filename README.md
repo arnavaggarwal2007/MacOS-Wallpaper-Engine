@@ -31,6 +31,7 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 | [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) | UI spec (tabs, layout, flows) |
 | [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 (V2) |
 | [`docs/PHASE_9_QUICK_MODES.md`](docs/PHASE_9_QUICK_MODES.md) | Phase 9 quick modes + menu bar |
+| [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md) | Phase 9 regression matrix |
 | [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Full manual test matrix |
 | [`docs/archive/`](docs/archive/) | Historical roadmaps and phase validation notes |
 

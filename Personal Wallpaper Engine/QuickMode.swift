@@ -58,8 +58,6 @@ struct ShellNavigationRequest: Equatable {
     let tab: ShellTab?
     let activateWindow: Bool
 
-    static let showMainWindow = ShellNavigationRequest(tab: nil, activateWindow: true)
-
     static func open(tab: ShellTab) -> ShellNavigationRequest {
         ShellNavigationRequest(tab: tab, activateWindow: true)
     }

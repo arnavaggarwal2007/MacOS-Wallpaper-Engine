@@ -73,3 +73,5 @@ KB: `Wallpaper Engine KB/40 Bugs/Bug-Phase9-Quick-Mode-Hero-And-Menu-Bar.md`
 - Menu bar thumbnail visible on open
 - Show Main Window / Preferences bring app forward when another app is active
 - Menu bar: apply collection, setup, recent, quick mode still work
+
+Full matrix: [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md)

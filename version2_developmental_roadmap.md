@@ -113,7 +113,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ### Phase 7C — Auto‑Tuning and Performance Diagnostics
 
-**Status:** **Complete** (2026-05-23). Extensions **7D–7G complete** (2026-06-01). Phase 8 complete; Phase 9 is next.
+**Status:** **Complete** (2026-05-23). Extensions **7D–7G complete** (2026-06-01). Phases 8–9 complete (2026-06-09).
 
 **Scope:** Auto‑tuning heuristics and a lightweight diagnostics panel to help users understand and control performance — **not** further decode optimization.
 
@@ -254,7 +254,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ## Phase 9 Roadmap — Quick Modes and UX Streamlining
 
-**Status:** **Complete** (9A–9B, 2026-06-09). Post-ship fixes: hero pause on mode switch, menu preview layout, window activation — KB `Bug-Phase9-Quick-Mode-Hero-And-Menu-Bar`.
+**Status:** **Complete** (9A–9B, 2026-06-09). Post-ship fixes (three passes): hero attach token, pin UX, sidebar persistence, Settings scope — KB `Bug-Phase9-Quick-Mode-Hero-And-Menu-Bar`, [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md).
 
 **Goal:** Layer simple, high‑level presets on top of your powerful configuration so it feels as approachable as consumer apps like Wallspace, without sacrificing your engine’s flexibility.[^3][^2]
 
