@@ -56,6 +56,7 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         var attachedURLKey: String?
         private var pendingDeferredAttach = false
         private var pendingLayoutWork = false
+        private var pendingHoldFrameRetry = false
 
         func syncAttachState() {
             guard let appModel, let container = containerView, let url = videoURL else { return }
@@ -71,6 +72,12 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
                 if isAttached,
                    attachedURLKey == url.absoluteString,
                    containerView === container {
+                    if !appModel.isHeroPreviewAttached(to: container) {
+                        isAttached = false
+                        attachedURLKey = nil
+                        attemptAttach()
+                        return
+                    }
                     appModel.setHeroPreviewLayerHidden(false)
                     appModel.updateHeroPreviewLayerFrame(in: container)
                     return
@@ -87,6 +94,12 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
             if isAttached,
                attachedURLKey == urlKey,
                containerView === container {
+                if !appModel.isHeroPreviewAttached(to: container) {
+                    isAttached = false
+                    attachedURLKey = nil
+                    attemptAttach()
+                    return
+                }
                 appModel.setHeroPreviewLayerHidden(false)
                 appModel.updateHeroPreviewLayerFrame(in: container)
                 return
@@ -113,6 +126,12 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
         private func handleLayoutDeferred() {
             guard !isPlaybackPaused || holdDesktopFrame else { return }
             if isAttached, let container = containerView {
+                if appModel?.isHeroPreviewAttached(to: container) != true {
+                    isAttached = false
+                    attachedURLKey = nil
+                    attemptAttach()
+                    return
+                }
                 appModel?.setHeroPreviewLayerHidden(false)
                 appModel?.updateHeroPreviewLayerFrame(in: container)
                 return
@@ -137,7 +156,20 @@ struct UnifiedVideoPreviewView: NSViewRepresentable {
                 reportAttachState(true)
             } else {
                 attachedURLKey = nil
-                reportAttachState(false)
+                if holdDesktopFrame, !pendingHoldFrameRetry {
+                    scheduleHoldFrameRetry()
+                } else {
+                    reportAttachState(false)
+                }
+            }
+        }
+
+        private func scheduleHoldFrameRetry() {
+            pendingHoldFrameRetry = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                guard let self else { return }
+                self.pendingHoldFrameRetry = false
+                self.attemptAttach()
             }
         }
 

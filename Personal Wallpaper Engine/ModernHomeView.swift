@@ -12,7 +12,6 @@ struct ModernHomeView: View {
     @State private var transientPerDisplayPreviewURL: URL?
     @State private var isSaveSetupModalPresented = false
     @State private var isLibraryBrowserSheetPresented = false
-    @State private var isSidebarVisible = true
     @State private var isDisplaySelectionModalPresented = false
     @State private var pendingVideoURL: URL?
     @State private var showDisplaysScrollHint = true
@@ -59,7 +58,10 @@ struct ModernHomeView: View {
 
                 // Layer 1: Floating glass utility bar (fixed at top)
                 TopUtilityBar(
-                    isSidebarVisible: $isSidebarVisible,
+                    isSidebarVisible: Binding(
+                        get: { appModel.isHomeSidebarVisible },
+                        set: { appModel.setHomeSidebarVisible($0) }
+                    ),
                     onChooseWallpaper: { isFileImporterPresented = true },
                     onBrowseLibrary: { isLibraryBrowserSheetPresented = true }
                 )
@@ -77,7 +79,7 @@ struct ModernHomeView: View {
                 }
 
                 // Layer 2: Toggleable sidebar overlay
-                if isSidebarVisible {
+                if appModel.isHomeSidebarVisible {
                     HStack(alignment: .top, spacing: 0) {
                         Spacer()
                             .allowsHitTesting(false)
@@ -173,7 +175,7 @@ struct ModernHomeView: View {
 
                 Spacer()
 
-                Button(action: { withAnimation { isSidebarVisible = false } }) {
+                Button(action: { withAnimation { appModel.setHomeSidebarVisible(false) } }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
                         .foregroundColor(DesignTokens.Colors.textSecondary)

@@ -33,6 +33,11 @@ final class SettingsStore {
         static let libraryItems = "libraryItems"  // Phase 8A
         static let libraryLastScanDate = "libraryLastScanDate"  // Phase 8A
         static let lastUsedLibraryItemID = "lastUsedLibraryItemID"  // Phase 8A
+        static let quickMode = "quickMode"  // Phase 9A
+        static let lastNonCustomQuickMode = "lastNonCustomQuickMode"  // Phase 9A
+        static let pinnedSetupName = "pinnedSetupName"  // Phase 9A
+        static let recentLibraryItemIDs = "recentLibraryItemIDs"  // Phase 9B
+        static let homeSidebarVisible = "homeSidebarVisible"
     }
 
     private init() {
@@ -147,6 +152,26 @@ final class SettingsStore {
             libraryLastScanDate = nil
         }
         lastUsedLibraryItemID = UserDefaults.standard.string(forKey: Keys.lastUsedLibraryItemID)
+        if let raw = UserDefaults.standard.string(forKey: Keys.quickMode),
+           let mode = QuickMode(rawValue: raw) {
+            quickMode = mode
+        } else {
+            quickMode = .perDisplayCustom
+        }
+        if let raw = UserDefaults.standard.string(forKey: Keys.lastNonCustomQuickMode),
+           let mode = QuickMode(rawValue: raw), mode != .custom {
+            lastNonCustomQuickMode = mode
+        } else {
+            lastNonCustomQuickMode = .perDisplayCustom
+        }
+        pinnedSetupName = UserDefaults.standard.string(forKey: Keys.pinnedSetupName)
+        if let data = UserDefaults.standard.data(forKey: Keys.recentLibraryItemIDs),
+           let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            recentLibraryItemIDs = decoded
+        } else {
+            recentLibraryItemIDs = []
+        }
+        homeSidebarVisible = UserDefaults.standard.object(forKey: Keys.homeSidebarVisible) as? Bool ?? false
     }
 
     // Per-display mapping: displayID (as string) -> URL string
@@ -273,6 +298,55 @@ final class SettingsStore {
                 UserDefaults.standard.removeObject(forKey: Keys.lastUsedLibraryItemID)
             }
         }
+    }
+
+    /// Phase 9A: Active quick mode preset (`.custom` when manual changes diverge).
+    var quickMode: QuickMode {
+        didSet { UserDefaults.standard.set(quickMode.rawValue, forKey: Keys.quickMode) }
+    }
+
+    /// Phase 9A: Last user-selected mode before drifting to `.custom`.
+    var lastNonCustomQuickMode: QuickMode {
+        didSet {
+            let stored = lastNonCustomQuickMode == .custom ? QuickMode.perDisplayCustom : lastNonCustomQuickMode
+            UserDefaults.standard.set(stored.rawValue, forKey: Keys.lastNonCustomQuickMode)
+        }
+    }
+
+    /// Phase 9A: Setup name used when `quickMode == .pinnedSetup`.
+    var pinnedSetupName: String? {
+        didSet {
+            if let pinnedSetupName {
+                UserDefaults.standard.set(pinnedSetupName, forKey: Keys.pinnedSetupName)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.pinnedSetupName)
+            }
+        }
+    }
+
+    /// Phase 9B: Recent library items (most recent first, capped in `recordRecentLibraryItem`).
+    var recentLibraryItemIDs: [String] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(recentLibraryItemIDs) {
+                UserDefaults.standard.set(encoded, forKey: Keys.recentLibraryItemIDs)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.recentLibraryItemIDs)
+            }
+        }
+    }
+
+    /// Home overlay sidebar visibility (persisted; default closed).
+    var homeSidebarVisible: Bool {
+        didSet { UserDefaults.standard.set(homeSidebarVisible, forKey: Keys.homeSidebarVisible) }
+    }
+
+    func recordRecentLibraryItem(id: String, maxCount: Int = 10) {
+        var recents = recentLibraryItemIDs.filter { $0 != id }
+        recents.insert(id, at: 0)
+        if recents.count > maxCount {
+            recents = Array(recents.prefix(maxCount))
+        }
+        recentLibraryItemIDs = recents
     }
 
     // Per-display mapping: displayID (as string) -> scaling mode

@@ -70,17 +70,12 @@ struct SettingsTabView: View {
                                     .foregroundStyle(DesignTokens.Colors.textSecondary)
                             }
                         }
-                    }
-                }
 
-                GlassCardView(title: "Wallpaper Source") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(appModel.selectedVideoPath.isEmpty ? "No video selected" : appModel.selectedVideoPath)
-                            .font(DesignTokens.Typography.subtitle)
-                            .foregroundColor(DesignTokens.Colors.textSecondary)
-                            .lineLimit(3)
-
-                        if appModel.rendererMode == .web {
+                        if appModel.rendererMode == .video {
+                            Text("Assign video wallpapers on the Home tab — Choose Wallpaper, Browse Library, or the display cards.")
+                                .font(.caption)
+                                .foregroundStyle(DesignTokens.Colors.textSecondary)
+                        } else {
                             VStack(alignment: .leading, spacing: 8) {
                                 Label("Web Source URL", systemImage: "globe")
                                     .font(DesignTokens.Typography.subtitle)
@@ -102,21 +97,6 @@ struct SettingsTabView: View {
                                     .disabled(appModel.webURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isApplyingWallpaper)
                                 }
                             }
-                        } else {
-                            HStack(spacing: 10) {
-                                Button(action: { isFileImporterPresented = true }) {
-                                    Label("Choose Video", systemImage: "folder.badge.plus")
-                                }
-
-                                Button(action: { Task { await appModel.applyWallpaperFromSelection() } }) {
-                                    Label("Apply to All Displays", systemImage: "checkmark.circle.fill")
-                                }
-                                .disabled(appModel.selectedVideoPath.isEmpty || appModel.isApplyingWallpaper)
-                            }
-
-                            Text("Assign per display on the Home tab, or apply this source to every connected display here.")
-                                .font(.caption)
-                                .foregroundColor(DesignTokens.Colors.textSecondary)
                         }
                     }
                 }

@@ -344,6 +344,8 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 
 ### Hero pause freeze-frame (2026-06-02, v2)
 
+**Canonical doc.** KB: `40 Bugs/Bug-Hero-Pause-Double-Frame.md`, hub `40 Bugs/00 Hero Preview and Playback Issues.md`; feature `30 Features/Feature-V2-Engine-Performance.md`.
+
 - **v1 gap:** Async snapshot + nil-image window still mounted hidden `AVPlayerLayer`; `AVAssetImageGenerator` crop ≠ `resizeAspectFill`; `transientPreviewURL` could disagree with desktop decode; dual-display different files showed split seam.
 - **Global user pause (`shouldShowPausedChrome`):** Shell hero uses `shellHeroPreviewURL` (applied wallpaper only); **visible** unified `AVPlayerLayer` via `holdDesktopFrame` — no generator snapshot.
 - **Policy/unfocus/scroll pause:** Static snapshot at `player.currentTime()` with generator tolerances; black placeholder until loaded; `detachHeroPreviewLayer` — never hidden layer + bitmap stack.

@@ -119,15 +119,20 @@ struct HeroWallpaperView: View {
         .onChange(of: videoURL?.absoluteString) { _, _ in
             unifiedAttachFailed = false
         }
-    }
-
-    private var policyPausePlaceholder: some View {
-        Color.black
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func detachHeroPreviewForPolicyPause() {
-        appModel.detachHeroPreviewLayer()
+        .onChange(of: appModel.heroPreviewVisibilityRevision) { _, _ in
+            unifiedAttachFailed = false
+        }
+        .onChange(of: appModel.displaySourcesVersion) { _, _ in
+            unifiedAttachFailed = false
+        }
+        .onChange(of: appModel.heroPreviewAttachToken) { _, _ in
+            unifiedAttachFailed = false
+        }
+        .onChange(of: isPlaybackPaused) { wasPaused, isPaused in
+            if wasPaused, !isPaused {
+                unifiedAttachFailed = false
+            }
+        }
     }
 
     private func heroStaticImage(_ image: NSImage) -> some View {
@@ -165,6 +170,10 @@ struct HeroWallpaperView: View {
         usesUnifiedDesktopDecode && isPlaybackPaused && !isGlobalDesktopPaused
     }
 
+    private var heroAttachIdentity: String {
+        "\(appModel.heroPreviewAttachToken)"
+    }
+
     private var heroImage: some View {
         Group {
             if let videoURL = videoURL, isVideoFile(videoURL) {
@@ -182,19 +191,32 @@ struct HeroWallpaperView: View {
                             }
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .id("unified-hold-\(videoURL.absoluteString)")
+                        .id("unified-hold-\(videoURL.absoluteString)-\(heroAttachIdentity)")
                     } else if usesPolicyUnifiedPause {
                         if let image {
                             heroStaticImage(image)
-                                .id("unified-policy-pause-\(videoURL.absoluteString)")
-                                .onAppear { detachHeroPreviewForPolicyPause() }
+                                .id("unified-policy-pause-\(videoURL.absoluteString)-\(heroAttachIdentity)")
+                        } else if unifiedAttachFailed {
+                            unifiedHeroFallback(videoURL: videoURL)
+                                .id("unified-policy-fallback-\(videoURL.absoluteString)-\(heroAttachIdentity)")
                         } else {
-                            policyPausePlaceholder
-                                .id("unified-policy-wait-\(videoURL.absoluteString)")
-                                .onAppear { detachHeroPreviewForPolicyPause() }
+                            UnifiedVideoPreviewView(
+                                appModel: appModel,
+                                videoURL: videoURL,
+                                isPlaybackPaused: false,
+                                holdDesktopFrame: true,
+                                onAttachStateChanged: { attached in
+                                    if !attached {
+                                        unifiedAttachFailed = true
+                                    }
+                                }
+                            )
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .id("unified-policy-hold-\(videoURL.absoluteString)-\(heroAttachIdentity)")
                         }
                     } else if unifiedAttachFailed {
                         unifiedHeroFallback(videoURL: videoURL)
+                            .id("unified-fallback-\(videoURL.absoluteString)-\(heroAttachIdentity)")
                     } else {
                         UnifiedVideoPreviewView(
                             appModel: appModel,
@@ -208,7 +230,7 @@ struct HeroWallpaperView: View {
                             }
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .id("unified-\(videoURL.absoluteString)")
+                        .id("unified-\(videoURL.absoluteString)-\(heroAttachIdentity)")
                     }
                 } else if !isPlaybackPaused {
                     VideoPreviewView(

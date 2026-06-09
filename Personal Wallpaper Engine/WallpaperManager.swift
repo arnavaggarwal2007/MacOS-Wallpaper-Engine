@@ -1009,6 +1009,10 @@ final class WallpaperManager {
         clearHeroPreviewAttachmentState()
     }
 
+    func isHeroPreviewAttached(to containerView: NSView) -> Bool {
+        activeHeroContainerID == ObjectIdentifier(containerView) && activeHeroPreviewProvider != nil
+    }
+
     private func clearHeroPreviewAttachmentState() {
         activeHeroContainerID = nil
         activeHeroURLPath = nil
