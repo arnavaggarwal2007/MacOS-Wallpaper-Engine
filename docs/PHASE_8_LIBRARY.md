@@ -1,7 +1,8 @@
 # Phase 8 — Local Library
 
-**Status:** Implemented (8A–8C)  
+**Status:** Implemented (8A–8C, 2026-06-01)  
 **Depends on:** Phase 7 complete  
+**Knowledge base:** `30 Features/Feature-V2-Local-Library.md`, `20 Architecture/Modules/LocalLibraryManager.md`, `20 Architecture/Modules/LibraryThumbnailCache.md`, `50 Decisions/ADR-006-Local-Library-Persistence.md`
 
 ## Scope
 

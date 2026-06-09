@@ -1,5 +1,7 @@
 # Version 2 Developmental Roadmap (Phases 7–10)
 
+**Status (2026-06-09):** Phases **7A–7G**, **8A–8C**, and **9A–9B** complete. **Phase 10** (lock-screen research) next. KB: `Wallpaper Engine KB/70 Master Plan/MASTER_DEVELOPMENT_PLAN.md`, `30 Features/00 Features Index.md`.
+
 **Prerequisite:** Version 1 complete — see [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md), [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md), [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md).
 
 Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roadmap through Phase 6 (Collections + Desktop Setups) is complete and stable. It’s structured in the same style so you can drop it straight into your document as the next section.[^1]
@@ -150,7 +152,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 **Goal:** Move beyond a plain file picker to a \"mini library\" experience while staying local‑only (no network), capturing some of the curated feel that Wallspace offers.[^2][^3][^6]
 
-**Status:** **Complete** (8A–8C, 2026-06-01). Phase 9 (quick modes) is next.
+**Status:** **Complete** (8A–8C, 2026-06-01). Phase 9 complete (2026-06-09).
 
 ### Phase 8 Summary
 
@@ -251,6 +253,8 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 ***
 
 ## Phase 9 Roadmap — Quick Modes and UX Streamlining
+
+**Status:** **Complete** (9A–9B, 2026-06-09). Post-ship fixes: hero pause on mode switch, menu preview layout, window activation — KB `Bug-Phase9-Quick-Mode-Hero-And-Menu-Bar`.
 
 **Goal:** Layer simple, high‑level presets on top of your powerful configuration so it feels as approachable as consumer apps like Wallspace, without sacrificing your engine’s flexibility.[^3][^2]
 
@@ -373,8 +377,6 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 - Add a new top‑level section after your current \"Phase 6 Roadmap\" titled something like **\"Phase 7+ Roadmap — Power, Library, and UX\"**.[^1]
 - Insert Phases 7–10 exactly in this order; each phase depends on stable completion of your current roadmap, and earlier phases (7 and 8) directly address the biggest product‑level gaps vs Wallspace (battery friendliness, library experience, quick flows).[^6][^2][^3]
-
-If you’d like, next step can be to zoom into one of these phases (for example, Phase 7A or 8A) and turn it into the same ultra‑detailed “step‑by‑step implementation” style you used for earlier phases (with concrete filenames, properties, and method signatures).
 
 <div align="center">⁂</div>
 

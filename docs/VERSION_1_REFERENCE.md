@@ -1,9 +1,10 @@
 # Version 1 Reference
 
 **Status:** Complete (Phases 1–6B + UI final vision)  
-**Last updated:** 2026-05-21  
+**Last updated:** 2026-06-02  
 **Branch:** `main`  
-**Next:** Version 2 — [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) (Phase 7+)  
+**V2 status:** Phases 7–9 complete; Phase 10 (lock-screen research) next — [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md)  
+**Knowledge base:** `Wallpaper Engine KB/` — [`20 Architecture/00 Architecture Index`](../../Wallpaper%20Engine%20KB/20%20Architecture/00%20Architecture%20Index.md), [`30 Features/00 Features Index`](../../Wallpaper%20Engine%20KB/30%20Features/00%20Features%20Index.md)  
 
 Sign-off record: [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
 
@@ -15,7 +16,7 @@ Sign-off record: [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
 
 | Phase / chunk | Deliverable |
 |---------------|-------------|
-| 1–3 | `WallpaperManager` actor, `DisplayController`, `Renderer` protocol, `VideoRenderer` (AVPlayer), file apply, mute, scaling |
+| 1–3 | `WallpaperManager`, `DisplayController`, `Renderer` protocol, `VideoRenderer` (AVPlayer), file apply, mute, scaling |
 | 4A–4D | Lifecycle (sleep/wake), recovery, resize debounce, state reconciliation |
 | 4E | Diagnostics flag, system health tracking, production checklist |
 
@@ -59,13 +60,15 @@ Personal_Wallpaper_EngineApp
         └── MainTabBar (floating)
   └── MenuBarController (status item)
   └── AppViewModel (@MainActor)
-        └── WallpaperManager (actor)
+        └── WallpaperManager (@MainActor)
               └── DisplayController × N
-                    └── VideoRenderer | WebRenderer
+                    └── VideoRenderer | WebRenderer | SharedVideoLayerRenderer
         └── SettingsStore (UserDefaults)
+        └── LocalLibraryManager (V2 Phase 8)
+        └── PowerPolicyManager / PerformanceMonitor (V2 Phase 7)
 ```
 
-**Concurrency:** `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` on target; `WallpaperManager` is a Swift actor.
+**Concurrency:** `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` on target; `WallpaperManager` and `AppViewModel` are `@MainActor` classes. See KB `ADR-003-WallpaperManager-Actor-Architecture`.
 
 **Platform:** macOS 15.0+ deployment target; CI builds universal binary (arm64 + x86_64) via `scripts/xcodebuild_ci.sh`.
 
@@ -99,6 +102,20 @@ Personal_Wallpaper_EngineApp
 | `LoginItemManager.swift` | Launch at login |
 | `UI/*` | Design tokens, glass chrome, cards, modals, thumbnails |
 
+### Version 2 modules (Phases 7–8)
+
+| Module | Responsibility |
+|--------|----------------|
+| `PowerPolicyManager.swift` | AC/battery/LPM events (7A) |
+| `SharedVideoPlaybackSession.swift` | Coalesced multi-display decode (7B P2) |
+| `DesktopVisibilityTracker.swift` | Occlusion-based desktop pause (7B P3) |
+| `PerformanceMonitor.swift` | CPU sampling, profiles, suggestions (7B–7C) |
+| `LocalLibraryManager.swift` | Library roots, scan, favorites (8) |
+| `LibraryThumbnailCache.swift` | Disk thumbnails, LRU (8B) |
+| `LibraryBrowserView.swift` | Home library grid (8C) |
+
+KB: `Feature-V2-*` notes under `30 Features/`, architecture modules under `20 Architecture/Modules/`.
+
 ---
 
 ## Verification
@@ -124,4 +141,7 @@ UI execution history: [`docs/archive/ui_revamp_roadmap.md`](archive/ui_revamp_ro
 
 ## Version 2 pointer
 
-Phase 7 expands to **Performance & Power** (power policy, **engine efficiency**, profiles, diagnostics) before local library (8) and quick modes (9). See consolidated plan in repo and KB `MASTER_DEVELOPMENT_PLAN`.
+- **Phases 7–8:** Complete (2026-06-01) — power, engine performance, diagnostics, local library.
+- **Phase 9:** Quick modes + menu bar (complete). See [`PHASE_9_QUICK_MODES.md`](PHASE_9_QUICK_MODES.md).
+- Repo: `version2_developmental_roadmap.md`, `docs/PERFORMANCE_TUNING.md`, `docs/PHASE_8_LIBRARY.md`.
+- KB: `70 Master Plan/MASTER_DEVELOPMENT_PLAN.md`, `60 Changelog/Project-Changelog.md`.

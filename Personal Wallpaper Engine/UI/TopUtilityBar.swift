@@ -28,6 +28,8 @@ struct TopUtilityBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
+                QuickModeSelector()
+
                 button(key: "choose", action: onChooseWallpaper) {
                     Label("Choose Wallpaper", systemImage: "folder.badge.plus")
                         .font(.system(size: 13, weight: .semibold))

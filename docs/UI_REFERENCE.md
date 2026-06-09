@@ -33,7 +33,7 @@ Preview-first, native macOS configuration window comparable to [Wallspace](https
 | Home | `ModernHomeView` | Apply wallpaper, per-display carousel, status sidebar |
 | Collections | `CollectionsTabView` | Full collection CRUD, apply, editor |
 | Setups | `SetupsTabView` | Save / restore / delete desktop setups |
-| Settings | `SettingsTabView` | Renderer, scaling, mute, launch on login, web URL |
+| Settings | `SettingsTabView` | Renderer, scaling, mute, launch on login, web URL (video wallpaper assignment on Home only) |
 
 ---
 
@@ -44,7 +44,7 @@ Preview-first, native macOS configuration window comparable to [Wallspace](https
 | Layer | Contents |
 |-------|----------|
 | Content | `TopUtilityBar` (Choose Wallpaper, Apply, sidebar toggle); scroll area with “Scroll for Displays” hint |
-| Overlay | Toggleable right sidebar — display name, wallpaper, collection/setup status, save setup, banners |
+| Overlay | Toggleable right sidebar — display name, wallpaper, collection/setup status, save setup, banners (**default closed**; preference persisted in `SettingsStore.homeSidebarVisible`) |
 
 **Scroll-reveal:** Display carousel (`DisplaySwitcherView`) mounts when user scrolls past threshold; **local library horizontal strip** sits below the carousel (not above). Full library browse opens via **Browse All…** or toolbar **Browse Library** sheet.
 
@@ -90,9 +90,10 @@ App always uses per-display sources internally (`usePerDisplay`).
 ### Setups
 
 1. Setups tab → **Save Current Setup**
-2. Select setup → **Restore & Apply** or delete
-3. **Restore & Apply** writes settings to `SettingsStore`, updates previews, and applies wallpapers to connected displays (bookmarks + collection keys supported)
-4. Launch does **not** auto-run setup restore; last session is restored from per-display persistence
+2. Select setup → **Restore & Apply**, **Pin for Quick Access** / **Unpin**, or delete
+3. **Pinned** (`pinnedSetupName`) is the Quick Mode shortcut target; **Active** is the last restored setup — these are independent
+4. **Restore & Apply** writes settings to `SettingsStore`, updates previews, and applies wallpapers to connected displays (bookmarks + collection keys supported)
+5. Launch does **not** auto-run setup restore; last session is restored from per-display persistence
 
 ---
 
@@ -134,8 +135,17 @@ Automated: `chunk7_smoke.sh`, `chunk7_regression.sh` — see [`V1_SIGNOFF.md`](V
 - Local library — Home: horizontal strip below display carousel; full browse via **Browse All…** sheet or toolbar **Browse Library**
 - Collection editor library picker; Settings → Local Library for folder roots
 
-**Planned:**
+**Complete (Phase 9):**
 
-- Quick mode selector (Phase 9) — Home top bar + menu bar
+- Quick mode selector — Home `TopUtilityBar` (`QuickModeSelector`); modes: Single All, Per Display, Pinned Setup, Custom (drift)
+- Pinned setup — one pinned item in Quick Mode menu (pin/unpin on Setups tab)
+- Menu bar control center — display-aware thumbnail (248×160 header), Quick Mode / Apply Saved / Recents, power shortcuts, Show Main Window, Preferences
+- Window activation — `AppViewModel.bringAppToFront(selecting:)` (synchronous from menu bar)
+- Home sidebar persistence — default closed; `homeSidebarVisible` survives tab switches and relaunch
+- Settings scope — no video wallpaper picker; assign wallpapers on Home tab only
+
+**Deferred:**
+
+- Collection rotation quick mode (V2.1)
 
 Polish-only tweaks remain optional without roadmap phase.

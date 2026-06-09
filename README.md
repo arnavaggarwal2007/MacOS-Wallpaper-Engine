@@ -15,7 +15,8 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 - Web wallpaper rendering through a swappable renderer architecture (WKWebView).
 - Wallpaper collections (simple and display-bound) with security-scoped bookmarks.
 - Desktop setups — save and restore full application state snapshots.
-- Menu bar controls for play/pause, mute, preferences, and quit.
+- Quick modes (Single All, Per Display, Pinned Setup) with drift-to-Custom detection.
+- Menu bar control center: display-aware preview, quick modes, collections/setups, recents, power shortcuts.
 - Persistent user settings via UserDefaults (JSON-encoded collections and setups).
 - Launch-on-login support for supported macOS versions (13.2+).
 - Modern UI shell: four tabs with shared live wallpaper background (`AppWallpaperBackground`), glass chrome, and hero-first Home with scroll-reveal display carousel.
@@ -29,10 +30,11 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 | [`DESIGN.md`](DESIGN.md) | Design spec (product shape, tokens, copy catalog) |
 | [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) | UI spec (tabs, layout, flows) |
 | [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 (V2) |
+| [`docs/PHASE_9_QUICK_MODES.md`](docs/PHASE_9_QUICK_MODES.md) | Phase 9 quick modes + menu bar |
 | [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Full manual test matrix |
 | [`docs/archive/`](docs/archive/) | Historical roadmaps and phase validation notes |
 
-Knowledge base (Obsidian): `Wallpaper Engine KB/` — architecture, features, ADRs, changelog.
+Knowledge base (Obsidian): `Wallpaper Engine KB/` — start at `10 Project Home.md` and `KB-Guide.md` (architecture, features, ADRs, changelog).
 
 ## Tech Stack
 
@@ -50,7 +52,7 @@ Knowledge base (Obsidian): `Wallpaper Engine KB/` — architecture, features, AD
 
 ## Architecture
 
-The codebase follows a modular design centered around a `WallpaperManager` actor that coordinates display lifecycle, renderer assignment, and wallpaper state. Per-display behavior is encapsulated in `DisplayController`, while rendering backends conform to a shared `Renderer` protocol.
+The codebase follows a modular design centered around a `@MainActor` `WallpaperManager` that coordinates display lifecycle, renderer assignment, and wallpaper state. Per-display behavior is encapsulated in `DisplayController`, while rendering backends conform to a shared `Renderer` protocol.
 
 Core persistence is handled through `SettingsStore`. The UI layer uses SwiftUI with `AppViewModel` orchestration.
 
@@ -86,8 +88,9 @@ Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`)
 | UI final vision (4 tabs, app-wide background, glass tabs) | Complete — merged to `main` May 2026 |
 | Version 2 Phase 7 (performance, power, diagnostics — 7A–7G) | Complete — signed off 2026-06-01; see `docs/PERFORMANCE_TUNING.md` |
 | Version 2 Phase 8 (local library — 8A–8C) | Complete — see [`docs/PHASE_8_LIBRARY.md`](docs/PHASE_8_LIBRARY.md) |
-| Version 2 Phase 9 (quick modes) | Next — see `version2_developmental_roadmap.md` |
+| Version 2 Phase 9 (quick modes + menu bar) | Complete — see `version2_developmental_roadmap.md` |
+| Version 2 Phase 10 (lock-screen research) | Next |
 
 ## Status
 
-**June 1, 2026:** Phase 8 complete (8A–8C local library). Phase 9 (quick modes) next.
+**June 9, 2026:** Phase 9 complete (9A–9B quick modes + menu bar). Post-ship bug fixes for hero preview, menu thumbnail layout, and window activation. Phase 10 next. KB: `Wallpaper Engine KB/KB-Guide.md`.

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Tab-based main shell: Home, Collections, Setups, Settings.
@@ -39,6 +40,15 @@ struct TabbedMainView: View {
 
     private var backgroundIntensity: AppWallpaperBackground.Intensity {
         isOnHomeTab ? .hero : .management
+    }
+
+    private func mainTab(from shellTab: ShellTab) -> MainTab {
+        switch shellTab {
+        case .home: return .home
+        case .collections: return .collections
+        case .setups: return .setups
+        case .settings: return .settings
+        }
     }
 
     private func recomputeHeroPreviewPausePolicy() -> Bool {
@@ -107,6 +117,11 @@ struct TabbedMainView: View {
         }
         .onChange(of: appModel.performanceProfile) { _, _ in
             pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
+        }
+        .onChange(of: appModel.shellNavigationRequest) { _, request in
+            guard let request, let tab = request.tab else { return }
+            selectedTab = mainTab(from: tab)
+            appModel.clearShellNavigationRequest()
         }
         .frame(minWidth: 800, minHeight: 600)
     }

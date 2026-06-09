@@ -55,6 +55,15 @@ final class AppPreviewVisibilityMonitor {
         ]
     }
 
+    /// Cancels pending debounce and publishes the current app/window visibility snapshot immediately.
+    func publishImmediately() {
+        debounceTask?.cancel()
+        debounceTask = nil
+        refreshAppState()
+        syncMainWindowOcclusionState()
+        publishIfChanged(reason: "Visibility flush (immediate)")
+    }
+
     func stop() {
         debounceTask?.cancel()
         debounceTask = nil
@@ -152,6 +161,17 @@ final class AppPreviewVisibilityMonitor {
     private func refreshAppState() {
         isAppActive = NSApplication.shared.isActive
         isAppHidden = NSApplication.shared.isHidden
+    }
+
+    private func syncMainWindowOcclusionState() {
+        if observedWindow == nil {
+            attachMainWindowIfNeeded()
+        }
+        if let window = observedWindow {
+            isMainWindowOccluded = !window.occlusionState.contains(.visible)
+        } else {
+            isMainWindowOccluded = false
+        }
     }
 
     private func updateOcclusion(for window: NSWindow) {

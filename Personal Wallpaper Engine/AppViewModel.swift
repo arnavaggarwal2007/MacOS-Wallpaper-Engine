@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import Darwin
 import Foundation
 import os
 import SwiftUI
@@ -88,6 +89,14 @@ final class AppViewModel: ObservableObject {
     @Published var libraryLastScanDate: Date?
     /// Temporary hero preview URL when browsing the library before apply.
     @Published var transientPreviewURL: URL?
+
+    // MARK: - Phase 9 Quick Modes
+    @Published private(set) var quickMode: QuickMode = .perDisplayCustom
+    @Published var pinnedSetupName: String?
+    @Published private(set) var recentLibraryItemIDs: [String] = []
+    @Published var shellNavigationRequest: ShellNavigationRequest?
+    /// Display whose menu bar was clicked — set by MenuBarController on menu open.
+    @Published var menuBarContextDisplayID: CGDirectDisplayID?
     
     // MARK: - Phase 7 Unified Display State
     @Published var displayWallpaperState: [CGDirectDisplayID: DisplayWallpaperInfo] = [:]
@@ -115,6 +124,11 @@ final class AppViewModel: ObservableObject {
     private let heroPreviewVisibility = AppPreviewVisibilityMonitor()
     /// Bumped when app/window visibility changes so hero pause state refreshes in SwiftUI (Home tab only).
     @Published private(set) var heroPreviewVisibilityRevision = 0
+    /// Forces UnifiedVideoPreviewView remount after quick-mode transitions (avoids stale coordinator attach state).
+    @Published private(set) var heroPreviewAttachToken = 0
+    @Published var isHomeSidebarVisible = false
+    private(set) var isQuickModeTransitionActive = false
+    private var quickModeHeroRecoveryTask: Task<Void, Never>?
     private(set) var isMainShellOnHomeTab = true
 
     init() {
@@ -130,7 +144,12 @@ final class AppViewModel: ObservableObject {
         self.pauseOnLowBattery = settings.pauseOnLowBattery
         self.lowBatteryThreshold = settings.lowBatteryThreshold
         self.performanceProfile = settings.performanceProfile
+        self.quickMode = settings.quickMode
+        self.pinnedSetupName = settings.pinnedSetupName
+        self.recentLibraryItemIDs = settings.recentLibraryItemIDs
+        self.isHomeSidebarVisible = settings.homeSidebarVisible
         ensurePerDisplayMode()
+        reconcileQuickModeOnLaunch()
     }
 
     init(
@@ -149,7 +168,12 @@ final class AppViewModel: ObservableObject {
         self.pauseOnLowBattery = settings.pauseOnLowBattery
         self.lowBatteryThreshold = settings.lowBatteryThreshold
         self.performanceProfile = settings.performanceProfile
+        self.quickMode = settings.quickMode
+        self.pinnedSetupName = settings.pinnedSetupName
+        self.recentLibraryItemIDs = settings.recentLibraryItemIDs
+        self.isHomeSidebarVisible = settings.homeSidebarVisible
         ensurePerDisplayMode()
+        reconcileQuickModeOnLaunch()
     }
 
     /// Per-display is the only mode; migrates legacy unified preference on load.
@@ -200,9 +224,15 @@ final class AppViewModel: ObservableObject {
 
     func updatePerDisplaySource(_ displayID: CGDirectDisplayID, _ urlString: String) {
         settings.perDisplaySources[String(displayID)] = urlString
+        notifyDisplaySourcesChanged()
+        evaluateQuickModeDrift(trigger: .perDisplaySourceChanged)
     }
 
-    func selectPerDisplaySource(_ displayID: CGDirectDisplayID, at url: URL) {
+    func selectPerDisplaySource(
+        _ displayID: CGDirectDisplayID,
+        at url: URL,
+        notifyChanges: Bool = true
+    ) {
         if settings.debugDiagnosticsEnabled {
             logger.debug("selectPerDisplaySource display=\(displayID) url=\(url.absoluteString)")
         }
@@ -228,6 +258,10 @@ final class AppViewModel: ObservableObject {
 
         statusMessage = "Selected for \(displayStatusLabel(for: displayID)): \(url.lastPathComponent)"
         errorMessage = nil
+        if notifyChanges {
+            notifyDisplaySourcesChanged()
+            evaluateQuickModeDrift(trigger: .perDisplaySourceChanged)
+        }
     }
 
     func perDisplayResolvedURL(for displayID: CGDirectDisplayID) -> URL? {
@@ -353,6 +387,10 @@ final class AppViewModel: ObservableObject {
 
     /// P1b / 7E: Pause live hero when unfocused or occluded. Max Quality keeps hero on all tabs when allowed.
     func shouldPauseHeroPreview(isOnHomeTab: Bool) -> Bool {
+        if isQuickModeTransitionActive {
+            return false
+        }
+
         if !isOnHomeTab {
             if performanceProfile == .maxQuality {
                 if heroPreviewVisibility.isAppHidden { return true }
@@ -414,6 +452,15 @@ final class AppViewModel: ObservableObject {
 
     func setHeroPreviewLayerHidden(_ hidden: Bool) {
         wallpaperManager.setHeroPreviewLayerHidden(hidden)
+    }
+
+    func isHeroPreviewAttached(to containerView: NSView) -> Bool {
+        wallpaperManager.isHeroPreviewAttached(to: containerView)
+    }
+
+    func setHomeSidebarVisible(_ visible: Bool) {
+        isHomeSidebarVisible = visible
+        settings.homeSidebarVisible = visible
     }
 
     /// Tracks main shell tab so visibility churn on management tabs does not relayout the hero.
@@ -516,7 +563,7 @@ final class AppViewModel: ObservableObject {
         }
 
         for displayID in displayIDs {
-            selectPerDisplaySource(displayID, at: url)
+            selectPerDisplaySource(displayID, at: url, notifyChanges: false)
             await applyPerDisplayWallpaper(displayID: displayID, sourceString: url.absoluteString)
         }
 
@@ -527,6 +574,7 @@ final class AppViewModel: ObservableObject {
         statusMessage = "Applied to \(displayCount) display\(displayCount == 1 ? "" : "s")"
         errorMessage = nil
         notifyDisplaySourcesChanged()
+        evaluateQuickModeDrift(trigger: .perDisplaySourceChanged)
     }
 
     /// Normalized filesystem path or trimmed string for stable collection bookmark keys.
@@ -1539,9 +1587,26 @@ final class AppViewModel: ObservableObject {
     
     @MainActor
     func openPreferences() async {
-        // Show preferences window or switch to preferences view
-        // For now, this can be expanded to show a preferences window
-        statusMessage = "Preferences window would open here (Phase 5F+)"
+        bringAppToFront(selecting: .settings)
+    }
+
+    func showMainWindow() {
+        bringAppToFront()
+    }
+
+    func bringAppToFront(selecting tab: ShellTab? = nil) {
+        NSApp.activate(ignoringOtherApps: true)
+        let window = NSApp.windows.first(where: { $0.canBecomeKey })
+            ?? NSApp.windows.first
+        window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()
+        if let tab {
+            shellNavigationRequest = .open(tab: tab)
+        }
+    }
+
+    func clearShellNavigationRequest() {
+        shellNavigationRequest = nil
     }
     // MARK: - Launch-on-Login (Phase 5G)
     func updateLaunchOnLoginStatus() {
@@ -1826,6 +1891,7 @@ final class AppViewModel: ObservableObject {
 
             refreshCollectionState()
             notifyDisplaySourcesChanged()
+            evaluateQuickModeDrift(trigger: .collectionApplied)
             await refreshDisplayState()
             statusMessage = "Collection '\(collection.name)' applied to all displays."
             errorMessage = nil
@@ -1870,6 +1936,7 @@ final class AppViewModel: ObservableObject {
         settings.lastUsedCollectionName = collection.name
         refreshCollectionState()
         notifyDisplaySourcesChanged()
+        evaluateQuickModeDrift(trigger: .collectionApplied)
         let overflowCount = max(collection.sources.count - displayIDs.count, 0)
         if overflowCount > 0 {
             statusMessage = "Applied \(appliedCount) source(s). \(overflowCount) extra source(s) were skipped because fewer displays are available."
@@ -1981,6 +2048,7 @@ final class AppViewModel: ObservableObject {
         
         refreshCollectionState()
         notifyDisplaySourcesChanged()
+        evaluateQuickModeDrift(trigger: .collectionApplied)
 
         if unmatchedWarnings.isEmpty {
             statusMessage = "Collection '\(collection.name)' applied to matched displays."
@@ -2291,6 +2359,10 @@ final class AppViewModel: ObservableObject {
         refreshSetupState()
         await refreshDisplayState()
 
+        if quickMode == .pinnedSetup, pinnedSetupName != name {
+            transitionToCustomMode()
+        }
+
         if wallpaperApplicationErrors.isEmpty {
             if appliedDisplays.isEmpty {
                 statusMessage = "Setup '\(name)' settings restored. No wallpapers were configured for connected displays."
@@ -2316,6 +2388,16 @@ final class AppViewModel: ObservableObject {
         
         switch result {
         case .success:
+            if pinnedSetupName == name {
+                pinnedSetupName = nil
+                settings.pinnedSetupName = nil
+                if quickMode == .pinnedSetup {
+                    transitionToCustomMode()
+                }
+            }
+            if selectedSetupName == name {
+                selectedSetupName = nil
+            }
             refreshSetupState()
             statusMessage = "Setup '\(name)' deleted."
             errorMessage = nil
@@ -2516,6 +2598,279 @@ final class AppViewModel: ObservableObject {
         await refreshDisplayState()
     }
 
+    // MARK: - Phase 9 Quick Modes
+
+    private enum QuickModeDriftTrigger {
+        case perDisplaySourceChanged
+        case collectionApplied
+        case setupRestored
+    }
+
+    private func reconcileQuickModeOnLaunch() {
+        quickMode = settings.quickMode
+        pinnedSetupName = settings.pinnedSetupName
+        recentLibraryItemIDs = settings.recentLibraryItemIDs
+        if quickMode == .pinnedSetup,
+           let name = pinnedSetupName,
+           settings.savedSetups[name] == nil {
+            transitionToCustomMode()
+        } else if quickMode == .singleAllDisplays, !allConnectedDisplaysShareSameWallpaper() {
+            transitionToCustomMode()
+        }
+    }
+
+    func returnToLastCommittedQuickMode() async {
+        let mode = settings.lastNonCustomQuickMode
+        if mode == .pinnedSetup, let name = pinnedSetupName ?? settings.pinnedSetupName {
+            await applyQuickMode(.pinnedSetup, pinnedSetup: name)
+        } else {
+            await applyQuickMode(mode)
+        }
+    }
+
+    func applyQuickMode(_ mode: QuickMode, pinnedSetup: String? = nil) async {
+        guard mode != .custom else { return }
+
+        isQuickModeTransitionActive = true
+
+        switch mode {
+        case .singleAllDisplays:
+            commitQuickMode(.singleAllDisplays)
+            if allConnectedDisplaysShareSameWallpaper() {
+                statusMessage = "Single-all mode active."
+            } else if let focused = focusedDisplayID ?? NSScreen.screens.first?.displayID,
+                      let url = resolvePlaybackURL(for: focused) {
+                await selectVideoForDisplays(url: url, displayIDs: orderedConnectedDisplayIDs())
+            } else {
+                statusMessage = "Single-all mode active. Choose a wallpaper to mirror to every display."
+            }
+
+        case .perDisplayCustom:
+            commitQuickMode(.perDisplayCustom)
+            statusMessage = "Per-display mode active."
+
+        case .pinnedSetup:
+            let setupName = (pinnedSetup ?? pinnedSetupName)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let setupName, !setupName.isEmpty else {
+                isQuickModeTransitionActive = false
+                bringAppToFront(selecting: .setups)
+                statusMessage = "Pin a setup in the Setups tab for quick access."
+                return
+            }
+            guard settings.savedSetups[setupName] != nil else {
+                isQuickModeTransitionActive = false
+                errorMessage = "Setup '\(setupName)' not found."
+                return
+            }
+            commitQuickMode(.pinnedSetup)
+            _ = await restoreSetup(name: setupName)
+
+        case .custom:
+            break
+        }
+
+        refreshHeroPreviewAfterQuickMode()
+    }
+
+    private func refreshHeroPreviewAfterQuickMode() {
+        quickModeHeroRecoveryTask?.cancel()
+        heroPreviewVisibility.publishImmediately()
+        notifyDisplaySourcesChanged()
+        heroPreviewAttachToken += 1
+        heroPreviewVisibilityRevision += 1
+        NSApp.activate(ignoringOtherApps: true)
+        quickModeHeroRecoveryTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.heroPreviewVisibility.publishImmediately()
+            self.heroPreviewAttachToken += 1
+            self.heroPreviewVisibilityRevision += 1
+            self.isQuickModeTransitionActive = false
+        }
+    }
+
+    func pinSetup(name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, settings.savedSetups[trimmed] != nil else {
+            errorMessage = "Setup '\(name)' not found."
+            return
+        }
+        pinnedSetupName = trimmed
+        settings.pinnedSetupName = trimmed
+        statusMessage = "Pinned \"\(trimmed)\" for Quick Modes."
+        errorMessage = nil
+    }
+
+    func unpinSetup() {
+        pinnedSetupName = nil
+        settings.pinnedSetupName = nil
+        if quickMode == .pinnedSetup {
+            transitionToCustomMode()
+        }
+        statusMessage = "Setup unpinned from Quick Modes."
+        errorMessage = nil
+    }
+
+    func isSetupPinned(_ name: String) -> Bool {
+        pinnedSetupName == name
+    }
+
+    func setPinnedSetupName(_ name: String?) {
+        pinnedSetupName = name
+        settings.pinnedSetupName = name
+    }
+
+    private func commitQuickMode(_ mode: QuickMode) {
+        quickMode = mode
+        settings.quickMode = mode
+        if mode != .custom {
+            settings.lastNonCustomQuickMode = mode
+        }
+    }
+
+    private func transitionToCustomMode() {
+        guard quickMode != .custom else { return }
+        quickMode = .custom
+        settings.quickMode = .custom
+    }
+
+    private func evaluateQuickModeDrift(trigger: QuickModeDriftTrigger) {
+        switch quickMode {
+        case .custom:
+            return
+        case .singleAllDisplays:
+            if !allConnectedDisplaysShareSameWallpaper() {
+                transitionToCustomMode()
+            }
+        case .pinnedSetup:
+            if trigger == .perDisplaySourceChanged || trigger == .collectionApplied {
+                transitionToCustomMode()
+            }
+        case .perDisplayCustom:
+            break
+        }
+    }
+
+    func allConnectedDisplaysShareSameWallpaper() -> Bool {
+        let ids = orderedConnectedDisplayIDs()
+        guard !ids.isEmpty else { return true }
+        let paths = ids.compactMap { id -> String? in
+            guard let url = shellHeroPreviewURL(forDisplayID: id) else { return nil }
+            if url.isFileURL { return url.standardizedFileURL.path }
+            return url.absoluteString
+        }
+        guard !paths.isEmpty else { return true }
+        return Set(paths).count <= 1
+    }
+
+    /// Display ID used for menu-bar thumbnail resolution.
+    func menuBarPreviewDisplayID() -> CGDirectDisplayID? {
+        if allConnectedDisplaysShareSameWallpaper() {
+            return focusedDisplayID ?? menuBarContextDisplayID ?? NSScreen.screens.first?.displayID
+        }
+        return menuBarContextDisplayID ?? focusedDisplayID ?? NSScreen.screens.first?.displayID
+    }
+
+    func menuBarPreviewURL() -> URL? {
+        shellHeroPreviewURL(forDisplayID: menuBarPreviewDisplayID())
+    }
+
+    func menuBarPreviewCaption() -> String {
+        guard let url = menuBarPreviewURL() else { return "No wallpaper" }
+        let filename = url.lastPathComponent.isEmpty ? url.absoluteString : url.lastPathComponent
+        if allConnectedDisplaysShareSameWallpaper() {
+            return "All Displays · \(filename)"
+        }
+        if let displayID = menuBarPreviewDisplayID() {
+            return "\(displayStatusLabel(for: displayID)) · \(filename)"
+        }
+        return filename
+    }
+
+    func menuBarStatusLine() -> String {
+        let mode = quickMode.shortName
+        let profile = performanceProfile.displayName
+        let playback = isPlaying ? "Playing" : "Paused"
+        return "\(mode) · \(profile) · \(playback)"
+    }
+
+    func enablePauseUntilPluggedIn() {
+        if !pauseOnBattery {
+            updatePauseOnBattery(true)
+        }
+        Task { await applyPowerPolicySettings() }
+        statusMessage = "Wallpapers will pause on battery until plugged in."
+    }
+
+    func applyBatterySaverProfile() {
+        updatePerformanceProfile(.batterySaver)
+        statusMessage = "Battery Saver profile enabled."
+    }
+
+    func targetDisplayIDsForApply(focusedOnly: [CGDirectDisplayID]) -> [CGDirectDisplayID] {
+        if quickMode == .singleAllDisplays {
+            return orderedConnectedDisplayIDs()
+        }
+        return focusedOnly
+    }
+
+    func recordLibraryRecent(_ itemID: String) {
+        settings.recordRecentLibraryItem(id: itemID)
+        recentLibraryItemIDs = settings.recentLibraryItemIDs
+    }
+
+    func recentLibraryItems() -> [LibraryItem] {
+        recentLibraryItemIDs.compactMap { id in
+            libraryItems.first(where: { $0.id == id })
+        }
+    }
+
+    func applyRecentLibraryItem(_ item: LibraryItem) async {
+        let displayIDs = targetDisplayIDsForApply(
+            focusedOnly: [focusedDisplayID ?? NSScreen.screens.first?.displayID].compactMap { $0 }
+        )
+        guard !displayIDs.isEmpty else {
+            errorMessage = "No display available."
+            return
+        }
+        _ = await applyLibraryItem(item, displayIDs: displayIDs)
+    }
+
+    func formattedMemoryUsageMB() -> String {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return "—" }
+        let megabytes = Double(info.resident_size) / (1024 * 1024)
+        return String(format: "%.0f MB", megabytes)
+    }
+
+    func formattedDiagnosticsLine() -> String {
+        let cpu = isCPUMeasurementReady ? String(format: "CPU %.1f%%", estimatedCPUPercent) : "CPU —"
+        return "\(cpu) · \(formattedMemoryUsageMB())"
+    }
+
+    func menuBarThumbnailImage(for url: URL) async -> NSImage? {
+        if url.isFileURL, VideoWallpaperThumbnail.isVideoFile(url) {
+            return await VideoWallpaperThumbnail.imageAsync(for: url, at: .zero)
+        }
+        if let item = libraryItems.first(where: { item in
+            guard let resolved = localLibraryManager.resolveURL(for: item) else { return false }
+            return resolved.standardizedFileURL == url.standardizedFileURL
+        }) {
+            return await libraryThumbnail(for: item)
+        }
+        return NSImage(contentsOf: url)
+    }
+
     // MARK: - Phase 8 Local Library
 
     func loadLibraryFromSettings() {
@@ -2523,6 +2878,10 @@ final class AppViewModel: ObservableObject {
         libraryRoots = localLibraryManager.roots
         libraryItems = localLibraryManager.items
         libraryLastScanDate = settings.libraryLastScanDate
+        recentLibraryItemIDs = settings.recentLibraryItemIDs
+        if recentLibraryItemIDs.isEmpty, let lastID = settings.lastUsedLibraryItemID {
+            recordLibraryRecent(lastID)
+        }
         selectedLibraryItemID = settings.lastUsedLibraryItemID
     }
 
@@ -2611,6 +2970,7 @@ final class AppViewModel: ObservableObject {
         selectedLibraryItemID = item.id
         transientPreviewURL = url
         localLibraryManager.markLastUsed(itemID: item.id)
+        recordLibraryRecent(item.id)
         localLibraryManager.refreshBookmark(for: item.id, url: url)
         libraryItems = localLibraryManager.items
         selectVideo(at: url)
@@ -2633,6 +2993,7 @@ final class AppViewModel: ObservableObject {
         let result = await applyWallpaperToDisplays(url: url, displayIDs: displayIDs)
         if case .success = result {
             transientPreviewURL = nil
+            recordLibraryRecent(item.id)
             notifyDisplaySourcesChanged()
         }
         return result
@@ -2644,11 +3005,13 @@ final class AppViewModel: ObservableObject {
             errorMessage = "Select a library video to apply."
             return
         }
-        guard let displayID = focusedDisplayID ?? NSScreen.screens.first?.displayID else {
+        let focusedID = focusedDisplayID ?? NSScreen.screens.first?.displayID
+        let displayIDs = targetDisplayIDsForApply(focusedOnly: [focusedID].compactMap { $0 })
+        guard !displayIDs.isEmpty else {
             errorMessage = "No display available."
             return
         }
-        _ = await applyLibraryItem(item, displayIDs: [displayID])
+        _ = await applyLibraryItem(item, displayIDs: displayIDs)
     }
 
     func libraryThumbnail(for item: LibraryItem) async -> NSImage? {
