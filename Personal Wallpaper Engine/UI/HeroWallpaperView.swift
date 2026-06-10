@@ -20,7 +20,7 @@ struct HeroWallpaperView: View {
     @State private var unifiedAttachFailed = false
 
     var body: some View {
-        ZStack(alignment: isFullWindowBackground ? .topLeading : .bottomLeading) {
+        ZStack(alignment: isFullWindowBackground ? .center : .bottomLeading) {
             heroImage
 
             // Only show gradient overlay if NOT full-window background
@@ -93,10 +93,12 @@ struct HeroWallpaperView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .aspectRatio(
-            dynamicAspectRatio ?? (16 / 9),
-            contentMode: isFullWindowBackground ? .fill : .fit
-        )
+        .conditionalModifier(!isFullWindowBackground) {
+            $0.aspectRatio(
+                dynamicAspectRatio ?? (16 / 9),
+                contentMode: .fit
+            )
+        }
         .clipped()
         .conditionalModifier(!isFullWindowBackground) {
             $0

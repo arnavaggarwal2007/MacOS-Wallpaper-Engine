@@ -18,7 +18,6 @@ struct AppWallpaperBackground: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let aspect = proxy.size.width / max(proxy.size.height, 1)
             ZStack {
                 HeroWallpaperView(
                     title: "",
@@ -29,7 +28,7 @@ struct AppWallpaperBackground: View {
                     videoURL: heroVideoURL,
                     usesUnifiedDesktopDecode: usesUnifiedDesktopDecode,
                     isFullWindowBackground: true,
-                    dynamicAspectRatio: aspect,
+                    dynamicAspectRatio: nil,
                     isPlaybackPaused: pausePlayback,
                     isGlobalDesktopPaused: isGlobalDesktopPaused
                 )
@@ -58,6 +57,7 @@ struct AppWallpaperBackground: View {
                     Color.black.opacity(DesignTokens.Surfaces.managementScrimOpacity)
                 }
             }
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -69,18 +69,21 @@ struct AppWallpaperBackground: View {
 
     private var managementThumbnailTaskKey: String {
         guard let url = previewURL, needsManagementThumbnail else { return "none" }
-        if intensity == .hero, usesPolicyUnifiedPauseSnapshot {
-            return "policy-pause|\(url.absoluteString)"
-        }
-        return url.absoluteString
+        let tabKind = intensity == .hero ? "hero" : "management"
+        let mode = usesPausePositionSnapshot ? "pause" : "poster"
+        return "\(tabKind)|\(mode)|\(url.absoluteString)"
     }
 
-    /// Policy/unfocus/scroll pause with unified decode — async snapshot, not global desktop hold.
+    /// Paused hero/management static frame at desktop decode position (not t=0 poster).
+    private var usesPausePositionSnapshot: Bool {
+        pausePlayback && usesUnifiedDesktopDecode
+    }
+
+    /// Home policy/unfocus/scroll pause with unified decode — async snapshot, not global desktop hold.
     private var usesPolicyUnifiedPauseSnapshot: Bool {
         intensity == .hero
-            && pausePlayback
+            && usesPausePositionSnapshot
             && !isGlobalDesktopPaused
-            && usesUnifiedDesktopDecode
     }
 
     private var needsManagementThumbnail: Bool {
@@ -152,22 +155,27 @@ struct AppWallpaperBackground: View {
 
     @MainActor
     private func loadManagementThumbnailIfNeeded() async {
-        managementThumbnail = nil
-
         guard let url = previewURL else {
+            managementThumbnail = nil
             return
         }
         guard needsManagementThumbnail else {
             return
         }
         guard VideoWallpaperThumbnail.isVideoFile(url) else {
+            managementThumbnail = nil
             return
         }
 
-        if usesPolicyUnifiedPauseSnapshot {
-            managementThumbnail = await appModel.captureHeroPauseSnapshot(for: url)
+        let loaded: NSImage?
+        if usesPausePositionSnapshot {
+            loaded = await appModel.captureHeroPauseSnapshot(for: url)
         } else {
-            managementThumbnail = await VideoWallpaperThumbnail.imageAsync(for: url)
+            loaded = await VideoWallpaperThumbnail.imageAsync(for: url)
+        }
+        guard !Task.isCancelled else { return }
+        if let loaded {
+            managementThumbnail = loaded
         }
     }
 }

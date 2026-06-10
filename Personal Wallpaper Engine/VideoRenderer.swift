@@ -268,9 +268,6 @@ final class VideoRenderer: Renderer {
     func attachHeroPreviewLayer(in containerView: NSView, videoGravity: AVLayerVideoGravity = .resizeAspectFill) -> Bool {
         guard let player else { return false }
 
-        if containerView.bounds.isEmpty {
-            containerView.layoutSubtreeIfNeeded()
-        }
         let bounds = containerView.bounds
         guard !bounds.isEmpty else { return false }
 

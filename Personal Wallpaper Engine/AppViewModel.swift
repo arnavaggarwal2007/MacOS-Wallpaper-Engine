@@ -129,6 +129,7 @@ final class AppViewModel: ObservableObject {
     @Published var isHomeSidebarVisible = false
     private(set) var isQuickModeTransitionActive = false
     private var quickModeHeroRecoveryTask: Task<Void, Never>?
+    private var shellHeroLayoutRecoveryTask: Task<Void, Never>?
     private(set) var isMainShellOnHomeTab = true
 
     init() {
@@ -465,7 +466,44 @@ final class AppViewModel: ObservableObject {
 
     /// Tracks main shell tab so visibility churn on management tabs does not relayout the hero.
     func setMainShellOnHomeTab(_ onHome: Bool) {
+        let wasOnHome = isMainShellOnHomeTab
         isMainShellOnHomeTab = onHome
+        if wasOnHome, !onHome, performanceProfile != .maxQuality {
+            prepareManagementStaticHeroBackground()
+        }
+    }
+
+    /// Detach unified hero layer before Balanced/Battery management-tab static background.
+    /// Also bumps `heroPreviewAttachToken` (same remount signal as `refreshHeroPreviewAfterShellLayout()`, with detach).
+    func prepareManagementStaticHeroBackground() {
+        detachHeroPreviewLayer()
+        heroPreviewAttachToken += 1
+    }
+
+    /// Re-mount hero preview after shell background reaches final layout (launch).
+    /// Same attach-token mechanism as `prepareManagementStaticHeroBackground()` but without detaching first.
+    func refreshHeroPreviewAfterShellLayout() {
+        heroPreviewAttachToken += 1
+    }
+
+    /// Deferred hero remount after main shell layout settles (matches quick-mode recovery pattern).
+    func scheduleShellHeroLayoutRecovery() {
+        shellHeroLayoutRecoveryTask?.cancel()
+        shellHeroLayoutRecoveryTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.refreshHeroPreviewAfterShellLayout()
+        }
+    }
+
+    /// Count of setup/collection entries tied to currently connected displays.
+    func connectedDisplayCount(in perDisplaySources: [String: String]) -> Int {
+        let connectedKeys = Set(NSScreen.screens.map { String($0.displayID) })
+        return perDisplaySources.keys.filter { connectedKeys.contains($0) }.count
     }
 
     func applyPerDisplayWallpaper(displayID: CGDirectDisplayID, sourceString: String) async {
@@ -1320,6 +1358,8 @@ final class AppViewModel: ObservableObject {
     }
 
     func stop() async {
+        shellHeroLayoutRecoveryTask?.cancel()
+        quickModeHeroRecoveryTask?.cancel()
         heroPreviewVisibility.stop()
         performanceMonitor.stop()
         await wallpaperManager.stop()
@@ -2152,21 +2192,25 @@ final class AppViewModel: ObservableObject {
         perDisplayBookmarksBase64: [String: String]
     ) {
         let unifiedBookmarkBase64 = settings.videoBookmarkData.flatMap { $0.base64EncodedString() }
-        
-        // Collect per-display bookmarks
+        let connectedKeys = Set(NSScreen.screens.map { String($0.displayID) })
+
+        // Collect per-display bookmarks for connected displays only (omit stale hotplug IDs).
         var perDisplayBookmarksBase64: [String: String] = [:]
-        for (displayIDStr, bookmark) in settings.perDisplayBookmarks {
+        for (displayIDStr, bookmark) in settings.perDisplayBookmarks where connectedKeys.contains(displayIDStr) {
             perDisplayBookmarksBase64[displayIDStr] = bookmark.base64EncodedString()
         }
-        
+
+        let perDisplaySources = settings.perDisplaySources.filter { connectedKeys.contains($0.key) }
+        let perDisplayScalingModes = settings.perDisplayScalingModes.filter { connectedKeys.contains($0.key) }
+
         return (
             rendererMode: rendererMode.rawValue,
             isMuted: isMuted,
             scalingMode: scalingMode.rawValue,
             usePerDisplay: true,
             unifiedSource: selectedVideoPath.isEmpty ? nil : selectedVideoPath,
-            perDisplaySources: settings.perDisplaySources,
-            perDisplayScalingModes: settings.perDisplayScalingModes,
+            perDisplaySources: perDisplaySources,
+            perDisplayScalingModes: perDisplayScalingModes,
             unifiedBookmarkBase64: unifiedBookmarkBase64,
             perDisplayBookmarksBase64: perDisplayBookmarksBase64
         )

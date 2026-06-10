@@ -107,6 +107,7 @@ struct TabbedMainView: View {
         .onAppear {
             appModel.setMainShellOnHomeTab(isOnHomeTab)
             pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
+            appModel.scheduleShellHeroLayoutRecovery()
         }
         .onChange(of: selectedTab) { _, newTab in
             appModel.setMainShellOnHomeTab(newTab == .home)
@@ -115,8 +116,11 @@ struct TabbedMainView: View {
         .onChange(of: appModel.heroPreviewVisibilityRevision) { _, _ in
             pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
         }
-        .onChange(of: appModel.performanceProfile) { _, _ in
+        .onChange(of: appModel.performanceProfile) { oldProfile, newProfile in
             pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
+            if !isOnHomeTab, oldProfile == .maxQuality, newProfile != .maxQuality {
+                appModel.prepareManagementStaticHeroBackground()
+            }
         }
         .onChange(of: appModel.shellNavigationRequest) { _, request in
             guard let request, let tab = request.tab else { return }

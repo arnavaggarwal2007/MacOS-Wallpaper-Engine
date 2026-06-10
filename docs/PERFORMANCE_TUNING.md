@@ -351,6 +351,15 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 - **Policy/unfocus/scroll pause:** Static snapshot at `player.currentTime()` with generator tolerances; black placeholder until loaded; `detachHeroPreviewLayer` — never hidden layer + bitmap stack.
 - **Dual display:** Hero reflects focused display’s applied file; different files per display is expected unless coalesced.
 
+### Management tab shell background + launch layout (2026-06-09)
+
+**KB:** `40 Bugs/Bug-Management-Tab-Shell-Background-Geometry.md`, hub `40 Bugs/00 Hero Preview and Playback Issues.md`.
+
+- **Regression:** Balanced/Battery management tabs (Collections/Setups/Settings) showed partial-width hero, shifted blur/scrim, and double-image ghosting; cold launch hero misaligned until pause/resume.
+- **Root cause:** `AppWallpaperBackground` `GeometryReader` child did not fill the window; full-window `HeroWallpaperView` used redundant `aspectRatio`; hero attach called synchronous `layoutSubtreeIfNeeded` on empty bounds.
+- **Fix:** Pin inner `ZStack` to `GeometryReader` size; skip `aspectRatio` for full-window backgrounds; pause-position snapshots on management tabs; detach unified layer on Home → management switch; deferred attach-token remount on shell appear (`scheduleShellHeroLayoutRecovery`); remove sync layout from hero attach paths.
+- **Validation:** Owner confirmed 2026-06-09 — full-window frozen frame + blur on management tabs; launch hero centered; no layout recursion warning.
+
 ### Profile CPU gap expectations (Release 2026-06-01)
 
 | Scenario | Max Quality | Balanced | Battery Saver | Primary lever |

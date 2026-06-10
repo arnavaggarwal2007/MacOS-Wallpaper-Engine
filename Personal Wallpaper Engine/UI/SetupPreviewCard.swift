@@ -13,6 +13,10 @@ struct SetupPreviewCard: View {
         viewModel.selectedSetupName == setup.name
     }
 
+    private var connectedDisplayCount: Int {
+        viewModel.connectedDisplayCount(in: setup.perDisplaySources)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 8) {
@@ -59,7 +63,7 @@ struct SetupPreviewCard: View {
 
                 infoBadge(
                     icon: "display",
-                    value: "\(setup.perDisplaySources.count) display\(setup.perDisplaySources.count == 1 ? "" : "s")"
+                    value: "\(connectedDisplayCount) display\(connectedDisplayCount == 1 ? "" : "s")"
                 )
 
                 infoBadge(
