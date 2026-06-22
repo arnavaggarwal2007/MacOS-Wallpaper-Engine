@@ -26,6 +26,8 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 | Document | Purpose |
 |----------|---------|
 | [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) | V1 gate: functional + performance baseline |
+| [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) | Consolidated release gate |
+| [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Signing, notarization, DMG |
 | [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md) | V1 feature inventory and architecture |
 | [`DESIGN.md`](DESIGN.md) | Design spec (product shape, tokens, copy catalog) |
 | [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) | UI spec (tabs, layout, flows) |

@@ -78,10 +78,11 @@ struct EngineDiagnosticsSection: View {
             diagnosticRow("CPU (instant)", cpuPercentText(appModel.instantCPUPercent))
             diagnosticRow("CPU (smoothed)", cpuPercentText(appModel.currentCPUPercent))
             diagnosticRow("CPU (60s avg)", cpuPercentText(appModel.estimatedCPUPercent))
-            Text("Process CPU — 100% = one logical core. Smoothed aligns with `ps`; Activity Monitor often reads 2–5pp lower due to heavier smoothing. Instant is the last 1s window. Suggestions use smoothed CPU.")
+            diagnosticRow("System CPU share", CPUMetricsFormatting.systemWideText(fromPerCore: appModel.estimatedCPUPercent, ready: appModel.isCPUMeasurementReady))
+            Text("Process CPU — 100% = one logical core (Activity Monitor scale). System share = per-core ÷ \(CPUMetricsFormatting.logicalProcessorCount) cores. Smoothed aligns with `ps`; Activity Monitor often reads 2–5pp lower due to heavier smoothing.")
                 .font(.caption2)
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
-            diagnosticRow("Logical CPUs", "\(ProcessInfo.processInfo.activeProcessorCount)")
+            diagnosticRow("Logical CPUs", "\(CPUMetricsFormatting.logicalProcessorCount)")
             diagnosticRow("Profile", diag.performanceProfile.displayName)
             diagnosticRow("Lifecycle", String(describing: diag.lifecycleState))
             diagnosticRow("Playback active", diag.isPlaybackActive ? "Yes" : "No")
@@ -131,7 +132,7 @@ struct EngineDiagnosticsSection: View {
             reasons.append("Max Quality")
         }
         guard !reasons.isEmpty else { return nil }
-        return "Elevated CPU is expected with \(reasons.joined(separator: ", ")). Canonical baseline: same 1080p on all displays, unfocused (~2.5–3% Debug)."
+        return "Elevated CPU is expected with \(reasons.joined(separator: ", ")). Canonical baseline: same 1080p on all displays, unfocused (~2.5% per-core Debug, ~0.2% system on 12 cores)."
     }
 
     private func hasMultipleDecodePaths(_ diag: WallpaperManager.EngineDiagnosticsSnapshot) -> Bool {

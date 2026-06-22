@@ -203,6 +203,22 @@ struct SettingsTabView: View {
                                     .foregroundStyle(DesignTokens.Colors.textSecondary)
                             }
                         }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Version \(UpdateChecker.currentMarketingVersion) (\(UpdateChecker.currentBuildNumber))")
+                                .font(DesignTokens.Typography.subtitle)
+                            Text("Runs as a menu bar agent when the main window is closed. Check releases for updates (Sparkle integration planned).")
+                                .font(.caption)
+                                .foregroundStyle(DesignTokens.Colors.textSecondary)
+                            Button {
+                                UpdateChecker.openReleasePage()
+                            } label: {
+                                Label("Check for Updates…", systemImage: "arrow.down.circle")
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
                 }
 

@@ -72,7 +72,10 @@ if [ -x ./scripts/chunk7_smoke.sh ]; then
   export CODE_SIGNING_ALLOWED="${CODE_SIGNING_ALLOWED:-YES}"
   export SMOKE_SKIP_BUILD=1
   export SMOKE_APP_PATH="$APP_PATH"
-  ./scripts/chunk7_smoke.sh 2>&1 | tee "$ARTIFACT_DIR/chunk7_smoke.log" || echo "smoke checks exited with non-zero status"
+  if ! ./scripts/chunk7_smoke.sh 2>&1 | tee "$ARTIFACT_DIR/chunk7_smoke.log"; then
+    echo "ERROR: smoke checks failed — regression aborted"
+    exit 1
+  fi
 fi
 
 # Collect some metadata

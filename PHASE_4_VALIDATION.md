@@ -1,5 +1,5 @@
 # PHASE_4_VALIDATION.md (archived)
 
-Moved to [`docs/archive/PHASE_4_VALIDATION.md`](docs/archive/PHASE_4_VALIDATION.md).
+This file has moved to [`docs/archive/PHASE_4_VALIDATION.md`](docs/archive/PHASE_4_VALIDATION.md).
 
-See [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) and [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md).
+**Current release gate:** [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md)

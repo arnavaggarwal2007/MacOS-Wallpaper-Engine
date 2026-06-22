@@ -108,6 +108,10 @@ struct TabbedMainView: View {
             appModel.setMainShellOnHomeTab(isOnHomeTab)
             pauseHeroPreviewForPolicy = recomputeHeroPreviewPausePolicy()
             appModel.scheduleShellHeroLayoutRecovery()
+            DockAgentPolicy.updateDockVisibility(hasVisibleMainWindows: true)
+        }
+        .onDisappear {
+            DockAgentPolicy.updateDockVisibility(hasVisibleMainWindows: DockAgentPolicy.mainWindowsVisible())
         }
         .onChange(of: selectedTab) { _, newTab in
             appModel.setMainShellOnHomeTab(newTab == .home)

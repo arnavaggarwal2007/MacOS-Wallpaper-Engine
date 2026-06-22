@@ -8,6 +8,20 @@
 
 ---
 
+## CPU scale glossary (Activity Monitor)
+
+| Scale | Definition | Example (12 logical cores) |
+|-------|------------|----------------------------|
+| **Per-core (AM / `ps`)** | CPU-time ÷ wall-time; **100% = one full logical core** | 12% in Activity Monitor |
+| **System-wide** | Per-core ÷ logical processor count | 12% ÷ 12 = **~1%** of 1200% total pool |
+| **Over 100%** | Multi-threaded work across cores | 240% ≈ 2.4 cores busy |
+
+**In-app diagnostics** use the **per-core** scale (same as Activity Monitor process column). Settings → Diagnostics also shows **System CPU share** (÷ core count). Competitor marketing claims (“under 2%”) are comparable on the **per-core** scale, or as system-wide when divided by core count — e.g. Release canonical **13.75% per-core** on 12 cores ≈ **~1.15% system-wide**.
+
+**Do not** divide in-app readings again by core count; the sampler already matches Activity Monitor.
+
+---
+
 ## How to measure
 
 1. Apply wallpaper; let playback stabilize **30s**.

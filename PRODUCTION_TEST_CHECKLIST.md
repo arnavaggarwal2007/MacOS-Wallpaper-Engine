@@ -1,15 +1,20 @@
 # Phase 4 Production Testing Checklist (Chunk 4E)
 
-**Status:** Ready for Release Gate Sign-Off  
-**Date:** May 3, 2026  
+**Status:** Superseded for release gate by [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md)  
+**Date:** Updated 2026-06-21 (Phase 1–9 audit)  
+**Platform:** macOS **15.0+** (deployment target)  
 **Tester:** [Name/Date to be filled]  
 **Build:** Personal Wallpaper Engine Release Build  
+
+## CPU measurement note
+
+Activity Monitor reports **per-core** CPU (100% = one logical core). On an N-core Mac, **system-wide share ≈ per-core ÷ N**. Example: 12% per-core on 12 cores ≈ **1% of total system capacity**. See [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md).
 
 ## Pre-Testing Setup
 
 - [ ] Clean build passes: `xcodebuild clean build` succeeds without warnings
 - [ ] All previous chunks (1-4D) compile and function
-- [ ] macOS version 12.0+ for testing
+- [ ] macOS version **15.0+** for testing
 - [ ] Test videos available: MP4/MOV files (small, medium, 4K)
 - [ ] Multi-display setup available (or can simulate via Spaces)
 - [ ] Debug diagnostics flag can be toggled via UserDefaults
@@ -22,7 +27,7 @@
 - [ ] App launches without crashes
 - [ ] Desktop wallpaper appears behind desktop icons
 - [ ] Video plays smoothly at 60fps
-- [ ] CPU usage < 10%, GPU < 2% at idle (measured via Activity Monitor)
+- [ ] CPU usage stable on Balanced profile (per-core scale; see PERFORMANCE_TUNING — coalesced 1080p typically ~2–14% per-core Release depending on scenario)
 - [ ] Audio muting works correctly (toggle in UI)
 - [ ] Scaling modes (Fill/Fit/Stretch) apply correctly
 - [ ] Wallpaper persists after app quit/reopen

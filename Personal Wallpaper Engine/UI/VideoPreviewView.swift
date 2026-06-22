@@ -2,6 +2,9 @@ import SwiftUI
 import AppKit
 import AVFoundation
 import AVKit
+import os.log
+
+private let videoPreviewLogger = Logger(subsystem: "com.local.wallpaper", category: "VideoPreviewView")
 
 /// A SwiftUI wrapper around `AVPlayerView` for in-app video preview playback.
 /// `isPlaybackPaused` is for scroll-reveal pause only — not tied to desktop global pause.
@@ -83,24 +86,24 @@ struct VideoPreviewView: NSViewRepresentable {
         coordinator: Coordinator
     ) async {
         let debug = SettingsStore.shared.debugDiagnosticsEnabled
-        if debug { print("VideoPreviewView: loadAndPlay -> \(url.path)") }
+        if debug { videoPreviewLogger.debug("loadAndPlay -> \(url.path, privacy: .public)") }
 
         // Manage security-scoped access for file URLs
         if url.isFileURL {
             if let prev = coordinator.accessedURL, prev.path != url.path {
                 prev.stopAccessingSecurityScopedResource()
                 coordinator.accessedURL = nil
-                if debug { print("VideoPreviewView: stopped scope for \(prev.path)") }
+                if debug { videoPreviewLogger.debug("stopped scope for \(prev.path, privacy: .public)") }
             }
             if coordinator.accessedURL?.path != url.path {
                 let didStart = url.startAccessingSecurityScopedResource()
-                if debug { print("VideoPreviewView: startAccessingScope -> \(didStart) for \(url.path)") }
+                if debug { videoPreviewLogger.debug("startAccessingScope -> \(didStart) for \(url.path, privacy: .public)") }
                 if didStart { coordinator.accessedURL = url }
             }
         }
 
         guard FileManager.default.fileExists(atPath: url.path) else {
-            if debug { print("VideoPreviewView: file missing at \(url.path)") }
+            if debug { videoPreviewLogger.debug("file missing at \(url.path, privacy: .public)") }
             return
         }
 
@@ -110,7 +113,7 @@ struct VideoPreviewView: NSViewRepresentable {
 
         coordinator.playerItemObserver = item.observe(\AVPlayerItem.status, options: [.initial, .new]) { item, _ in
             guard debug else { return }
-            print("VideoPreviewView: playerItem.status = \(item.status.rawValue)")
+            videoPreviewLogger.debug("playerItem.status = \(item.status.rawValue)")
         }
 
         if shouldLoop {
@@ -134,10 +137,10 @@ struct VideoPreviewView: NSViewRepresentable {
             player.replaceCurrentItem(with: item)
             if shouldStartPlayback {
                 player.play()
-                if debug { print("VideoPreviewView: player.play()") }
+                if debug { videoPreviewLogger.debug("player.play()") }
             } else {
                 player.pause()
-                if debug { print("VideoPreviewView: player.pause() after load (scroll pause)") }
+                if debug { videoPreviewLogger.debug("player.pause() after load (scroll pause)") }
             }
         }
     }

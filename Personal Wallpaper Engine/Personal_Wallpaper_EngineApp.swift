@@ -22,8 +22,9 @@ struct Personal_Wallpaper_EngineApp: App {
                     await appModel.start()
                 }
                 .onAppear {
-                    // Initialize launch-on-login status from system
+                    DockAgentPolicy.applyInitialPolicy()
                     appModel.updateLaunchOnLoginStatus()
+                    DockAgentPolicy.updateDockVisibility(hasVisibleMainWindows: true)
                 }
                 .onDisappear {
                     Task {

@@ -98,8 +98,6 @@ final class AppViewModel: ObservableObject {
     /// Display whose menu bar was clicked — set by MenuBarController on menu open.
     @Published var menuBarContextDisplayID: CGDirectDisplayID?
     
-    // MARK: - Phase 7 Unified Display State
-    @Published var displayWallpaperState: [CGDirectDisplayID: DisplayWallpaperInfo] = [:]
     /// Bumped when per-display sources/bookmarks change so Home previews refresh.
     @Published private(set) var displaySourcesVersion = 0
     
@@ -2487,7 +2485,7 @@ final class AppViewModel: ObservableObject {
     // MARK: - Phase 7 Unified Display State Management
     
     /// Phase 7: Apply wallpaper to specific displays
-    /// Shows ApplyWallpaperModal in HomeTabView if called from manual selection
+    /// Applies wallpaper to selected displays after user picks a file.
     /// Collections call this directly with predetermined displayIDs
     @MainActor
     func applyWallpaperToDisplays(url: URL, displayIDs: [CGDirectDisplayID]) async -> Result<Void, WallpaperError> {
@@ -2575,68 +2573,9 @@ final class AppViewModel: ObservableObject {
         return .success(())
     }
     
-    /// Phase 7: Refresh display wallpaper state from wallpaperManager
-    /// Called after any wallpaper apply to sync displayWallpaperState with reality
+    /// Notifies UI that per-display wallpaper sources changed (carousel, hero, menu bar).
     @MainActor
     func refreshDisplayState() async {
-        var newState: [CGDirectDisplayID: DisplayWallpaperInfo] = [:]
-        
-        // Get all connected displays
-        let screens = NSScreen.screens
-        let displayIDs = screens.map { $0.displayID }
-        
-        for (index, displayID) in displayIDs.enumerated() {
-            let screen = screens[index]
-            let displayName = screen.localizedName
-            let resolution = screen.frame.size
-            let isPrimary = screen == NSScreen.main
-            
-            // Get current wallpaper URL from settings
-            let wallpaperURL: URL? = {
-                // Prefer per-display resolved URL when present
-                if let resolved = perDisplayResolvedURL(for: displayID) {
-                    return resolved
-                }
-
-                if let urlString = settings.perDisplaySources[String(displayID)], !urlString.isEmpty {
-                    return resolvedSourceURL(from: urlString)
-                }
-
-                return nil
-            }()
-            
-            // Get current renderer mode
-            let rendererMode: WallpaperRendererMode = {
-                if let modeString = settings.perDisplayRendererModes[String(displayID)],
-                   let mode = WallpaperRendererMode(rawValue: modeString) {
-                    return mode
-                }
-                return self.rendererMode == .web ? .web : .video
-            }()
-            
-            // Get current scaling mode
-            let scalingMode: VideoScalingMode = {
-                if let modeString = settings.perDisplayScalingModes[String(displayID)],
-                   let mode = VideoScalingMode(rawValue: modeString) {
-                    return mode
-                }
-                return self.scalingMode
-            }()
-            
-            let info = DisplayWallpaperInfo(
-                displayID: displayID,
-                displayName: displayName,
-                resolution: resolution,
-                wallpaperURL: wallpaperURL,
-                rendererMode: rendererMode,
-                scalingMode: scalingMode,
-                isPrimary: isPrimary
-            )
-            
-            newState[displayID] = info
-        }
-        
-        displayWallpaperState = newState
         notifyDisplaySourcesChanged()
     }
     
@@ -2885,21 +2824,29 @@ final class AppViewModel: ObservableObject {
         _ = await applyLibraryItem(item, displayIDs: displayIDs)
     }
 
-    func formattedMemoryUsageMB() -> String {
-        var info = mach_task_basic_info()
-        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
-        let result = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
-            }
+    /// Applies a dropped video file to the focused display (or all displays in Single All mode).
+    func applyDroppedVideoURL(_ url: URL) async {
+        guard VideoDropImport.isVideoFile(url) else {
+            errorMessage = "Unsupported file type. Use MP4 or MOV."
+            return
         }
-        guard result == KERN_SUCCESS else { return "—" }
-        let megabytes = Double(info.resident_size) / (1024 * 1024)
-        return String(format: "%.0f MB", megabytes)
+        let focused = [focusedDisplayID ?? NSScreen.screens.first?.displayID].compactMap { $0 }
+        let displayIDs = targetDisplayIDsForApply(focusedOnly: focused)
+        guard !displayIDs.isEmpty else {
+            errorMessage = "No display available."
+            return
+        }
+        let result = await applyWallpaperToDisplays(url: url, displayIDs: displayIDs)
+        if case .failure(let error) = result {
+            errorMessage = error.errorDescription ?? "Could not apply wallpaper."
+        }
     }
 
     func formattedDiagnosticsLine() -> String {
-        let cpu = isCPUMeasurementReady ? String(format: "CPU %.1f%%", estimatedCPUPercent) : "CPU —"
+        let cpu = CPUMetricsFormatting.menuBarCPUText(
+            perCoreAverage: estimatedCPUPercent,
+            ready: isCPUMeasurementReady
+        )
         return "\(cpu) · \(formattedMemoryUsageMB())"
     }
 

@@ -1,5 +1,8 @@
 import SwiftUI
 import AppKit
+import os.log
+
+private let heroPreviewLogger = Logger(subsystem: "com.local.wallpaper", category: "HeroWallpaperView")
 
 struct HeroWallpaperView: View {
     @EnvironmentObject private var appModel: AppViewModel
@@ -162,7 +165,7 @@ struct HeroWallpaperView: View {
             .id("fallback-\(videoURL.absoluteString)")
             .onAppear {
                 if SettingsStore.shared.debugDiagnosticsEnabled {
-                    print("HeroWallpaperView: unified attach failed — independent decode fallback \(videoURL.path)")
+                    heroPreviewLogger.debug("Unified attach failed — independent decode fallback \(videoURL.path, privacy: .public)")
                 }
             }
         }
@@ -245,7 +248,7 @@ struct HeroWallpaperView: View {
                     .id(videoURL.absoluteString)
                     .onAppear {
                         if SettingsStore.shared.debugDiagnosticsEnabled {
-                            print("HeroWallpaperView: video preview \(videoURL.path)")
+                            heroPreviewLogger.debug("Video preview \(videoURL.path, privacy: .public)")
                         }
                     }
                 } else if let image {
@@ -257,7 +260,7 @@ struct HeroWallpaperView: View {
                 heroStaticImage(image)
                     .onAppear {
                         if SettingsStore.shared.debugDiagnosticsEnabled {
-                            print("HeroWallpaperView: static image")
+                            heroPreviewLogger.debug("Static image hero")
                         }
                     }
             } else {
@@ -285,7 +288,7 @@ struct HeroWallpaperView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             if SettingsStore.shared.debugDiagnosticsEnabled {
-                print("HeroWallpaperView: placeholder")
+                heroPreviewLogger.debug("Hero placeholder")
             }
         }
     }

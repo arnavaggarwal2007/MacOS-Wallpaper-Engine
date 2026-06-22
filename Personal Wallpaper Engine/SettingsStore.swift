@@ -1,7 +1,19 @@
-import Foundation
 import AVFoundation
+import Foundation
+import os.log
 
 final class SettingsStore {
+    private static let persistenceLogger = Logger(subsystem: "com.local.wallpaper", category: "SettingsStore")
+
+    /// Persists JSON-encoded values without deleting existing data on encode failure.
+    private static func persistEncoded<T: Encodable>(_ value: T, forKey key: String) {
+        do {
+            let encoded = try JSONEncoder().encode(value)
+            UserDefaults.standard.set(encoded, forKey: key)
+        } catch {
+            persistenceLogger.error("Failed to encode UserDefaults key \(key, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+    }
     static let shared = SettingsStore()
 
     private enum Keys {
@@ -176,13 +188,7 @@ final class SettingsStore {
 
     // Per-display mapping: displayID (as string) -> URL string
     var perDisplaySources: [String: String] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(perDisplaySources) {
-                UserDefaults.standard.set(encoded, forKey: Keys.perDisplaySources)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.perDisplaySources)
-            }
-        }
+        didSet { Self.persistEncoded(perDisplaySources, forKey: Keys.perDisplaySources) }
     }
 
     var videoFilePath: String {
@@ -258,24 +264,12 @@ final class SettingsStore {
 
     /// Phase 8A: Security-scoped library root folders.
     var libraryRoots: [LibraryRoot] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(libraryRoots) {
-                UserDefaults.standard.set(encoded, forKey: Keys.libraryRoots)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.libraryRoots)
-            }
-        }
+        didSet { Self.persistEncoded(libraryRoots, forKey: Keys.libraryRoots) }
     }
 
     /// Phase 8A: Indexed library catalog (ordered array for stable UI).
     var libraryItems: [LibraryItem] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(libraryItems) {
-                UserDefaults.standard.set(encoded, forKey: Keys.libraryItems)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.libraryItems)
-            }
-        }
+        didSet { Self.persistEncoded(libraryItems, forKey: Keys.libraryItems) }
     }
 
     /// Phase 8A: Timestamp of the last full library rescan.
@@ -326,13 +320,7 @@ final class SettingsStore {
 
     /// Phase 9B: Recent library items (most recent first, capped in `recordRecentLibraryItem`).
     var recentLibraryItemIDs: [String] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(recentLibraryItemIDs) {
-                UserDefaults.standard.set(encoded, forKey: Keys.recentLibraryItemIDs)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.recentLibraryItemIDs)
-            }
-        }
+        didSet { Self.persistEncoded(recentLibraryItemIDs, forKey: Keys.recentLibraryItemIDs) }
     }
 
     /// Home overlay sidebar visibility (persisted; default closed).
@@ -351,35 +339,17 @@ final class SettingsStore {
 
     // Per-display mapping: displayID (as string) -> scaling mode
     var perDisplayScalingModes: [String: String] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(perDisplayScalingModes) {
-                UserDefaults.standard.set(encoded, forKey: Keys.perDisplayScalingModes)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.perDisplayScalingModes)
-            }
-        }
+        didSet { Self.persistEncoded(perDisplayScalingModes, forKey: Keys.perDisplayScalingModes) }
     }
 
     // Per-display mapping: displayID (as string) -> renderer mode (Phase 7)
     var perDisplayRendererModes: [String: String] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(perDisplayRendererModes) {
-                UserDefaults.standard.set(encoded, forKey: Keys.perDisplayRendererModes)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.perDisplayRendererModes)
-            }
-        }
+        didSet { Self.persistEncoded(perDisplayRendererModes, forKey: Keys.perDisplayRendererModes) }
     }
 
     // Per-display mapping: displayID (as string) -> security-scoped bookmark data
     var perDisplayBookmarks: [String: Data] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(perDisplayBookmarks) {
-                UserDefaults.standard.set(encoded, forKey: Keys.perDisplayBookmarks)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.perDisplayBookmarks)
-            }
-        }
+        didSet { Self.persistEncoded(perDisplayBookmarks, forKey: Keys.perDisplayBookmarks) }
     }
 
     // Whether the app should use per-display wallpapers (true) or a single unified wallpaper (false)
@@ -389,24 +359,12 @@ final class SettingsStore {
 
     // Saved collections: keyed by collection name (unique identifier for user)
     var savedCollections: [String: WallpaperCollection] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(savedCollections) {
-                UserDefaults.standard.set(encoded, forKey: Keys.savedCollections)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.savedCollections)
-            }
-        }
+        didSet { Self.persistEncoded(savedCollections, forKey: Keys.savedCollections) }
     }
 
     // Collection bookmarks: keyed by collection name, then source URL; stores security-scoped bookmark data
     var collectionBookmarks: [String: [String: Data]] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(collectionBookmarks) {
-                UserDefaults.standard.set(encoded, forKey: Keys.collectionBookmarks)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.collectionBookmarks)
-            }
-        }
+        didSet { Self.persistEncoded(collectionBookmarks, forKey: Keys.collectionBookmarks) }
     }
 
     // Most recently used collection name (for convenience in UI)
@@ -516,13 +474,7 @@ final class SettingsStore {
 
     // Saved setups: keyed by setup name (unique identifier for user)
     var savedSetups: [String: SavedSetup] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(savedSetups) {
-                UserDefaults.standard.set(encoded, forKey: Keys.savedSetups)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.savedSetups)
-            }
-        }
+        didSet { Self.persistEncoded(savedSetups, forKey: Keys.savedSetups) }
     }
 
     // Currently active setup name (for tracking which setup was last loaded)

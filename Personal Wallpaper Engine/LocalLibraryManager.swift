@@ -156,7 +156,9 @@ final class LocalLibraryManager {
 
     func thumbnail(for item: LibraryItem) async -> NSImage? {
         guard let url = resolveURL(for: item) else { return nil }
-        return await thumbnailCache.image(for: item, resolvedURL: url)
+        return await Self.withSecurityScopedAccess(to: url) {
+            await thumbnailCache.image(for: item, resolvedURL: url)
+        }
     }
 
     func cacheByteCount() -> Int64 {
@@ -222,29 +224,44 @@ final class LocalLibraryManager {
     }
 
     nonisolated private static func extractMetadata(for item: LibraryItem, url: URL) async -> LibraryItem? {
-        var updated = item
-        let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
-        updated.contentModificationDate = values?.contentModificationDate
+        await withSecurityScopedAccess(to: url) {
+            var updated = item
+            let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
+            updated.contentModificationDate = values?.contentModificationDate
 
-        let asset = AVURLAsset(url: url)
-        let duration = try? await asset.load(.duration)
-        if let duration, duration.isNumeric {
-            updated.duration = CMTimeGetSeconds(duration)
-        }
+            let asset = AVURLAsset(url: url)
+            let duration = try? await asset.load(.duration)
+            if let duration, duration.isNumeric {
+                updated.duration = CMTimeGetSeconds(duration)
+            }
 
-        if let track = try? await asset.loadTracks(withMediaType: .video).first {
-            let size = try? await track.load(.naturalSize)
-            if let size {
-                updated.width = Int(abs(size.width.rounded()))
-                updated.height = Int(abs(size.height.rounded()))
+            if let track = try? await asset.loadTracks(withMediaType: .video).first {
+                let size = try? await track.load(.naturalSize)
+                if let size {
+                    updated.width = Int(abs(size.width.rounded()))
+                    updated.height = Int(abs(size.height.rounded()))
+                }
+                let descriptions = try? await track.load(.formatDescriptions)
+                if let format = descriptions?.first {
+                    let codec = CMFormatDescriptionGetMediaSubType(format)
+                    updated.codec = fourCCString(codec)
+                }
             }
-            let descriptions = try? await track.load(.formatDescriptions)
-            if let format = descriptions?.first {
-                let codec = CMFormatDescriptionGetMediaSubType(format)
-                updated.codec = fourCCString(codec)
+            return updated
+        }
+    }
+
+    nonisolated private static func withSecurityScopedAccess<T>(
+        to url: URL,
+        perform: () async -> T
+    ) async -> T {
+        let didStartScope = url.startAccessingSecurityScopedResource()
+        defer {
+            if didStartScope {
+                url.stopAccessingSecurityScopedResource()
             }
         }
-        return updated
+        return await perform()
     }
 
     nonisolated private static func fourCCString(_ code: FourCharCode) -> String {

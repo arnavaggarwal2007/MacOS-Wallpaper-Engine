@@ -64,9 +64,13 @@ artifacts/
 
 # Local logs (never commit Xcode export or debug captures)
 *.log
+Logs/
 Logs/Build*.txt
 Logs/console_logs.md
 Logs/console_logs_kb_summary.md
+
+# Editor / IDE
+.cursor/
 
 # Ignore user session files
 *.xcscmblueprint

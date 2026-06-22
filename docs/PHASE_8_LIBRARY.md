@@ -9,7 +9,7 @@
 | Subphase | Deliverable |
 |----------|-------------|
 | 8A | `LibraryItem`, `LibraryRoot`, `LocalLibraryManager`, `SettingsStore` persistence |
-| 8B | `LibraryThumbnailCache` — disk cache, LRU eviction (500 MB cap), AVFoundation metadata |
+| 8B | `LibraryThumbnailCache` — disk cache, LRU eviction (500 MB cap), AVFoundation metadata; frame extraction aligned with collection thumbnails (t=0 + tolerance, t=1 fallback, security-scoped reads) |
 | 8C | `LibraryBrowserView`, Home strip + sheet, Settings roots, Collection editor picker |
 | 8C polish | Horizontal strip on Home, full grid in sheet, tile alignment, sheet clipping fixes |
 
@@ -50,6 +50,7 @@ SettingsStore (libraryRoots, libraryItems, lastUsedLibraryItemID)
 | 12 | Remove library root | Items for root removed; cache entries pruned |
 | 13 | Setup save/restore with library path | Bookmarks restore playback |
 | 14 | Thumbnail load (50+ items) | No main-thread semaphore wait; max 4 concurrent loads |
+| 16 | Clear thumbnail cache → relaunch | Home strip + Browse Library grid regenerate previews; file-icon fallback only when decode truly fails |
 | 15 | Home display cards | Large video/image previews stay inside 214×104 card bounds; no overlap between cards |
 
 ## Build verification

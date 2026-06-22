@@ -1,10 +1,13 @@
 import AppKit
 import AVFoundation
 import Foundation
+import os
 
 /// Disk-backed thumbnail cache for library items with LRU eviction (Phase 8B).
 final class LibraryThumbnailCache: @unchecked Sendable {
     static let shared = LibraryThumbnailCache()
+
+    private static let logger = Logger(subsystem: "com.local.wallpaper", category: "LibraryThumbnailCache")
 
     private struct IndexEntry: Codable {
         let itemID: String
@@ -182,11 +185,35 @@ final class LibraryThumbnailCache: @unchecked Sendable {
 
     private static func generateThumbnail(for url: URL, maximumSize: CGSize) async -> NSImage? {
         guard url.isFileURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
+
+        let didStartScope = url.startAccessingSecurityScopedResource()
+        defer {
+            if didStartScope {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        if let image = await generateStill(from: url, at: .zero, maximumSize: maximumSize) {
+            return image
+        }
+        if let image = await generateStill(from: url, at: CMTime(seconds: 1, preferredTimescale: 600), maximumSize: maximumSize) {
+            return image
+        }
+
+        if SettingsStore.shared.debugDiagnosticsEnabled {
+            logger.debug("Library thumbnail generation failed file=\(url.lastPathComponent, privacy: .public)")
+        }
+        return nil
+    }
+
+    private static func generateStill(from url: URL, at time: CMTime, maximumSize: CGSize) async -> NSImage? {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = maximumSize
-        let time = CMTime(seconds: 1, preferredTimescale: 600)
+        let tolerance = CMTime(seconds: 0.1, preferredTimescale: 600)
+        generator.requestedTimeToleranceBefore = tolerance
+        generator.requestedTimeToleranceAfter = tolerance
 
         return await withCheckedContinuation { continuation in
             generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: time)]) { _, cgImage, _, result, _ in

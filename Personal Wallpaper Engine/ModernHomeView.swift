@@ -132,6 +132,10 @@ struct ModernHomeView: View {
         .onAppear {
             scheduleRebuildDisplayCardsCache()
         }
+        .videoDropImport { url in
+            pendingVideoURL = url
+            isDisplaySelectionModalPresented = true
+        }
         .fileImporter(
             isPresented: $isFileImporterPresented,
             allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
@@ -425,7 +429,9 @@ struct ModernHomeView: View {
 
     private func uiDebugLog(_ message: String) {
         guard SettingsStore.shared.debugDiagnosticsEnabled else { return }
+        #if DEBUG
         print("ModernHomeView: \(message)")
+        #endif
     }
 
     private var selectedDisplay: DisplayCard? {

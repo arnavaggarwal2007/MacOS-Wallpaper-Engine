@@ -26,6 +26,11 @@ private actor LibraryThumbnailLoader {
             next.resume()
         }
     }
+
+    func releaseAfter(_ operation: () async -> Void) async {
+        defer { release() }
+        await operation()
+    }
 }
 
 /// Grid or horizontal-strip browser for indexed local library items (Phase 8C).
@@ -80,6 +85,9 @@ struct LibraryBrowserView: View {
                     libraryStrip
                 }
             }
+        }
+        .videoDropImport { url in
+            Task { await appModel.applyDroppedVideoURL(url) }
         }
     }
 
@@ -259,11 +267,12 @@ struct LibraryBrowserView: View {
         }
 
         await LibraryThumbnailLoader.shared.acquire()
-        defer { Task { await LibraryThumbnailLoader.shared.release() } }
-
-        guard let image = await appModel.libraryThumbnail(for: item) else { return }
-        await MainActor.run {
-            thumbnailCache[item.id] = image
+        await LibraryThumbnailLoader.shared.releaseAfter {
+            let image = await appModel.libraryThumbnail(for: item)
+                ?? NSWorkspace.shared.icon(forFile: item.filePath)
+            await MainActor.run {
+                thumbnailCache[item.id] = image
+            }
         }
     }
 }
