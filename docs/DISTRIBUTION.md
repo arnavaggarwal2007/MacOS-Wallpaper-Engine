@@ -1,8 +1,11 @@
 # Distribution Guide
 
-**Purpose:** Steps to produce a signed, notarized macOS build of Personal Wallpaper Engine for direct download (outside the Mac App Store).
+**Purpose:** Steps to produce a signed, notarized macOS build of Personal Wallpaper Engine for **direct download** (outside the Mac App Store), and pointers for the **Mac App Store** path.
 
-**Prerequisites:** Apple Developer account, Developer ID Application certificate, Xcode 16+, macOS 15+ build host.
+**Strategy (App Store vs Direct vs Steam):** See [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md). **Launch order (2026-08-20):** App Store first, Direct second. Direct how-to remains in this document; MAS process is in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
+
+**Prerequisites (Direct):** Apple Developer account, Developer ID Application certificate, Xcode 16+, macOS 15+ build host.  
+**Prerequisites (App Store):** Same membership + Mac App Store distribution certificate / provisioning — see submission guide.
 
 ---
 
@@ -16,7 +19,7 @@ Before each release, update in Xcode target **Personal Wallpaper Engine**:
 | Build number | `CURRENT_PROJECT_VERSION` (increment every upload) |
 | Copyright | `INFOPLIST_KEY_NSHumanReadableCopyright` |
 
-The app uses **LSUIElement** (menu bar agent) and shows the dock icon when the main window is visible (`DockAgentPolicy`).
+The app uses **LSUIElement** (menu bar agent) and shows the dock icon when the main window is visible (`DockAgentPolicy`). Document this clearly in App Store review notes.
 
 ---
 
@@ -26,15 +29,17 @@ Entitlements file: [`Personal Wallpaper Engine/Personal Wallpaper Engine.entitle
 
 | Entitlement | Purpose |
 |-------------|---------|
-| App Sandbox | Required for notarization |
+| App Sandbox | Required for notarization and for Mac App Store |
 | User-selected read-only files | Pick wallpapers and library folders |
 | App-scoped bookmarks | Persist access across relaunch |
 
-No network entitlement is required for local-only operation. Add outbound network only if Sparkle auto-update is integrated later.
+**Network:** Local video wallpapers do not need network. **Web wallpapers** (`WebRenderer` / WKWebView loading `http`/`https` URLs) require `com.apple.security.network.client` under App Sandbox — add for Mac App Store (and any sandboxed Direct build that ships remote web wallpapers). Add outbound network for Sparkle only when Direct auto-update is implemented (Milestone 3).
+
+**App Group:** Required when Tier B screensaver ships (Milestone 2); not present in current entitlements plist.
 
 ---
 
-## 3. Release build
+## 3. Release build (Direct / Developer ID)
 
 ```bash
 cd "/Users/arnev/Desktop/Personal Wallpaper Engine"
@@ -46,6 +51,8 @@ xcodebuild \
   CODE_SIGN_IDENTITY="Developer ID Application: YOUR NAME (TEAMID)" \
   build
 ```
+
+When the **`PWE Direct`** scheme exists (V2.2 M3), prefer that scheme with `DIRECT_BUILD`. Until then, the default scheme is the single-flavor baseline.
 
 Verify locally:
 
@@ -118,14 +125,16 @@ codesign --force --sign "Developer ID Application: YOUR NAME (TEAMID)" \
 
 ## 7. Privacy and support
 
-For public distribution, publish a short privacy statement:
+Publish the privacy statement from [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) (host a copy for App Store Connect and the website):
 
 - No account required
-- No analytics or telemetry in v1.0
-- Wallpaper files stay local; bookmarks stored in UserDefaults on device
-- Optional future: Sparkle update checks (document when added)
+- No analytics or telemetry in current design
+- Wallpaper files stay local; bookmarks stored on device
+- Optional future: Sparkle update checks on Direct (document when added)
 
-Point **Check for Updates…** in Settings to your release page until Sparkle is integrated ([`UpdateChecker.swift`](../Personal%20Wallpaper%20Engine/UpdateChecker.swift)).
+**Direct builds:** Point **Check for Updates…** in Settings to your release page until Sparkle is integrated ([`UpdateChecker.swift`](../Personal%20Wallpaper%20Engine/UpdateChecker.swift)).
+
+**Mac App Store builds:** Must **not** open external update URLs; updates come only from the App Store (`#if APP_STORE_BUILD`).
 
 ---
 
@@ -144,23 +153,43 @@ xcodebuild test \
   CODE_SIGNING_ALLOWED=NO
 ```
 
+Also complete [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) (including App Store section when shipping MAS).
+
 ---
 
-## 9. Mac App Store path (alternative)
+## 9. Mac App Store path
 
-Mac App Store distribution requires:
+**Preferred first public channel** (see [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0). Detailed process: [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md). Engineering charter: [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md).
 
-- Sandbox-compatible entitlements (already enabled)
-- App Store provisioning profile
-- Remove or adjust `LSUIElement` if Review requires persistent dock presence
-- Sparkle replaced by App Store updates
+### Requirements checklist
 
-This repo is currently optimized for **direct Developer ID distribution**.
+| Item | Status / action |
+|------|-----------------|
+| App Sandbox | Already enabled — keep |
+| Network client entitlement | Add if shipping web wallpapers on MAS |
+| `PrivacyInfo.xcprivacy` | Add (Milestone 1) |
+| Mac App Store provisioning | Configure on `PWE App Store` scheme |
+| Disable external updater UI | `#if APP_STORE_BUILD` |
+| Tier C lock live video | **Never** on MAS |
+| `LSUIElement` | Allowed with justification — explain in review notes; do not remove unless Review requires it |
+| Sparkle | Must not ship on MAS |
+
+### Build model
+
+- Same git **`main`** as Direct
+- Separate **scheme / xcconfig / entitlements** (`APP_STORE_BUILD`)
+- **Do not** maintain a permanent `app-store` git branch
+
+Until Milestone 1 lands, the repo’s day-to-day build remains the single-flavor baseline optimized for local Debug/Release and future Developer ID work.
 
 ---
 
 ## References
 
-- [`docs/PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)
-- [`docs/V1_SIGNOFF.md`](V1_SIGNOFF.md)
-- [`docs/PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)
+- [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)
+- [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)
+- [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md)
+- [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
+- [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
+- [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)
+- [`V2_2_DIRECT_IMPLEMENTATION.md`](V2_2_DIRECT_IMPLEMENTATION.md)

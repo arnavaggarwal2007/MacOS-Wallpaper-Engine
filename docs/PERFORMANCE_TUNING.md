@@ -124,7 +124,7 @@ Launch/hotplug restore now coalesces after batch apply (7B closeout).
 | Hero pause freeze-frame (current-time snapshot vs `CMTime.zero` overlay) | **Complete** | Post–Phase 8 polish (2026-06-02) |
 | `AVPlayerItemVideoOutput` manual frame stepping | Deferred | Research |
 | Profile FPS caps via new engine mechanism | Deferred | Phase 9+ |
-| Historical CPU graphs / export diagnostics | Deferred | Phase 10 |
+| Historical CPU graphs / export diagnostics | Deferred | V2.1 diagnostics (not Phase 10 lock-screen research) |
 | **Phase 7D — unified hero decode** | **Complete** | Phase 7D |
 | **Phase 7E — profile decode tuning** | **Complete** | Phase 7E |
 | **Phase 7G — hero attach stability closeout** | **Complete** | Phase 7G |

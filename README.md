@@ -4,7 +4,7 @@ A macOS desktop wallpaper engine built in Swift that renders local video and web
 
 ## Overview
 
-Personal Wallpaper Engine plays local video files (and optional web sources) as animated macOS wallpapers. **Version 1 is complete:** engine core (Phases 1–5), wallpaper collections (6A), desktop setups (6B), and the four-tab UI final vision. **Version 2** (power, engine efficiency, local library, quick modes) is tracked in [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md).
+Personal Wallpaper Engine plays local video files (and optional web sources) as animated macOS wallpapers. **Version 1 is complete:** engine core (Phases 1–5), wallpaper collections (6A), desktop setups (6B), and the four-tab UI final vision. **Version 2** Phases 7–10 (research) are complete; **V2.2** (App Store–first implementation) is tracked in [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) Part 3.
 
 ## Features
 
@@ -26,18 +26,27 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 | Document | Purpose |
 |----------|---------|
 | [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) | V1 gate: functional + performance baseline |
-| [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) | Consolidated release gate |
-| [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Signing, notarization, DMG |
+| [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) | Consolidated release gate (incl. App Store) |
+| [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Direct download: signing, notarization, DMG; MAS pointers |
+| [`docs/DISTRIBUTION_CHANNELS.md`](docs/DISTRIBUTION_CHANNELS.md) | App Store vs Direct vs Steam strategy |
+| [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) | Mac App Store Connect + review guide |
+| [`docs/V2_2_APP_STORE_IMPLEMENTATION.md`](docs/V2_2_APP_STORE_IMPLEMENTATION.md) | V2.2 M1/M2 charter (trunk + flavors) |
+| [`docs/V2_2_DIRECT_IMPLEMENTATION.md`](docs/V2_2_DIRECT_IMPLEMENTATION.md) | Direct DMG stub (after App Store) |
+| [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) | Hostable privacy policy |
+| [`docs/PHASE_10A_FEASIBILITY.md`](docs/PHASE_10A_FEASIBILITY.md) | Phase 10A: lock-screen/screensaver feasibility |
+| [`docs/PHASE_10B_SCREENSAVER_RESEARCH.md`](docs/PHASE_10B_SCREENSAVER_RESEARCH.md) | Phase 10B: screensaver research |
+| [`docs/PHASE_10C_LOCK_SCREEN_RESEARCH.md`](docs/PHASE_10C_LOCK_SCREEN_RESEARCH.md) | Phase 10C: lock-screen research |
+| [`docs/PHASE_10_SUMMARY.md`](docs/PHASE_10_SUMMARY.md) | Phase 10 executive summary |
 | [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md) | V1 feature inventory and architecture |
 | [`DESIGN.md`](DESIGN.md) | Design spec (product shape, tokens, copy catalog) |
 | [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) | UI spec (tabs, layout, flows) |
-| [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 (V2) |
+| [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 + V2.2 Part 3 |
 | [`docs/PHASE_9_QUICK_MODES.md`](docs/PHASE_9_QUICK_MODES.md) | Phase 9 quick modes + menu bar |
 | [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md) | Phase 9 regression matrix |
 | [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Full manual test matrix |
 | [`docs/archive/`](docs/archive/) | Historical roadmaps and phase validation notes |
 
-Knowledge base (Obsidian): `Wallpaper Engine KB/` — start at `10 Project Home.md` and `KB-Guide.md` (architecture, features, ADRs, changelog).
+Knowledge base (Obsidian): sibling folder `Wallpaper Engine KB/` on Desktop — start at `10 Project Home.md` and `KB-Guide.md` (architecture, features, ADRs, changelog).
 
 ## Tech Stack
 
@@ -92,8 +101,12 @@ Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`)
 | Version 2 Phase 7 (performance, power, diagnostics — 7A–7G) | Complete — signed off 2026-06-01; see `docs/PERFORMANCE_TUNING.md` |
 | Version 2 Phase 8 (local library — 8A–8C) | Complete — see [`docs/PHASE_8_LIBRARY.md`](docs/PHASE_8_LIBRARY.md) |
 | Version 2 Phase 9 (quick modes + menu bar) | Complete — see `version2_developmental_roadmap.md` |
-| Version 2 Phase 10 (lock-screen research) | Next |
+| Version 2 Phase 10 (lock-screen + distribution research) | **Complete** — see Phase 10 docs above |
+| V2.2 docs + App Store–first charter (trunk + flavors) | **Complete** (2026-08-20) — see Part 3 in roadmap |
+| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Next** — engineering not started |
+| V2.2 Milestone 2 (Tier A + B on all flavors) | Planned after M1 |
+| V2.2 Milestone 3 (Direct DMG + Sparkle / Tier C) | Deferred after App Store |
 
 ## Status
 
-**June 9, 2026:** Phase 9 complete (9A–9B quick modes + menu bar). Post-ship bug fixes for hero preview, menu thumbnail layout, and window activation. Phase 10 next. KB: `Wallpaper Engine KB/KB-Guide.md`.
+**August 20, 2026:** Documentation solidified for **App Store–first** phased launch on a **single trunk with build flavors** (no permanent channel branches). Phases 1–9 remain the shippable desktop product; Phase 10 research stands; V2.2 implementation charters are in `docs/`. **Next:** Milestone 1 engineering (`feature/mas-compliance`). KB: sibling `Wallpaper Engine KB/`.

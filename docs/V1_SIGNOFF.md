@@ -3,8 +3,8 @@
 **Date:** 2026-06-21 (Phase 1–9 audit update)  
 **Build:** Release verified 2026-06-01; audit hardening 2026-06-21  
 **Scope:** Phases 1–6B + UI final vision + V2 Phases 7–9  
-**Gate:** V1 + **Phases 7–9 complete (9A–9B)**. Phase 10 (lock-screen research) next.  
-**Knowledge base:** `Wallpaper Engine KB/` — `10 Project Home.md`, `KB-Guide.md`, `30 Features/Feature-V2-Quick-Modes.md`.
+**Gate:** V1 + **Phases 7–9 complete (9A–9B)**. **Phase 10 research complete** (2026-06-21). **V2.2 docs / App Store–first charter complete** (2026-08-20) — see [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md), [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md).  
+**Knowledge base:** Sibling `Wallpaper Engine KB/` — `10 Project Home.md`, `KB-Guide.md`, ADR-008.
 
 ---
 
@@ -21,11 +21,20 @@
 | Phase 8 local library | **Pass** | [`PHASE_8_LIBRARY.md`](PHASE_8_LIBRARY.md) |
 | Phase 9 quick modes + menu bar | **Pass** | [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) — all rows **P** |
 | XCTest unit suite | **Pass (added)** | CPUMetrics, QuickMode, SettingsStore persistence |
-| Distribution docs | **Pass** | [`DISTRIBUTION.md`](DISTRIBUTION.md), [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) |
+| Distribution docs | **Pass** | [`DISTRIBUTION.md`](DISTRIBUTION.md), [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md), [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md), V2.2 App Store charters (2026-08-20) |
 
-**Recommendation:** Phases 1–9 **complete and hardened** for local-first distribution after notarization. Phase 10 next.
+**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0. V2.2 application code not started.
 
 ---
+
+## V2.2 distribution milestones (sign-off tracking)
+
+| Milestone | Scope | Status | Date |
+|-----------|--------|--------|------|
+| Docs / charter (trunk + flavors, App Store first) | Roadmap Part 3 + submission/privacy docs | **Pass** | 2026-08-20 |
+| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Pending | |
+| M2 — Tier A + Tier B (v1.1) | Lock export + screensaver | Pending | |
+| M3 — Direct DMG | Sparkle + tip link + conditional Tier C | Deferred | |
 
 ## Automated verification
 
@@ -93,9 +102,10 @@ Source: [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § Phase 7 Closeout.
 
 ## Known gaps (accepted post Phase 9)
 
-- Lock-screen integration — Phase 10 research
+- Lock-screen / screensaver — Phase 10 **research complete**; implementation V2.2 M2 — [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md), [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)
+- Mac App Store flavor / privacy manifest — V2.2 M1 (docs ready; code not started)
 - Collection rotation / playlists — V2.1
-- Sparkle auto-update — manual release page for v1.0 ([`UpdateChecker.swift`](../Personal%20Wallpaper%20Engine/UpdateChecker.swift))
+- Sparkle auto-update — Direct M3 ([`V2_2_DIRECT_IMPLEMENTATION.md`](V2_2_DIRECT_IMPLEMENTATION.md)); MAS uses App Store updates
 - Community wallpaper platform — out of local-first scope
 
 ---
@@ -105,13 +115,16 @@ Source: [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § Phase 7 Closeout.
 | Role | Name | Date |
 |------|------|------|
 | Engineering | Phase 1–9 audit | 2026-06-21 |
+| Engineering | V2.2 documentation / charter | 2026-08-20 |
 | Product / owner | | |
 
 ---
 
 ## References
 
-- [`docs/PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)
-- [`docs/DISTRIBUTION.md`](DISTRIBUTION.md)
-- [`docs/PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md)
-- [`docs/PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)
+- [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)
+- [`DISTRIBUTION.md`](DISTRIBUTION.md)
+- [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)
+- [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)
+- [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md)
+- [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)

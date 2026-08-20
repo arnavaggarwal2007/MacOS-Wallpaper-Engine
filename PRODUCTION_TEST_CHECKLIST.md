@@ -319,12 +319,11 @@ Activity Monitor reports **per-core** CPU (100% = one logical core). On an N-cor
 - ✅ System health tracking and visibility
 
 ### Known Limitations
-- Single video per system (future: per-display selection)
-- No launch-on-login support yet (future: Phase 5)
-- No web rendering yet (future: Phase 1.5 extension)
+- Lock-screen live video and screensaver — Phase 10 research complete; implementation deferred to V2.2
+- See [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) for the consolidated release gate
 
 ### System Requirements
-- macOS 12.0 or later
+- macOS 15.0 or later (deployment target)
 - ~100MB disk space
 - ~100MB RAM during playback
 

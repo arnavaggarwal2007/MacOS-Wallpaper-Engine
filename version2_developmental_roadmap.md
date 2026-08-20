@@ -1,8 +1,10 @@
-# Version 2 Developmental Roadmap (Phases 7–10)
+# Version 2 Developmental Roadmap (Phases 7–10 + V2.2)
 
-**Status (2026-06-09):** Phases **7A–7G**, **8A–8C**, and **9A–9B** complete. **Phase 10** (lock-screen research) next. KB: `Wallpaper Engine KB/70 Master Plan/MASTER_DEVELOPMENT_PLAN.md`, `30 Features/00 Features Index.md`.
+**Status (2026-08-20):** Phases **7A–7G**, **8A–8C**, **9A–9B**, and **Phase 10** (research) complete. **V2.2 Implementation** is the active track: **App Store first** (phased), then Direct DMG. See [Part 3](#part-3--v22-implementation--app-store-first) below. KB: `Wallpaper Engine KB/70 Master Plan/MASTER_DEVELOPMENT_PLAN.md`, `30 Features/00 Features Index.md`.
 
 **Prerequisite:** Version 1 complete — see [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md), [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md), [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md).
+
+**Implementation charters:** [`docs/V2_2_APP_STORE_IMPLEMENTATION.md`](docs/V2_2_APP_STORE_IMPLEMENTATION.md) · [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) · [`docs/V2_2_DIRECT_IMPLEMENTATION.md`](docs/V2_2_DIRECT_IMPLEMENTATION.md)
 
 Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roadmap through Phase 6 (Collections + Desktop Setups) is complete and stable. It’s structured in the same style so you can drop it straight into your document as the next section.[^1]
 
@@ -329,7 +331,9 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ***
 
-## Phase 10 Roadmap — Lock‑Screen and Screensaver Strategy (Planned Future)
+## Phase 10 Roadmap — Lock‑Screen and Screensaver Strategy
+
+**Status (2026-06-21):** **Research complete** — no application code shipped. Deliverables: `docs/PHASE_10A_FEASIBILITY.md`, `PHASE_10B_SCREENSAVER_RESEARCH.md`, `PHASE_10C_LOCK_SCREEN_RESEARCH.md`, `DISTRIBUTION_CHANNELS.md`, `PHASE_10_SUMMARY.md`. Implementation is **V2.2** — see [Part 3](#part-3--v22-implementation--app-store-first) (App Store first, trunk + flavors).
 
 **Goal:** Lay out a clear path to lock‑screen and/or screensaver integration inspired by Wallspace’s lock‑screen live wallpapers, while explicitly treating this as a research/planning phase that may depend on future macOS APIs and entitlements.[^5][^7][^3]
 
@@ -373,10 +377,107 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ***
 
+## Part 3 — V2.2 Implementation (App Store first)
+
+**Status (2026-08-20):** Documentation and charter complete. **No application code for V2.2 yet.** Next engineering step: Milestone 1 on a short-lived feature branch.
+
+**Channel priority (amended):** Mac App Store first (phased), Direct DMG second, Steam only if explicitly committed. Supersedes Phase 10’s “Direct primary” recommendation for *launch order*; feature matrix and Tier C policy are unchanged. See [`docs/PHASE_10_SUMMARY.md`](docs/PHASE_10_SUMMARY.md), [`docs/DISTRIBUTION_CHANNELS.md`](docs/DISTRIBUTION_CHANNELS.md), KB ADR-008.
+
+### Trunk + build flavors (mandatory)
+
+| Approach | Decision |
+|----------|----------|
+| Three long-lived branches (`app-store` / `direct` / `steam`) | **Rejected** |
+| One trunk (`main`) + schemes / xcconfigs / entitlements / `#if` flags | **Adopted** |
+
+**Rules:**
+
+- `main` is always the product. Releases are **tags** (e.g. `v1.0`, `v1.1`).
+- Use short-lived feature branches (`feature/mas-compliance`, `feature/tier-a-b`) that merge and delete.
+- Never create permanent channel forks. Channel deltas are compile-time flavors.
+- Universal features (Tier A, Tier B, App Group, privacy manifest) ship **once** on `main` for every flavor.
+
+Full policy: [`docs/V2_2_APP_STORE_IMPLEMENTATION.md`](docs/V2_2_APP_STORE_IMPLEMENTATION.md) § Branching.
+
+### Milestone summary
+
+| Milestone | Scope | Git | Target |
+|-----------|--------|-----|--------|
+| **M1** | App Store compliance flavor + privacy + submission of Phases 1–9 desktop engine | `feature/mas-compliance` → `main` → tag `v1.0` | ~1–2 weeks eng + review prep |
+| **M2** | Universal Tier A (static lock export) + Tier B (`.saver` screensaver) | `feature/tier-a-b` → `main` → tag `v1.1` | ~15–20 days |
+| **M3** | Direct flavor (Sparkle, tip link, conditional Tier C) | `feature/direct-channel` → `main` | After App Store stable |
+| **Steam** | Unsandboxed + Steamworks scheme | Only if committed | Deferred |
+
+```mermaid
+flowchart LR
+  Docs[Docs_solidified]
+  F1[feature_mas_compliance]
+  Main1[main_tag_v1.0]
+  Submit[AppStore_Submit]
+  F2[feature_tier_a_b]
+  Main2[main_tag_v1.1]
+  Update[AppStore_Update]
+  F3[feature_direct_flavor]
+  Direct[Direct_DMG]
+  Docs --> F1
+  F1 --> Main1
+  Main1 --> Submit
+  Submit --> F2
+  F2 --> Main2
+  Main2 --> Update
+  Update --> F3
+  F3 --> Direct
+```
+
+### Milestone 1 — Mac App Store compliance (v1.0)
+
+**Goal:** Ship the complete Phases 1–9 desktop product on the Mac App Store with review-safe policies. No Tier A/B/C code yet.
+
+| Deliverable | Notes |
+|-------------|--------|
+| `Configurations/AppStore.xcconfig` + `APP_STORE_BUILD` | Compile flag for MAS flavor |
+| `PWE App Store` scheme | Release archive with Mac App Store signing |
+| MAS entitlements (+ network client for web wallpapers) | Sandbox retained |
+| `PrivacyInfo.xcprivacy` | Universal; required for MAS |
+| Disable external “Check for Updates” on MAS | Guard `UpdateChecker` / Settings UI |
+| App Store Connect assets + review notes | [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) |
+| Privacy policy hosted | [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) |
+
+**Acceptance:** PRE_RELEASE + App Store checklist **P**; Validate App succeeds; owner sign-off; no permanent channel branches.
+
+### Milestone 2 — Tier A + Tier B (v1.1, all flavors)
+
+**Goal:** Competitive App Store fast-follow and shared foundation for Direct later.
+
+| Deliverable | Channel |
+|-------------|---------|
+| App Group + shared container | All |
+| `.saver` video screensaver (Tier B) | All |
+| Static lock-screen export + guided System Settings (Tier A) | All |
+| Settings “Lock Screen & Screen Saver” UI | All (no Tier C copy on MAS) |
+| Optional tip IAP | MAS only (`#if APP_STORE_BUILD`) |
+
+**Acceptance:** Saver preview + App Group sync regression; lock export on multi-display; App Store update screenshots; Tier C still compile-excluded on MAS.
+
+### Milestone 3 — Direct DMG (deferred)
+
+Sparkle 2, Developer ID notarization pipeline, external tip link, conditional Tier C (private API; Direct/Steam only). Charter stub: [`docs/V2_2_DIRECT_IMPLEMENTATION.md`](docs/V2_2_DIRECT_IMPLEMENTATION.md).
+
+### Explicitly out of scope until later
+
+- Permanent `app-store` / `direct` / `steam` git branches
+- Steamworks / Steam Workshop
+- Collection rotation / playlists (V2.1)
+- CPU history graphs (V2.1)
+- iCloud sync (KB Phase 11)
+
+***
+
 ## How to Attach This as “Part 2”
 
 - Add a new top‑level section after your current \"Phase 6 Roadmap\" titled something like **\"Phase 7+ Roadmap — Power, Library, and UX\"**.[^1]
 - Insert Phases 7–10 exactly in this order; each phase depends on stable completion of your current roadmap, and earlier phases (7 and 8) directly address the biggest product‑level gaps vs Wallspace (battery friendliness, library experience, quick flows).[^6][^2][^3]
+- Append **Part 3 — V2.2 Implementation** for App Store–first shipping after Phase 10 research.
 
 <div align="center">⁂</div>
 

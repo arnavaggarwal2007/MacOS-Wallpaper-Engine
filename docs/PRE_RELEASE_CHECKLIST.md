@@ -1,10 +1,13 @@
-# Pre-Release Checklist (Phases 1–9)
+# Pre-Release Checklist (Phases 1–9 + App Store)
 
 **Purpose:** Consolidated gate before public distribution. Supersedes scattered manual rows across phase matrices.
 
-**Platform:** macOS 15.0+ | **Build:** Release recommended for performance sign-off
+**Platform:** macOS 15.0+ | **Build:** Release recommended for performance sign-off  
+**Channels:** Complete the core sections for any release. Complete the **App Store** section before Mac App Store upload. Complete **Direct** signing rows before public DMG.
 
 Legend: **P** Pass · **F** Fail · **N/A** Not applicable
+
+**Related:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) · [`DISTRIBUTION.md`](DISTRIBUTION.md) · [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)
 
 ---
 
@@ -13,6 +16,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable
 - [ ] `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` — Debug + Release build, smoke passes
 - [ ] `xcodebuild test -scheme "Personal Wallpaper Engine" -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — unit tests pass
 - [ ] No new Swift compiler errors or warnings introduced
+- [ ] (When scheme exists) Release **PWE App Store** configuration builds cleanly
 
 ---
 
@@ -49,17 +53,43 @@ See [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § CPU scale glossary.
 
 ---
 
-## Distribution
+## Distribution — Direct (Developer ID)
 
-- [ ] [`DISTRIBUTION.md`](DISTRIBUTION.md) steps completed (sign, notarize, staple)
+- [ ] [`DISTRIBUTION.md`](DISTRIBUTION.md) steps completed (sign, notarize, staple) — when shipping Direct
 - [ ] Version + build number incremented
-- [ ] Privacy statement published (if public)
+- [ ] Privacy statement published ([`PRIVACY_POLICY.md`](PRIVACY_POLICY.md))
 
 ---
 
-## Deferred (not release blockers for local-first v1.0)
+## Distribution — Mac App Store (Milestone 1+)
 
-- Lock-screen video (Phase 10)
+Complete before App Store Connect upload:
+
+- [ ] Built with **`PWE App Store`** scheme / `APP_STORE_BUILD` (when available)
+- [ ] `PrivacyInfo.xcprivacy` present in the archived app
+- [ ] Network client entitlement present if web wallpapers are enabled
+- [ ] “Check for Updates…” does **not** open GitHub / external updater
+- [ ] No Tier C / private API code in MAS binary
+- [ ] Organizer **Validate App** succeeds
+- [ ] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
+- [ ] Privacy Policy URL and Support URL live
+- [ ] Review notes include menu bar agent instructions ([`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §5)
+- [ ] Screenshots attached per submission guide
+- [ ] Owner sign-off on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 (and M2 when applicable)
+
+---
+
+## Milestone 2 extras (when Tier A/B ship)
+
+- [ ] Static lock export flow (Tier A)
+- [ ] Screensaver install / App Group sync (Tier B)
+- [ ] MAS listing does not claim lock-screen live video
+
+---
+
+## Deferred (not blockers for desktop-only MAS v1.0)
+
+- Lock-screen live video (Tier C — Direct only, later)
 - Collection rotation / playlists (V2.1)
-- Sparkle auto-update (manual release page for now)
-- 1-hour soak / stress matrix in legacy [`PRODUCTION_TEST_CHECKLIST.md`](../PRODUCTION_TEST_CHECKLIST.md)
+- Sparkle auto-update (Direct Milestone 3)
+- 1-hour soak / stress matrix in legacy [`PRODUCTION_TEST_CHECKLIST.md`](../PRODUCTION_TEST_CHECKLIST.md) — run if Review or soak confidence requires it

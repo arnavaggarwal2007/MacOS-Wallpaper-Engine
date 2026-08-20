@@ -3,8 +3,8 @@
 **Status:** Complete (Phases 1–6B + UI final vision)  
 **Last updated:** 2026-06-02  
 **Branch:** `main`  
-**V2 status:** Phases 7–9 complete; Phase 10 (lock-screen research) next — [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md)  
-**Knowledge base:** `Wallpaper Engine KB/` — [`20 Architecture/00 Architecture Index`](../../Wallpaper%20Engine%20KB/20%20Architecture/00%20Architecture%20Index.md), [`30 Features/00 Features Index`](../../Wallpaper%20Engine%20KB/30%20Features/00%20Features%20Index.md)  
+**V2 status:** Phases 7–9 complete; **Phase 10 research complete** (2026-06-21); **V2.2 docs / App Store–first charter complete** (2026-08-20) — [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md), [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md), [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
+**Knowledge base:** Sibling [`Wallpaper Engine KB/`](../../Wallpaper%20Engine%20KB/) — [`20 Architecture/00 Architecture Index`](../../Wallpaper%20Engine%20KB/20%20Architecture/00%20Architecture%20Index.md), [`30 Features/00 Features Index`](../../Wallpaper%20Engine%20KB/30%20Features/00%20Features%20Index.md)  
 
 Sign-off record: [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
 
@@ -143,5 +143,7 @@ UI execution history: [`docs/archive/ui_revamp_roadmap.md`](archive/ui_revamp_ro
 
 - **Phases 7–8:** Complete (2026-06-01) — power, engine performance, diagnostics, local library.
 - **Phase 9:** Quick modes + menu bar (complete). See [`PHASE_9_QUICK_MODES.md`](PHASE_9_QUICK_MODES.md).
+- **Phase 10:** Research complete. See [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md).
+- **V2.2:** App Store–first implementation charter — [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md); roadmap Part 3.
 - Repo: `version2_developmental_roadmap.md`, `docs/PERFORMANCE_TUNING.md`, `docs/PHASE_8_LIBRARY.md`.
-- KB: `70 Master Plan/MASTER_DEVELOPMENT_PLAN.md`, `60 Changelog/Project-Changelog.md`.
+- KB: `70 Master Plan/MASTER_DEVELOPMENT_PLAN.md`, `60 Changelog/Project-Changelog.md`, ADR-008.
