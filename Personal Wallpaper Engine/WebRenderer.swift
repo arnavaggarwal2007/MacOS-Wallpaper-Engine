@@ -2,10 +2,65 @@ import AppKit
 import WebKit
 import os.log
 
+final class WebRendererNavigationDelegate: NSObject, WKNavigationDelegate {
+    private let logger = Logger(subsystem: "com.local.wallpaper", category: "WebRenderer")
+    private var loadContinuation: CheckedContinuation<Result<Void, WallpaperError>, Never>?
+    private var initialLoadURL: URL?
+
+    func beginLoad(for url: URL) async -> Result<Void, WallpaperError> {
+        initialLoadURL = url
+        return await withCheckedContinuation { continuation in
+            loadContinuation = continuation
+        }
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let requestURL = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+
+        if navigationAction.navigationType == .other,
+           let initialLoadURL,
+           requestURL.absoluteString == initialLoadURL.absoluteString {
+            decisionHandler(.allow)
+            return
+        }
+
+        if WebWallpaperURLValidator.isAllowed(requestURL) {
+            decisionHandler(.allow)
+            return
+        }
+
+        logger.warning("Blocked navigation to disallowed URL: \(requestURL.absoluteString, privacy: .public)")
+        decisionHandler(.cancel)
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        finishLoad(with: .success(()))
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        finishLoad(with: .failure(.internalError(description: "Web page failed to load: \(error.localizedDescription)")))
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        finishLoad(with: .failure(.internalError(description: "Web page failed to load: \(error.localizedDescription)")))
+    }
+
+    private func finishLoad(with result: Result<Void, WallpaperError>) {
+        guard let continuation = loadContinuation else { return }
+        loadContinuation = nil
+        initialLoadURL = nil
+        continuation.resume(returning: result)
+    }
+}
+
 final class WebRenderer: Renderer {
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "WebRenderer")
     private weak var containerView: NSView?
     private var webView: WKWebView?
+    private var navigationDelegate: WebRendererNavigationDelegate?
     private var activeURL: URL?
     private var currentScalingMode: VideoScalingMode = .resizeAspectFill
     private var performanceProfile: PerformanceProfile = .balanced
@@ -21,9 +76,7 @@ final class WebRenderer: Renderer {
             return .failure(.windowCreationFailed(reason: "Container view has zero bounds after layout"))
         }
 
-        // Configure WKWebView for macOS: avoid using iOS-only APIs like `allowsInlineMediaPlayback`.
         let configuration = WKWebViewConfiguration()
-        // Allow autoplay by not requiring a user action for media playback
         if #available(macOS 10.13, *) {
             configuration.mediaTypesRequiringUserActionForPlayback = []
         }
@@ -38,15 +91,17 @@ final class WebRenderer: Renderer {
             configuration.preferences = preferences
         }
 
+        let delegate = WebRendererNavigationDelegate()
         let webView = WKWebView(frame: bounds, configuration: configuration)
         webView.autoresizingMask = [.width, .height]
-        webView.navigationDelegate = nil
+        webView.navigationDelegate = delegate
         webView.allowsBackForwardNavigationGestures = false
 
         containerView.addSubview(webView)
         webView.translatesAutoresizingMaskIntoConstraints = true
         webView.frame = bounds
 
+        self.navigationDelegate = delegate
         self.webView = webView
         logger.info("WebRenderer initialized and attached to container view")
         return .success(())
@@ -116,6 +171,7 @@ final class WebRenderer: Renderer {
     func dispose() async {
         await stop()
         webView = nil
+        navigationDelegate = nil
         containerView = nil
         activeURL = nil
         currentScalingMode = .resizeAspectFill
@@ -124,9 +180,13 @@ final class WebRenderer: Renderer {
 
     // MARK: - Load URL
     func load(url: URL) async -> Result<Void, WallpaperError> {
+        guard WebWallpaperURLValidator.isAllowed(url) else {
+            return .failure(.internalError(description: WebWallpaperURLValidator.validationHint))
+        }
+
         activeURL = url
 
-        guard let webView = webView else {
+        guard let webView, let navigationDelegate else {
             return .failure(.rendererInitializationFailed(reason: "WebView not initialized"))
         }
 
@@ -135,7 +195,7 @@ final class WebRenderer: Renderer {
             webView.load(request)
         }
 
-        return .success(())
+        return await navigationDelegate.beginLoad(for: url)
     }
 
     // MARK: - Reconciliation Query Methods

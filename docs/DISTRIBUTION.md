@@ -166,10 +166,12 @@ Also complete [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) (including 
 | Item | Status / action |
 |------|-----------------|
 | App Sandbox | Already enabled — keep |
-| Network client entitlement | Add if shipping web wallpapers on MAS |
-| `PrivacyInfo.xcprivacy` | Add (Milestone 1) |
+| Network client entitlement | **Shipped** (M1 — web wallpapers) |
+| `PrivacyInfo.xcprivacy` | **Shipped** (M1) |
 | Mac App Store provisioning | Configure on `PWE App Store` scheme |
-| Disable external updater UI | `#if APP_STORE_BUILD` |
+| `Configurations/AppStore.xcconfig` | **Shipped** — `APP_STORE_BUILD`, `Release-AppStore` |
+| `Configurations/Direct.xcconfig` | **Shipped** — `DIRECT_BUILD` for Debug/Release |
+| Disable external updater UI | **Shipped** — `#if APP_STORE_BUILD` |
 | Tier C lock live video | **Never** on MAS |
 | `LSUIElement` | Allowed with justification — explain in review notes; do not remove unless Review requires it |
 | Sparkle | Must not ship on MAS |
@@ -180,7 +182,7 @@ Also complete [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) (including 
 - Separate **scheme / xcconfig / entitlements** (`APP_STORE_BUILD`)
 - **Do not** maintain a permanent `app-store` git branch
 
-Until Milestone 1 lands, the repo’s day-to-day build remains the single-flavor baseline optimized for local Debug/Release and future Developer ID work.
+Milestone 1 is on `main` via **`PWE App Store`** / `Release-AppStore`. Day-to-day Debug/Release uses **`Direct.xcconfig`** (`DIRECT_BUILD`).
 
 ---
 

@@ -1,0 +1,5 @@
+// Mac App Store flavor (Release-AppStore archive)
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) APP_STORE_BUILD
+CODE_SIGN_ENTITLEMENTS = Personal Wallpaper Engine/Personal Wallpaper Engine AppStore.entitlements
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
+REGISTER_APP_GROUPS = NO

@@ -1,0 +1,5 @@
+// Direct / default developer flavor (Debug + Release)
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) DIRECT_BUILD
+CODE_SIGN_ENTITLEMENTS = Personal Wallpaper Engine/Personal Wallpaper Engine.entitlements
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
+REGISTER_APP_GROUPS = NO

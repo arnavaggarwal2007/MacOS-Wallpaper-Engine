@@ -82,7 +82,11 @@ Aligned with [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md):
 
 **Privacy manifest:** Declare APIs used that require reason codes (e.g. UserDefaults) per Apple’s current required-reason API list. No tracking domains.
 
-**Web wallpapers:** If user pastes a remote URL, the app may load that URL (network entitlement). Document as user-initiated content, not developer analytics.
+**Web wallpapers:** If user pastes a remote URL, the app may load that URL (network entitlement). Document as user-initiated content, not developer analytics. Only **`https://`** and local **`file://`** URLs are accepted — see [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md).
+
+**Generative AI:** App does not use generative AI — state in privacy questionnaire and policy ([`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) § Generative AI).
+
+**Export compliance:** Answer that the app uses only exempt/standard encryption (`ITSAppUsesNonExemptEncryption=NO` in build settings).
 
 ---
 

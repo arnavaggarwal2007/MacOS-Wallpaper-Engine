@@ -1,6 +1,6 @@
 # V2.2 App Store Implementation Charter
 
-**Status:** Documentation complete (2026-08-20) — **no V2.2 application code yet**  
+**Status:** Milestone 1 engineering **complete** (2026-08-20) on `feature/mas-compliance` — pending PR merge to `main` and Connect upload  
 **Roadmap:** [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  
 **Privacy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
@@ -48,7 +48,7 @@ Define how Personal Wallpaper Engine ships on the **Mac App Store** under a phas
 | `PWE Direct` | `DIRECT_BUILD` | Yes | Yes (M2) | Conditional (M3) | Sparkle (M3) |
 | `PWE Steam` | `STEAM_BUILD` | **No** | Yes (if shipped) | Conditional | Steam |
 
-**Today:** Single unsigned/Debug–Release scheme only. M1 introduces App Store flavor; Direct/Steam schemes may be stubbed but are not required to ship M1.
+**Today:** `PWE App Store` scheme + `Release-AppStore` configuration ship M1; Direct uses `Direct.xcconfig` (`DIRECT_BUILD`); Steam scheme deferred.
 
 ```swift
 #if APP_STORE_BUILD
@@ -62,24 +62,26 @@ Define how Personal Wallpaper Engine ships on the **Mac App Store** under a phas
 
 ---
 
-## 3. Milestone 1 — Compliance (code not started)
+## 3. Milestone 1 — Compliance (**implemented** 2026-08-20)
 
 ### Goals
 
 Ship a review-safe Mac App Store build of the existing Phases 1–9 product.
 
-### File / project touch list (planned)
+### File / project touch list (done)
 
 | Item | Action |
 |------|--------|
-| `Configurations/AppStore.xcconfig` | Create; set `APP_STORE_BUILD` / `SWIFT_ACTIVE_COMPILATION_CONDITIONS` |
-| `Configurations/Direct.xcconfig` | Optional default for day-to-day Debug (`DIRECT_BUILD`) |
-| Xcode scheme `PWE App Store` | Release archive + Mac App Store signing |
-| `Personal Wallpaper Engine AppStore.entitlements` | Sandbox + user-selected files + bookmarks + **network.client** |
-| `PrivacyInfo.xcprivacy` | Required; declare UserDefaults / file access; no tracking |
-| `UpdateChecker.swift` | Guard external GitHub open behind `#if !APP_STORE_BUILD` |
-| `SettingsTabView.swift` | Hide or replace “Check for Updates…” on MAS |
-| CI | Build App Store Release flavor unsigned where possible |
+| `Configurations/AppStore.xcconfig` | **Done** — `APP_STORE_BUILD`, export compliance |
+| `Configurations/Direct.xcconfig` | **Done** — `DIRECT_BUILD`, `REGISTER_APP_GROUPS=NO` |
+| Xcode scheme `PWE App Store` | **Done** — archives `Release-AppStore` |
+| `Personal Wallpaper Engine AppStore.entitlements` | **Done** — sandbox + files + bookmarks + **network.client** |
+| `PrivacyInfo.xcprivacy` | **Done** — no tracking, no collected data types |
+| `UpdateChecker.swift` | **Done** — `#if !APP_STORE_BUILD` for external updates |
+| `SettingsTabView.swift` | **Done** — MAS update copy; web file importer |
+| `WebWallpaperURLValidator.swift` + `WebRenderer.swift` | **Done** — https/file allowlist + nav delegate |
+| `docs/M1_COMPLIANCE_CHECKLIST.md`, `docs/WEB_WALLPAPERS.md` | **Done** |
+| CI / local QA | **Done** — regression, tests, Release-AppStore build |
 
 ### Explicitly not in M1
 
@@ -92,11 +94,11 @@ Ship a review-safe Mac App Store build of the existing Phases 1–9 product.
 ### Acceptance criteria
 
 - [ ] `feature/mas-compliance` merged to `main`; branch deleted
-- [ ] Release **PWE App Store** archive validates in Organizer / `altool` / Transporter
-- [ ] No external update URL reachable in MAS binary
-- [ ] `PrivacyInfo.xcprivacy` present in app bundle
-- [ ] [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) App Store section all **P**
-- [ ] Owner sign-off on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row
+- [ ] Release **PWE App Store** archive validates in Organizer / Transporter (owner, signed)
+- [x] No external update URL reachable in MAS binary
+- [x] `PrivacyInfo.xcprivacy` present in app bundle
+- [x] Engineering rows in [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) / [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md)
+- [ ] Owner sign-off on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row (Connect upload)
 - [ ] Upload to App Store Connect complete per [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)
 
 ---

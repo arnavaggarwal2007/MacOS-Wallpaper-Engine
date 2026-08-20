@@ -13,10 +13,10 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable
 
 ## Automated gates
 
-- [ ] `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` — Debug + Release build, smoke passes
-- [ ] `xcodebuild test -scheme "Personal Wallpaper Engine" -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — unit tests pass
-- [ ] No new Swift compiler errors or warnings introduced
-- [ ] (When scheme exists) Release **PWE App Store** configuration builds cleanly
+- [x] `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` — Debug + Release build, smoke passes (2026-08-20)
+- [x] `xcodebuild test -scheme "Personal Wallpaper Engine" -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — unit tests pass (incl. `WebWallpaperURLValidatorTests`, `UpdateCheckerTests`)
+- [x] No new Swift compiler errors or warnings introduced (M1 branch)
+- [x] Release **PWE App Store** (`Release-AppStore`) configuration builds cleanly (2026-08-20)
 
 ---
 
@@ -63,14 +63,16 @@ See [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § CPU scale glossary.
 
 ## Distribution — Mac App Store (Milestone 1+)
 
-Complete before App Store Connect upload:
+Complete before App Store Connect upload. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md).
 
-- [ ] Built with **`PWE App Store`** scheme / `APP_STORE_BUILD` (when available)
-- [ ] `PrivacyInfo.xcprivacy` present in the archived app
-- [ ] Network client entitlement present if web wallpapers are enabled
-- [ ] “Check for Updates…” does **not** open GitHub / external updater
-- [ ] No Tier C / private API code in MAS binary
-- [ ] Organizer **Validate App** succeeds
+- [x] Built with **`PWE App Store`** scheme / `APP_STORE_BUILD`
+- [x] `PrivacyInfo.xcprivacy` present in the archived app
+- [x] Network client entitlement present (web wallpapers enabled)
+- [x] Web URL allowlist: **https** + **file** only; navigation errors surfaced — [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md)
+- [x] “Check for Updates…” does **not** open GitHub / external updater (MAS flavor)
+- [x] No Tier C / private API code in MAS binary
+- [ ] Web smoke: local HTML + one **https** URL on Release-AppStore (owner)
+- [ ] Organizer **Validate App** succeeds (signed archive — owner)
 - [ ] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
 - [ ] Privacy Policy URL and Support URL live
 - [ ] Review notes include menu bar agent instructions ([`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §5)

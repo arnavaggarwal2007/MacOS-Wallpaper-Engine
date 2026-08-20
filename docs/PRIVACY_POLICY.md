@@ -10,7 +10,13 @@ This document is intended for hosting as the App Store Connect **Privacy Policy 
 
 ## Summary
 
-Personal Wallpaper Engine is a **local-first** wallpaper application. It does **not** require an account and does **not** include analytics or advertising SDKs in the current product design.
+Personal Wallpaper Engine is a **local-first** wallpaper application. It does **not** require an account and does **not** include analytics or advertising SDKs in the current product design. It does **not** use generative AI features.
+
+---
+
+## Generative AI
+
+This app does **not** include chatbots, image generation, or other generative AI features. Wallpaper content comes from **your** local video files, optional local HTML files, or **URLs you choose** for web wallpapers.
 
 ---
 
@@ -21,7 +27,8 @@ We do not collect:
 - Names, email addresses, or account credentials (no accounts)
 - Location data
 - Advertising identifiers
-- Usage analytics or telemetry sold to third parties
+- Usage analytics or telemetry sold to third parties (no third-party analytics SDKs)
+- Generative-AI prompts or outputs (no AI features in the app)
 - Your wallpaper media files (videos, images, or web content remain on your Mac)
 
 ---

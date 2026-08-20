@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct SettingsTabView: View {
     @EnvironmentObject private var appModel: AppViewModel
     @State private var isFileImporterPresented = false
+    @State private var isWebFileImporterPresented = false
     @State private var isLibraryFolderImporterPresented = false
 
     var body: some View {
@@ -86,9 +87,13 @@ struct SettingsTabView: View {
                                 ))
                                 .textFieldStyle(.roundedBorder)
 
+                                Text(WebWallpaperURLValidator.validationHint)
+                                    .font(.caption)
+                                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+
                                 HStack(spacing: 10) {
-                                    Button(action: { isFileImporterPresented = true }) {
-                                        Label("Choose File", systemImage: "folder.badge.plus")
+                                    Button(action: { isWebFileImporterPresented = true }) {
+                                        Label("Choose HTML File", systemImage: "folder.badge.plus")
                                     }
 
                                     Button(action: { Task { await appModel.applyWallpaperFromSelection() } }) {
@@ -209,15 +214,17 @@ struct SettingsTabView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Version \(UpdateChecker.currentMarketingVersion) (\(UpdateChecker.currentBuildNumber))")
                                 .font(DesignTokens.Typography.subtitle)
-                            Text("Runs as a menu bar agent when the main window is closed. Check releases for updates (Sparkle integration planned).")
+                            Text("Runs as a menu bar agent when the main window is closed. \(UpdateChecker.updatesDescription)")
                                 .font(.caption)
                                 .foregroundStyle(DesignTokens.Colors.textSecondary)
-                            Button {
-                                UpdateChecker.openReleasePage()
-                            } label: {
-                                Label("Check for Updates…", systemImage: "arrow.down.circle")
+                            if !UpdateChecker.isAppStoreBuild {
+                                Button {
+                                    UpdateChecker.openReleasePage()
+                                } label: {
+                                    Label("Check for Updates…", systemImage: "arrow.down.circle")
+                                }
+                                .buttonStyle(.bordered)
                             }
-                            .buttonStyle(.bordered)
                         }
                     }
                 }
@@ -237,6 +244,20 @@ struct SettingsTabView: View {
             case .success(let urls):
                 guard let url = urls.first else { return }
                 appModel.selectVideo(at: url)
+                Task { await appModel.applyWallpaperFromSelection() }
+            case .failure(let error):
+                appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
+            }
+        }
+        .fileImporter(
+            isPresented: $isWebFileImporterPresented,
+            allowedContentTypes: [.html, .plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                appModel.updateWebURL(url.absoluteString)
                 Task { await appModel.applyWallpaperFromSelection() }
             case .failure(let error):
                 appModel.errorMessage = "File selection failed: \(error.localizedDescription)"

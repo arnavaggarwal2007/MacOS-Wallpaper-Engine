@@ -30,6 +30,8 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 | [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Direct download: signing, notarization, DMG; MAS pointers |
 | [`docs/DISTRIBUTION_CHANNELS.md`](docs/DISTRIBUTION_CHANNELS.md) | App Store vs Direct vs Steam strategy |
 | [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) | Mac App Store Connect + review guide |
+| [`docs/M1_COMPLIANCE_CHECKLIST.md`](docs/M1_COMPLIANCE_CHECKLIST.md) | M1 engineering + Connect sign-off matrix |
+| [`docs/WEB_WALLPAPERS.md`](docs/WEB_WALLPAPERS.md) | Web renderer usage, schemes, sandbox |
 | [`docs/V2_2_APP_STORE_IMPLEMENTATION.md`](docs/V2_2_APP_STORE_IMPLEMENTATION.md) | V2.2 M1/M2 charter (trunk + flavors) |
 | [`docs/V2_2_DIRECT_IMPLEMENTATION.md`](docs/V2_2_DIRECT_IMPLEMENTATION.md) | Direct DMG stub (after App Store) |
 | [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) | Hostable privacy policy |
@@ -103,10 +105,10 @@ Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`)
 | Version 2 Phase 9 (quick modes + menu bar) | Complete — see `version2_developmental_roadmap.md` |
 | Version 2 Phase 10 (lock-screen + distribution research) | **Complete** — see Phase 10 docs above |
 | V2.2 docs + App Store–first charter (trunk + flavors) | **Complete** (2026-08-20) — see Part 3 in roadmap |
-| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Next** — engineering not started |
+| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Engineering complete** (2026-08-20) — merge + Connect upload pending |
 | V2.2 Milestone 2 (Tier A + B on all flavors) | Planned after M1 |
 | V2.2 Milestone 3 (Direct DMG + Sparkle / Tier C) | Deferred after App Store |
 
 ## Status
 
-**August 20, 2026:** Documentation solidified for **App Store–first** phased launch on a **single trunk with build flavors** (no permanent channel branches). Phases 1–9 remain the shippable desktop product; Phase 10 research stands; V2.2 implementation charters are in `docs/`. **Next:** Milestone 1 engineering (`feature/mas-compliance`). KB: sibling `Wallpaper Engine KB/`.
+**August 20, 2026:** Milestone 1 **engineering complete** on `feature/mas-compliance` — App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening + `network.client`. Docs: `M1_COMPLIANCE_CHECKLIST.md`, `WEB_WALLPAPERS.md`. **Next:** PR merge to `main`, owner Connect upload @ `v1.0`.

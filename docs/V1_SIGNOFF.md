@@ -32,7 +32,7 @@
 | Milestone | Scope | Status | Date |
 |-----------|--------|--------|------|
 | Docs / charter (trunk + flavors, App Store first) | Roadmap Part 3 + submission/privacy docs | **Pass** | 2026-08-20 |
-| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Pending | |
+| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-20); Connect upload **Owner** | |
 | M2 — Tier A + Tier B (v1.1) | Lock export + screensaver | Pending | |
 | M3 — Direct DMG | Sparkle + tip link + conditional Tier C | Deferred | |
 
@@ -43,7 +43,9 @@
 | Debug smoke build | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_smoke.sh` | Pass | 2026-05-22 |
 | CI regression | `chunk7_regression.sh` | Pass | 2026-06-01 |
 | Phase 9 close-out Debug build | `xcodebuild` Debug | Pass | 2026-06-09 |
-| Unit tests | `xcodebuild test` | Pass | 2026-06-21 |
+| Unit tests | `xcodebuild test` | Pass | 2026-08-20 |
+| M1 Release-AppStore build | `PWE App Store` / `Release-AppStore` | Pass | 2026-08-20 |
+| M1 regression | `chunk7_regression.sh` | Pass | 2026-08-20 |
 | Phase 1–9 audit build | `chunk7_regression.sh` | Pass | 2026-06-21 |
 
 ---

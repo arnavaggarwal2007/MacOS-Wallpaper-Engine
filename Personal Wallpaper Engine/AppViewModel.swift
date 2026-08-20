@@ -1334,14 +1334,14 @@ final class AppViewModel: ObservableObject {
 
         if rendererMode == .web {
             let trimmed = webURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, URL(string: trimmed) != nil else {
-                errorMessage = "Please enter a valid web URL."
+            guard let url = WebWallpaperURLValidator.validatedURL(from: trimmed) else {
+                errorMessage = WebWallpaperURLValidator.validationHint
                 statusMessage = nil
                 return
             }
             for displayID in displayIDs {
-                updatePerDisplaySource(displayID, trimmed)
-                await applyPerDisplayWallpaper(displayID: displayID, sourceString: trimmed)
+                updatePerDisplaySource(displayID, url.absoluteString)
+                await applyPerDisplayWallpaper(displayID: displayID, sourceString: url.absoluteString)
             }
             statusMessage = "Applied web wallpaper to \(displayIDs.count) display\(displayIDs.count == 1 ? "" : "s")"
             errorMessage = nil
@@ -1351,7 +1351,7 @@ final class AppViewModel: ObservableObject {
     private func applyWallpaperFromSavedWebURL() async {
         guard rendererMode == .web else { return }
         let trimmed = settings.webURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let url = URL(string: trimmed) else { return }
+        guard let url = WebWallpaperURLValidator.validatedURL(from: trimmed) else { return }
         await applyWallpaper(url: url)
     }
 
