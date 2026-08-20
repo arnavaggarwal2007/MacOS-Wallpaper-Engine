@@ -120,10 +120,10 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `feature/mas-compliance` merged to `main` | Pending | Via PR |
-| Branch deleted after merge | Pending | |
-| Tag `v1.0` on uploaded commit | Pending | After merge; before/after upload per owner |
-| [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row | Pending | Engineering **P**; Connect **Owner** |
+| `feature/mas-compliance` merged to `main` | **P** | Fast-forward merge 2026-08-20 |
+| Branch deleted after merge | **Owner** | Optional cleanup |
+| Tag `v1.0` on uploaded commit | **P** | Tagged on `main` @ `65c5682` |
+| [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row | **P** | Engineering 2026-08-20; Connect upload **Owner** |
 
 ---
 

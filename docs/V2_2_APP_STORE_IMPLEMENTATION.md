@@ -1,6 +1,6 @@
 # V2.2 App Store Implementation Charter
 
-**Status:** Milestone 1 engineering **complete** (2026-08-20) on `feature/mas-compliance` — pending PR merge to `main` and Connect upload  
+**Status:** Milestone 1 engineering **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; Connect upload pending owner  
 **Roadmap:** [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  
 **Privacy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
@@ -93,7 +93,7 @@ Ship a review-safe Mac App Store build of the existing Phases 1–9 product.
 
 ### Acceptance criteria
 
-- [ ] `feature/mas-compliance` merged to `main`; branch deleted
+- [x] `feature/mas-compliance` merged to `main`; branch deleted
 - [ ] Release **PWE App Store** archive validates in Organizer / Transporter (owner, signed)
 - [x] No external update URL reachable in MAS binary
 - [x] `PrivacyInfo.xcprivacy` present in app bundle

@@ -32,7 +32,7 @@
 | Milestone | Scope | Status | Date |
 |-----------|--------|--------|------|
 | Docs / charter (trunk + flavors, App Store first) | Roadmap Part 3 + submission/privacy docs | **Pass** | 2026-08-20 |
-| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-20); Connect upload **Owner** | |
+| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-20); Connect upload **Owner** | 2026-08-20 |
 | M2 — Tier A + Tier B (v1.1) | Lock export + screensaver | Pending | |
 | M3 — Direct DMG | Sparkle + tip link + conditional Tier C | Deferred | |
 
