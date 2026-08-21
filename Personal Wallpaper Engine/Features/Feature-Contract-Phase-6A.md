@@ -441,20 +441,18 @@ All Phase 6A changes must preserve:
 
 ## Timeline Tracking
 
-| Chunk | Effort | Status | Completion Criteria |
-|-------|--------|--------|---------------------|
-| 1. KB Alignment & Feature Contract | 2 hrs | ✅ **DONE** (this document) | Feature contract created and reviewed |
-| 2. Data Model & Validation | 3 hrs | ✅ DONE (`WallpaperCollection.swift`) | Codable structs + validation helpers implemented |
-| 3. SettingsStore Persistence | 4 hrs | ✅ DONE (`SettingsStore.swift`) | JSON encoding, CRUD helpers implemented |
-| 4. AppViewModel Coordination | 4 hrs | ⏳ PENDING | @Published state + async methods for collection management/apply |
-| 5. WallpaperManager Apply Logic | 5 hrs | ⏳ PENDING | Simple + display-bound apply orchestration methods |
-| 6. Collection Editor UI | 4 hrs | ⏳ PENDING | CollectionEditorView and CollectionSourceInput components |
-| 7. ContentView Integration | 4 hrs | ⏳ PENDING | "Saved Collections" section with picker/preview/buttons |
-| 8. Error Handling & Edge Cases | 3 hrs | ✅ DONE (WallpaperError extensions) | All error types implemented + clear messages |
-| 9. Integration Testing & Verification | 5 hrs | ⏳ PENDING | Smoke tests, regression verification, build checks |
+**Phase 6A shipped in full (May 2026).** All nine chunks are complete; the estimates below are kept
+as historical planning record only. As-shipped behavior lives in KB
+`30 Features/Feature-Wallpaper-Collections-Phase-6A.md`.
 
-**Total Estimated:** ~36 hours (~5 days for focused part-time work)
-
----
-
-## Switch me to ACT MODE to implement Chunk 1 updates or continue with next chunk.
+| Chunk | Estimated effort | Delivered in |
+|-------|------------------|--------------|
+| 1. KB Alignment & Feature Contract | 2 hrs | This document |
+| 2. Data Model & Validation | 3 hrs | `WallpaperCollection.swift` |
+| 3. SettingsStore Persistence | 4 hrs | `SettingsStore.swift` |
+| 4. AppViewModel Coordination | 4 hrs | `AppViewModel.swift` |
+| 5. WallpaperManager Apply Logic | 5 hrs | `WallpaperManager.swift` |
+| 6. Collection Editor UI | 4 hrs | `UI/CollectionEditorView.swift` |
+| 7. ContentView Integration | 4 hrs | Superseded by the four-tab shell (`TabbedMainView`) |
+| 8. Error Handling & Edge Cases | 3 hrs | `WallpaperError` extensions |
+| 9. Integration Testing & Verification | 5 hrs | `scripts/chunk7_regression.sh`, `docs/PHASE_9_REGRESSION.md` |

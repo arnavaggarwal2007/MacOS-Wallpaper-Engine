@@ -22,7 +22,7 @@ Use this when merging `ui/polish/pr4-motion` (or your UI branch) into `main`.
 | `build/`, `DerivedData/`, `*.app` | Build products |
 | `xcuserdata/` | Per-user Xcode state |
 
-See [.gitignore](.gitignore) for the full list.
+See [.gitignore](../../.gitignore) for the full list.
 
 ## Before push
 

@@ -15,6 +15,7 @@ struct ModernHomeView: View {
     @State private var isDisplaySelectionModalPresented = false
     @State private var pendingVideoURL: URL?
     @State private var showDisplaysScrollHint = true
+    @State private var isWelcomeCardDismissed = false
     @State private var isDisplaysPanelVisible = false
     @State private var pauseWallpaperPreview = false
     @State private var cachedDisplayCards: [DisplayCard] = []
@@ -75,6 +76,13 @@ struct ModernHomeView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                         .padding(.bottom, DesignTokens.Spacing.large)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
+                        .zIndex(2)
+                }
+
+                if shouldShowWelcomeCard {
+                    welcomeCard
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .transition(.opacity)
                         .zIndex(2)
                 }
 
@@ -155,7 +163,11 @@ struct ModernHomeView: View {
                 selectedDisplayForPicker = nil
             }
         }
-        .sheet(isPresented: $isDisplaySelectionModalPresented) {
+        .sheet(isPresented: $isDisplaySelectionModalPresented, onDismiss: {
+            // Without this the picked URL outlives the sheet, so a later presentation could open
+            // against a stale video.
+            pendingVideoURL = nil
+        }) {
             if let videoURL = pendingVideoURL {
                 DisplaySelectionModal(videoURL: videoURL, appModel: appModel)
             }
@@ -179,12 +191,18 @@ struct ModernHomeView: View {
 
                 Spacer()
 
-                Button(action: { withAnimation { appModel.setHomeSidebarVisible(false) } }) {
+                Button(action: {
+                    withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+                        appModel.setHomeSidebarVisible(false)
+                    }
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                         .contentShape(Rectangle())
                 }
+                .help("Hide sidebar")
+                .accessibilityLabel("Hide sidebar")
                 .buttonStyle(.plain)
                 .help("Hide sidebar")
             }
@@ -317,6 +335,57 @@ struct ModernHomeView: View {
             displayCardThumbnails[key] = image
             cachedDisplayCards = buildDisplayCards()
         }
+    }
+
+    /// First-run guidance. The app is a menu bar agent with an empty hero until a
+    /// wallpaper is assigned, so without this the first screen offers no direction.
+    /// Re-evaluates when `AppViewModel` publishes a change, which
+    /// `notifyDisplaySourcesChanged()` guarantees once a wallpaper is applied.
+    private var shouldShowWelcomeCard: Bool {
+        guard !isWelcomeCardDismissed else { return false }
+        return !appModel.hasPersistedPerDisplayConfiguration()
+    }
+
+    private var welcomeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Welcome to \(AppInfo.displayName)", systemImage: "sparkles")
+                .font(DesignTokens.Typography.title)
+                .foregroundStyle(DesignTokens.Colors.textPrimary)
+
+            Text("Pick an MP4 or MOV from your Mac and it plays as your desktop wallpaper, behind your icons. Nothing is uploaded.")
+                .font(DesignTokens.Typography.subtitle)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Button {
+                    isFileImporterPresented = true
+                } label: {
+                    Label("Choose Wallpaper", systemImage: "folder.badge.plus")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    isLibraryBrowserSheetPresented = true
+                } label: {
+                    Label("Browse Library", systemImage: "square.grid.2x2")
+                }
+                .buttonStyle(.bordered)
+
+                Button("Dismiss") {
+                    withAnimation(DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion)) {
+                        isWelcomeCardDismissed = true
+                    }
+                }
+                .buttonStyle(.borderless)
+                .font(.caption)
+            }
+        }
+        .padding(DesignTokens.Spacing.large)
+        .frame(maxWidth: 460, alignment: .leading)
+        .glassChrome(.bar)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Welcome to \(AppInfo.displayName)")
     }
 
     private func displaysScrollHint(scrollProxy: ScrollViewProxy) -> some View {
@@ -510,43 +579,26 @@ struct ModernHomeView: View {
         appModel.previewURL(forDisplayID: displayID)
     }
 
+    /// Card artwork for a display. Never touches the disk.
+    ///
+    /// This runs while building the card list, which happens during view updates. Decoding a
+    /// thumbnail here stalled the main thread on every rebuild, so a cache miss returns a
+    /// type-based placeholder instead; `prefetchMissingThumbnails` loads the real image off the main
+    /// thread and rebuilding then picks it up from `displayCardThumbnails`.
     private func displayPreviewImage(for displayID: CGDirectDisplayID, source: String, resolvedURL: URL?) -> NSImage? {
-        if let resolvedURL {
-            if resolvedURL.isFileURL {
-                let key = resolvedURL.standardizedFileURL.path
-                if let cached = displayCardThumbnails[key] {
-                    return cached
-                }
+        let url = resolvedURL ?? (source.isEmpty ? nil : URL(string: source))
+        guard let url else { return nil }
 
-                let didStartScope = resolvedURL.startAccessingSecurityScopedResource()
-                defer {
-                    if didStartScope {
-                        resolvedURL.stopAccessingSecurityScopedResource()
-                    }
-                }
-
-                if VideoWallpaperThumbnail.isVideoFile(resolvedURL) {
-                    return NSWorkspace.shared.icon(for: .movie)
-                }
-
-                if let image = WallpaperThumbnailLoader.image(
-                    for: resolvedURL,
-                    maxPixelSize: Self.displayCardPreviewMaxPixelSize
-                ) {
-                    return image
-                }
-
-                return NSWorkspace.shared.icon(forFile: resolvedURL.path)
-            }
-
-            return previewIcon(forURL: resolvedURL, fallbackIsWeb: true)
+        guard url.isFileURL else {
+            return NSWorkspace.shared.icon(for: UTType.internetLocation)
         }
 
-        if !source.isEmpty, let fallbackURL = URL(string: source) {
-            return previewIcon(forURL: fallbackURL, fallbackIsWeb: true)
+        if let cached = displayCardThumbnails[url.standardizedFileURL.path] {
+            return cached
         }
 
-        return nil
+        // Icons by content type are served from a system cache, unlike `icon(forFile:)`.
+        return NSWorkspace.shared.icon(for: VideoWallpaperThumbnail.isVideoFile(url) ? .movie : .image)
     }
 
     private func migrateSelectedDisplayAfterScreenChange() {
@@ -579,28 +631,8 @@ struct ModernHomeView: View {
         appModel.focusedDisplayID = selectedDisplayID
     }
 
-    @ViewBuilder
     private func statusBanner(title: String, systemImage: String, tint: Color) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: systemImage)
-                .foregroundColor(tint)
-                .font(.subheadline)
-
-            Text(title)
-                .font(DesignTokens.Typography.subtitle)
-                .foregroundColor(DesignTokens.Colors.textPrimary)
-
-            Spacer()
-        }
-        .padding(12)
-        .background {
-            RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                .fill(tint.opacity(0.10))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous)
-                        .stroke(tint.opacity(0.18), lineWidth: 1)
-                }
-        }
+        StatusBanner(title: title, systemImage: systemImage, tint: tint)
     }
 
     private var homeLibrarySection: some View {
@@ -678,45 +710,6 @@ struct ModernHomeView: View {
         }
     }
 
-    private func previewIcon(forURL url: URL, fallbackIsWeb: Bool) -> NSImage {
-        if url.isFileURL {
-            let didStartScope = url.startAccessingSecurityScopedResource()
-            defer {
-                if didStartScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            if let thumbnail = thumbnailForLocalFile(at: url) {
-                uiDebugLog("previewIcon: thumbnail size \(thumbnail.size)")
-                return thumbnail
-            }
-            uiDebugLog("previewIcon: thumbnail failed, trying direct load")
-            if let image = NSImage(contentsOf: url), image.size != .zero {
-                uiDebugLog("previewIcon: direct load size \(image.size)")
-                return image
-            }
-            uiDebugLog("previewIcon: direct load failed, using file icon")
-            return NSWorkspace.shared.icon(forFile: url.path)
-        }
-
-        return fallbackIsWeb
-            ? NSWorkspace.shared.icon(for: UTType.internetLocation)
-            : NSWorkspace.shared.icon(for: .movie)
-    }
-
-    private func thumbnailForLocalFile(at url: URL) -> NSImage? {
-        let fileExtension = url.pathExtension.lowercased()
-        if ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"].contains(fileExtension), let image = NSImage(contentsOf: url), image.size != .zero {
-            return image
-        }
-
-        if let cached = VideoWallpaperThumbnail.cachedImage(for: url) {
-            return cached
-        }
-
-        return NSWorkspace.shared.icon(for: .movie)
-    }
 }
 
 #Preview {

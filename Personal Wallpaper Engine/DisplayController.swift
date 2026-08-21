@@ -102,6 +102,8 @@ final class DisplayController {
         self.lastFrameSize = frame.size
         logger.info("Window created for display \(self.displayID)")
 
+        // Idempotent: `fallbackRecreate` calls this again for the same controller.
+        removeResizeObserver()
         resizeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResizeNotification,
             object: window,
@@ -113,6 +115,13 @@ final class DisplayController {
         }
 
         logGeometryDiagnostics(for: screen, event: "Window created")
+    }
+
+    /// Safe to call when no observer is registered.
+    private func removeResizeObserver() {
+        guard let observer = resizeObserver else { return }
+        NotificationCenter.default.removeObserver(observer)
+        resizeObserver = nil
     }
 
     /// Window-local content rect; `NSScreen.frame` is global and must not be used as the content view frame.
@@ -424,16 +433,10 @@ final class DisplayController {
     }
 
     func stop() async {
-        // Cancel pending resize task
         resizeTask?.cancel()
         resizeTask = nil
-        
-        // Remove resize observer
-        if let observer = resizeObserver {
-            NotificationCenter.default.removeObserver(observer)
-            resizeObserver = nil
-        }
-        
+        removeResizeObserver()
+
         // Dispose renderer
         if let renderer = renderer { await renderer.dispose() }
         renderer = nil
@@ -547,14 +550,15 @@ final class DisplayController {
         // Stop current playback
         if let renderer = renderer { await renderer.dispose() }
         renderer = nil
-        
-        // Rebuild window
-        if let window = window {
-            window.orderOut(nil)
-        }
+
+        // Rebuild window. The pending resize task and observer both reference the outgoing window.
+        resizeTask?.cancel()
+        resizeTask = nil
+        removeResizeObserver()
+        window?.orderOut(nil)
         window = nil
         contentView = nil
-        
+
         setupWindow()
         
         // Restart playback if we have a video URL

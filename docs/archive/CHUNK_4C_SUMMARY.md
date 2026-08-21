@@ -123,12 +123,13 @@ The implementation handles these real-world scenarios:
 
 ## Files Modified
 
-1. [DisplayController.swift](Personal%20Wallpaper%20Engine/DisplayController.swift)
+1. [DisplayController.swift](../../Personal%20Wallpaper%20Engine/DisplayController.swift)
    - Added resize observer setup and handling
    - Implemented debounce logic
    - Fixed logging for CGSize
 
-2. [VSCode-based Development Roadmap for macOS Wallpaper Engine Core.md](VSCode-based%20Development%20Roadmap%20for%20macOS%20Wallpaper%20Engine%20Core.md)
+2. `VSCode-based Development Roadmap for macOS Wallpaper Engine Core.md` (no longer in the repo;
+   superseded by `version2_developmental_roadmap.md`)
    - Updated completion status to mark Chunk 4C complete
 
 ## Next Steps

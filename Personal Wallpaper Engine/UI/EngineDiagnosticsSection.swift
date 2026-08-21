@@ -13,8 +13,12 @@ struct EngineDiagnosticsSection: View {
                     .font(.caption)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
 
-                diagnosticsGrid
+                // Separate view so the 1 Hz CPU updates redraw only this readout.
+                DiagnosticsReadout(diagnostics: appModel.diagnostics)
 
+                #if DEBUG
+                // QA affordance only. `AppViewModel` also forces production thresholds in Release,
+                // so a persisted Debug value cannot leak into a shipping build.
                 Toggle(
                     isOn: Binding(
                         get: { appModel.useTestPerformanceSuggestionThresholds },
@@ -24,23 +28,12 @@ struct EngineDiagnosticsSection: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Use test suggestion thresholds")
                             .font(DesignTokens.Typography.subtitle)
-                        Text("Lower Max→Balanced gate (4%) for verifying the suggestion banner.")
+                        Text("Lowers the suggestion gate to 2% of system CPU for verifying the banner.")
                             .font(.caption)
                             .foregroundStyle(DesignTokens.Colors.textSecondary)
                     }
                 }
-
-                if let callout = heavyScenarioCallout {
-                    Label(callout, systemImage: "info.circle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let power = appModel.engineDiagnostics.powerPolicyMessage, !power.isEmpty {
-                    Label(power, systemImage: "bolt.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                #endif
 
                 Divider()
 
@@ -72,13 +65,37 @@ struct EngineDiagnosticsSection: View {
         .onDisappear { appModel.setDiagnosticsPanelVisible(false) }
     }
 
-    private var diagnosticsGrid: some View {
-        let diag = appModel.engineDiagnostics
-        return VStack(alignment: .leading, spacing: 8) {
-            diagnosticRow("CPU (instant)", cpuPercentText(appModel.instantCPUPercent))
-            diagnosticRow("CPU (smoothed)", cpuPercentText(appModel.currentCPUPercent))
-            diagnosticRow("CPU (60s avg)", cpuPercentText(appModel.estimatedCPUPercent))
-            diagnosticRow("System CPU share", CPUMetricsFormatting.systemWideText(fromPerCore: appModel.estimatedCPUPercent, ready: appModel.isCPUMeasurementReady))
+    private func restartEngine() async {
+        isRestarting = true
+        defer { isRestarting = false }
+        await appModel.restartWallpaperEngine()
+    }
+
+    private func resetToSafeDefault() async {
+        isResetting = true
+        defer { isResetting = false }
+        await appModel.resetToSafeDefault()
+    }
+}
+
+/// Live CPU and engine rows. Observes `PerformanceDiagnosticsModel` directly rather than
+/// `AppViewModel` so the per-second sampler does not invalidate the rest of Settings.
+private struct DiagnosticsReadout: View {
+    @ObservedObject var diagnostics: PerformanceDiagnosticsModel
+
+    var body: some View {
+        let diag = diagnostics.engineDiagnostics
+        VStack(alignment: .leading, spacing: 8) {
+            diagnosticRow("CPU (instant)", cpuPercentText(diagnostics.instantCPUPercent))
+            diagnosticRow("CPU (smoothed)", cpuPercentText(diagnostics.smoothedCPUPercent))
+            diagnosticRow("CPU (60s avg)", cpuPercentText(diagnostics.averageCPUPercent))
+            diagnosticRow(
+                "System CPU share",
+                CPUMetricsFormatting.systemWideText(
+                    fromPerCore: diagnostics.averageCPUPercent,
+                    ready: diagnostics.isCPUMeasurementReady
+                )
+            )
             Text("Process CPU — 100% = one logical core (Activity Monitor scale). System share = per-core ÷ \(CPUMetricsFormatting.logicalProcessorCount) cores. Smoothed aligns with `ps`; Activity Monitor often reads 2–5pp lower due to heavier smoothing.")
                 .font(.caption2)
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
@@ -114,15 +131,26 @@ struct EngineDiagnosticsSection: View {
                     }
                 }
             }
+
+            if let callout = heavyScenarioCallout(diag) {
+                Label(callout, systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let power = diag.powerPolicyMessage, !power.isEmpty {
+                Label(power, systemImage: "bolt.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
-    private var heavyScenarioCallout: String? {
-        let diag = appModel.engineDiagnostics
-        guard diag.isPlaybackActive, diag.displayRows.count >= 1 else { return nil }
+    private func heavyScenarioCallout(_ diag: WallpaperManager.EngineDiagnosticsSnapshot) -> String? {
+        guard diag.isPlaybackActive, !diag.displayRows.isEmpty else { return nil }
 
         var reasons: [String] = []
-        if hasMultipleDecodePaths(diag) {
+        if diag.decodePathCount > 1 {
             reasons.append("multiple decode paths")
         }
         if has4KSource(diag) {
@@ -135,10 +163,6 @@ struct EngineDiagnosticsSection: View {
         return "Elevated CPU is expected with \(reasons.joined(separator: ", ")). Canonical baseline: same 1080p on all displays, unfocused (~2.5% per-core Debug, ~0.2% system on 12 cores)."
     }
 
-    private func hasMultipleDecodePaths(_ diag: WallpaperManager.EngineDiagnosticsSnapshot) -> Bool {
-        diag.decodePathCount > 1
-    }
-
     private func has4KSource(_ diag: WallpaperManager.EngineDiagnosticsSnapshot) -> Bool {
         diag.displayRows.contains { row in
             let name = row.sourceName.lowercased()
@@ -149,7 +173,7 @@ struct EngineDiagnosticsSection: View {
     }
 
     private func cpuPercentText(_ value: Double) -> String {
-        guard appModel.isCPUMeasurementReady else { return "Measuring…" }
+        guard diagnostics.isCPUMeasurementReady else { return "Measuring…" }
         return String(format: "%.2f%%", value)
     }
 
@@ -162,17 +186,5 @@ struct EngineDiagnosticsSection: View {
             Text(value)
                 .font(DesignTokens.Typography.subtitle)
         }
-    }
-
-    private func restartEngine() async {
-        isRestarting = true
-        defer { isRestarting = false }
-        await appModel.restartWallpaperEngine()
-    }
-
-    private func resetToSafeDefault() async {
-        isResetting = true
-        defer { isResetting = false }
-        await appModel.resetToSafeDefault()
     }
 }

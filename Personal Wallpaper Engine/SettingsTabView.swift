@@ -81,7 +81,7 @@ struct SettingsTabView: View {
                                 Label("Web Source URL", systemImage: "globe")
                                     .font(DesignTokens.Typography.subtitle)
 
-                                TextField("https://example.com/animated-background", text: Binding(
+                                TextField("https://example.com/wallpaper.html", text: Binding(
                                     get: { appModel.webURLString },
                                     set: { appModel.updateWebURL($0) }
                                 ))
@@ -212,7 +212,7 @@ struct SettingsTabView: View {
                         Divider()
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Version \(UpdateChecker.currentMarketingVersion) (\(UpdateChecker.currentBuildNumber))")
+                            Text("\(AppInfo.displayName) \(UpdateChecker.currentMarketingVersion) (\(UpdateChecker.currentBuildNumber))")
                                 .font(DesignTokens.Typography.subtitle)
                             Text("Runs as a menu bar agent when the main window is closed. \(UpdateChecker.updatesDescription)")
                                 .font(.caption)
@@ -225,6 +225,19 @@ struct SettingsTabView: View {
                                 }
                                 .buttonStyle(.bordered)
                             }
+
+                            HStack(spacing: 10) {
+                                Link(destination: AppLinks.privacyPolicy) {
+                                    Label("Privacy Policy", systemImage: "hand.raised")
+                                }
+                                .accessibilityHint("Opens the privacy policy in your browser")
+
+                                Link(destination: AppLinks.support) {
+                                    Label("Support", systemImage: "questionmark.circle")
+                                }
+                                .accessibilityHint("Opens the support page in your browser")
+                            }
+                            .font(.caption)
                         }
                     }
                 }
@@ -310,6 +323,7 @@ struct SettingsTabView: View {
                             }
                             .buttonStyle(.borderless)
                             .help("Remove folder from library index")
+                            .accessibilityLabel("Remove \(root.displayName) from library")
                         }
                     }
                 }
@@ -396,16 +410,7 @@ struct SettingsTabView: View {
     }
 
     private func statusBanner(title: String, systemImage: String, tint: Color) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: systemImage)
-                .foregroundColor(tint)
-            Text(title)
-                .font(DesignTokens.Typography.subtitle)
-                .foregroundColor(DesignTokens.Colors.textPrimary)
-            Spacer()
-        }
-        .padding(12)
-        .glassChrome(.bar)
+        StatusBanner(title: title, systemImage: systemImage, tint: tint, style: .glass)
     }
 }
 

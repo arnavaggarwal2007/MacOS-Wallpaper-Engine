@@ -101,18 +101,33 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 
 ---
 
+## Launch prep — brand, in-app compliance, hosting (2026-08-20)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Store display name locked | **P** | **Deskloop** via `INFOPLIST_KEY_CFBundleDisplayName`; bundle ID unchanged |
+| Copyright string | **P** | `Copyright © 2026 Arnav Aggarwal. All rights reserved.` |
+| Broken update URL fixed | **P** | Pointed at a nonexistent org; now `arnavaggarwal2007/MacOS-Wallpaper-Engine` |
+| Outbound URLs centralized | **P** | [`AppLinks.swift`](../Personal%20Wallpaper%20Engine/AppLinks.swift); release notes excluded from MAS builds |
+| In-app Privacy Policy + Support links | **P** | Settings → System card, and Help menu |
+| First-run guidance (Guideline 2.4.5 discoverability) | **P** | Welcome card on Home until a wallpaper is assigned |
+| Web URL placeholder | **P** | Reserved `example.com` documentation domain, `.html` form |
+| Privacy policy content filled | **P** | Contact, support, developer name; no placeholders remain |
+| Hosted pages committed | **P** | [`index.html`](index.html) + [`privacy/index.html`](privacy/index.html) with `.nojekyll` |
+| GitHub Pages enabled | **Owner** | Settings → Pages → `main` / `/docs` (submission guide §1) |
+| Store copy final | **P** | Name, subtitle, description, keywords, What's New in submission guide §3 |
+| Age rating answers drafted | **P** | Unrestricted Web Access = Yes → **16+** (Plash precedent) |
+| Review notes | **P** | Rewritten for Deskloop with a one-minute test path |
+
 ## App Store Connect prep
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Privacy policy hosted (public URL) | **Owner** | Fill placeholders in [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) |
 | Privacy nutrition labels = Data Not Collected | **Owner** | Match PP; web loads = user-initiated |
-| Support URL live | **Owner** | GitHub Issues or simple page |
-| ASC app record (Graphics & Design) | **Owner** | Bundle ID `Personal.Personal-Wallpaper-Engine` |
+| ASC app record (Graphics & Design) | **Owner** | Name **Deskloop**, bundle ID `Personal.Personal-Wallpaper-Engine` |
 | Screenshots (6 scenes) | **Owner** | [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §6 |
-| Review notes + optional recording | **Ready** | Template in submission guide §5 |
 | Export compliance answer | **Ready** | Standard encryption exempt (HTTPS only) |
-| Upload + Resolution Center | **Owner** | After signed archive from `main` @ `v1.0` |
+| Upload + Resolution Center | **Owner** | After signed archive from `main` |
 
 ---
 

@@ -1,12 +1,9 @@
 import AppKit
 import Foundation
 
-/// Update channel: Direct opens release page; Mac App Store uses App Store updates only.
+/// Update channel: Direct opens the release page; Mac App Store relies on
+/// App Store updates only (App Review guideline 3.1.1).
 enum UpdateChecker {
-    #if !APP_STORE_BUILD
-    static let releaseNotesURL = URL(string: "https://github.com/Personal-Wallpaper-Engine/Personal-Wallpaper-Engine/releases")!
-    #endif
-
     static var isAppStoreBuild: Bool {
         #if APP_STORE_BUILD
         true
@@ -16,11 +13,11 @@ enum UpdateChecker {
     }
 
     static var currentMarketingVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        AppInfo.marketingVersion
     }
 
     static var currentBuildNumber: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        AppInfo.buildNumber
     }
 
     static var updatesDescription: String {
@@ -34,7 +31,7 @@ enum UpdateChecker {
         #if APP_STORE_BUILD
         return
         #else
-        NSWorkspace.shared.open(releaseNotesURL)
+        NSWorkspace.shared.open(AppLinks.releaseNotes)
         #endif
     }
 }

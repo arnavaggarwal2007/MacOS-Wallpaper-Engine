@@ -2,16 +2,25 @@ import AppKit
 import WebKit
 import os.log
 
+/// Navigation delegate for `WebRenderer`. All state is confined to the main thread: WebKit delivers
+/// delegate callbacks there, and the renderer drives loads from the main actor.
 final class WebRendererNavigationDelegate: NSObject, WKNavigationDelegate {
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "WebRenderer")
     private var loadContinuation: CheckedContinuation<Result<Void, WallpaperError>, Never>?
     private var initialLoadURL: URL?
 
     func beginLoad(for url: URL) async -> Result<Void, WallpaperError> {
+        // A load already in flight will never receive its callbacks now that we are superseding it.
+        finishLoad(with: .failure(.internalError(description: "Web page load superseded by a newer load")))
         initialLoadURL = url
         return await withCheckedContinuation { continuation in
             loadContinuation = continuation
         }
+    }
+
+    /// Resumes any in-flight load so teardown cannot leave `beginLoad` awaiting forever.
+    func cancelPendingLoad() {
+        finishLoad(with: .failure(.internalError(description: "Web wallpaper load cancelled")))
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -108,6 +117,7 @@ final class WebRenderer: Renderer {
     }
 
     func stop() async {
+        navigationDelegate?.cancelPendingLoad()
         webView?.stopLoading()
         webView?.removeFromSuperview()
         logger.debug("WebRenderer stopped")

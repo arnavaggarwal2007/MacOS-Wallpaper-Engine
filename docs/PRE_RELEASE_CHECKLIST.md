@@ -51,6 +51,24 @@ Measure on target hardware (record logical core count):
 
 See [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § CPU scale glossary.
 
+### Suggestion banner — must be checked on real hardware
+
+Thresholds were recalibrated 2026-08-20 against the benchmark envelope
+([`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) §ADR-009). Unit tests pin the arithmetic, but only a
+live run confirms the banner behaves on this machine. Both directions matter — a banner that never
+fires is as wrong as one that always does.
+
+- [ ] **Silent at rest:** Release build, wallpaper playing on every display, Max Quality, app
+      unfocused for 60+ seconds. No "High CPU usage" banner. This is the regression that shipped.
+- [ ] **Fires under real load:** Max Quality, 4K source, different file per display. Banner appears
+      within ~30 seconds and quotes a *system-wide* figure that matches the `System CPU share` row in
+      Settings → Diagnostics (not the per-core rows).
+- [ ] **Reappears after snooze:** trigger it, choose "Remind me later", drop back to light load, then
+      return to heavy load — the banner comes back. It used to latch permanently.
+- [ ] **Debug QA toggle works:** in a Debug build, enable test thresholds in Settings → Diagnostics and
+      confirm the banner appears within ~15 seconds at normal load. Confirm the toggle is **absent**
+      from the Release build's Settings UI.
+
 ---
 
 ## Distribution — Direct (Developer ID)
@@ -71,6 +89,10 @@ Complete before App Store Connect upload. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_
 - [x] Web URL allowlist: **https** + **file** only; navigation errors surfaced — [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md)
 - [x] “Check for Updates…” does **not** open GitHub / external updater (MAS flavor)
 - [x] No Tier C / private API code in MAS binary
+- [x] Bundle display name is **Deskloop**; copyright names Arnav Aggarwal
+- [x] In-app Privacy Policy + Support links present (Settings → System, Help menu)
+- [x] First-run welcome card appears until a wallpaper is assigned
+- [ ] Privacy Policy and Support URLs resolve over HTTPS (GitHub Pages enabled — owner)
 - [ ] Web smoke: local HTML + one **https** URL on Release-AppStore (owner)
 - [ ] Organizer **Validate App** succeeds (signed archive — owner)
 - [ ] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)

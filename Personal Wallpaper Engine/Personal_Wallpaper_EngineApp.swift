@@ -5,6 +5,7 @@
 //  Created by Arnav Aggarwal on 4/30/26.
 //
 
+import AppKit
 import SwiftUI
 
 @main
@@ -31,6 +32,19 @@ struct Personal_Wallpaper_EngineApp: App {
                         await appModel.stop()
                     }
                 }
+        }
+        .commands {
+            // The app ships no help book, so the stock Help item dead-ends.
+            // These also satisfy the App Review expectation that privacy and
+            // support are reachable from inside the app.
+            CommandGroup(replacing: .help) {
+                Button("\(AppInfo.displayName) Support") {
+                    NSWorkspace.shared.open(AppLinks.support)
+                }
+                Button("Privacy Policy") {
+                    NSWorkspace.shared.open(AppLinks.privacyPolicy)
+                }
+            }
         }
     }
 }

@@ -80,7 +80,7 @@ Here’s a linear “Part 2” roadmap (Phase 7+) that assumes your existing roa
 
 ### Phase 7B — Engine Efficiency + Performance Profiles
 
-**Status:** **Complete** (2026-05-23). Phase 7C (diagnostics UI) is next.
+**Status:** **Complete** (2026-05-23). Phase 7C (diagnostics UI) also complete — see below.
 
 **Scope:** (1) **Reduce real resource usage** in the playback and preview stack; (2) expose **PerformanceProfile** presets (Max Quality / Balanced / Battery Saver). Compare all changes to the baseline in `docs/V1_SIGNOFF.md`.[^3][^5][^2]
 

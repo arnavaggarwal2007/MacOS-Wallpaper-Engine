@@ -36,37 +36,8 @@ enum WallpaperThumbnailLoader {
         return nil
     }
 
-    static func image(for urlString: String, collectionName: String? = nil, maxPixelSize: CGFloat = 320) -> NSImage? {
-        guard let url = resolveURL(from: urlString, collectionName: collectionName) else { return nil }
-        return image(for: url, maxPixelSize: maxPixelSize)
-    }
-
-    /// Loads a thumbnail from an already-resolved URL (safe to call off the main actor).
-    nonisolated static func image(for url: URL, maxPixelSize: CGFloat = 320) -> NSImage? {
-        if url.isFileURL {
-            let didStartScope = url.startAccessingSecurityScopedResource()
-            defer {
-                if didStartScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            if let thumbnail = thumbnailForLocalFile(at: url, maxPixelSize: maxPixelSize) {
-                return thumbnail
-            }
-            if let image = NSImage(contentsOf: url), image.size != .zero {
-                return image
-            }
-            return NSWorkspace.shared.icon(forFile: url.path)
-        }
-
-        let isWeb = url.scheme?.hasPrefix("http") == true
-        return isWeb
-            ? NSWorkspace.shared.icon(for: UTType.internetLocation)
-            : NSWorkspace.shared.icon(for: .movie)
-    }
-
-    /// Async thumbnail load; preferred for video files to avoid QoS inversions from blocking waits.
+    /// Async-only by design. The synchronous variants were removed because every caller ran on the
+    /// main thread, where decoding a full-size image stalls the UI.
     nonisolated static func imageAsync(for url: URL, maxPixelSize: CGFloat = 320) async -> NSImage? {
         if url.isFileURL {
             let didStartScope = url.startAccessingSecurityScopedResource()
@@ -89,18 +60,6 @@ enum WallpaperThumbnailLoader {
         return isWeb
             ? NSWorkspace.shared.icon(for: UTType.internetLocation)
             : NSWorkspace.shared.icon(for: .movie)
-    }
-
-    nonisolated private static func thumbnailForLocalFile(at url: URL, maxPixelSize: CGFloat) -> NSImage? {
-        let fileExtension = url.pathExtension.lowercased()
-        if ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"].contains(fileExtension),
-           let image = NSImage(contentsOf: url),
-           image.size != .zero {
-            return image
-        }
-
-        // Video thumbnails use imageAsync / thumbnailForLocalFileAsync only.
-        return nil
     }
 
     nonisolated private static func thumbnailForLocalFileAsync(at url: URL, maxPixelSize: CGFloat) async -> NSImage? {

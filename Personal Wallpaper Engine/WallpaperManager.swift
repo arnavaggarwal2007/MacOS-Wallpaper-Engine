@@ -26,6 +26,7 @@ final class WallpaperManager {
         case powerPolicy
         case wake
         case sleep
+        case screenLock
         case system
     }
 
@@ -301,7 +302,10 @@ final class WallpaperManager {
     func startMonitoring() async {
         logger.debug("WallpaperManager startMonitoring")
 
-        // Observe screen parameter changes on main queue and call actor-safe handler
+        // Idempotent: avoid stacking duplicates if monitoring is restarted.
+        removeLifecycleObservers()
+
+        // `NSApplication` posts this one on the default center.
         screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             Task { await self?.handleScreenChange() }
         }
@@ -312,8 +316,10 @@ final class WallpaperManager {
         }
 
         // MARK: - Lifecycle Observers (Chunk 4A)
-        // Pause when screen sleeps or locks
-        sleepObserver = NotificationCenter.default.addObserver(
+        // Screen sleep/wake are NSWorkspace notifications, so they are only delivered on the
+        // workspace center. Registering these on `NotificationCenter.default` silently never fired,
+        // which meant wallpapers kept decoding through display sleep.
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.screensDidSleepNotification,
             object: nil,
             queue: .main
@@ -321,8 +327,26 @@ final class WallpaperManager {
             Task { await self?.pause(source: .sleep) }
         }
 
-        wakeObserver = NotificationCenter.default.addObserver(
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.screensDidWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.resumeFromSystemWake() }
+        }
+
+        // Locking the screen does not necessarily sleep the display, so this is a separate case.
+        // These names are undocumented but long-standing; failure mode is simply no pause on lock.
+        lockObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.pause(source: .screenLock) }
+        }
+
+        unlockObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsUnlocked"),
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -877,17 +901,31 @@ final class WallpaperManager {
         return url
     }
 
+    /// Unregisters every lifecycle observer. Safe to call when none are registered.
     @MainActor
-    func stop() async {
+    private func removeLifecycleObservers() {
         if let obs = screenObserver { NotificationCenter.default.removeObserver(obs); screenObserver = nil }
         if let obs = spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs); spaceObserver = nil }
-        if let obs = sleepObserver { NotificationCenter.default.removeObserver(obs); sleepObserver = nil }
-        if let obs = wakeObserver { NotificationCenter.default.removeObserver(obs); wakeObserver = nil }
-        
+        if let obs = sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs); sleepObserver = nil }
+        if let obs = wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs); wakeObserver = nil }
+        if let obs = lockObserver { DistributedNotificationCenter.default().removeObserver(obs); lockObserver = nil }
+        if let obs = unlockObserver { DistributedNotificationCenter.default().removeObserver(obs); unlockObserver = nil }
+    }
+
+    @MainActor
+    func stop() async {
+        removeLifecycleObservers()
+
         // MARK: - Cancel Reconciliation Task (Chunk 4D)
         reconciliationTask?.cancel()
         reconciliationTask = nil
 
+        // The power event stream keeps this actor alive until the task is cancelled.
+        powerTask?.cancel()
+        powerTask = nil
+        powerPolicyManager.stopObserving()
+
+        desktopVisibilityTracker.onChange = nil
         desktopVisibilityTracker.stop()
         
         for controller in displayControllers.values { await controller.stop() }

@@ -54,6 +54,8 @@ struct LibraryBrowserView: View {
 
     @State private var thumbnailCache: [String: NSImage] = [:]
     @State private var loadingIDs: Set<String> = []
+    /// Local to this view so typing does not invalidate everything observing `AppViewModel`.
+    @State private var searchText = ""
 
     private let gridColumns = [
         GridItem(.adaptive(minimum: 160, maximum: 220), spacing: 14)
@@ -68,21 +70,24 @@ struct LibraryBrowserView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // Filtered once per body pass rather than recomputed for the empty check and each layout.
+        let items = appModel.filteredLibraryItems(searchText: searchText)
+
+        return VStack(alignment: .leading, spacing: 12) {
             if layout == .grid {
                 filterBar
             }
 
             if appModel.libraryRoots.isEmpty {
                 emptyRootsState
-            } else if appModel.filteredLibraryItems.isEmpty {
+            } else if items.isEmpty {
                 emptyItemsState
             } else {
                 switch layout {
                 case .grid:
-                    libraryGrid
+                    libraryGrid(items)
                 case .strip:
-                    libraryStrip
+                    libraryStrip(items)
                 }
             }
         }
@@ -96,7 +101,7 @@ struct LibraryBrowserView: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
-                TextField("Search library…", text: $appModel.librarySearchText)
+                TextField("Search library…", text: $searchText)
                     .textFieldStyle(.plain)
             }
             .padding(.horizontal, 12)
@@ -164,10 +169,10 @@ struct LibraryBrowserView: View {
         .buttonStyle(.plain)
     }
 
-    private var libraryGrid: some View {
+    private func libraryGrid(_ items: [LibraryItem]) -> some View {
         ScrollView {
             LazyVGrid(columns: gridColumns, spacing: 22) {
-                ForEach(appModel.filteredLibraryItems) { item in
+                ForEach(items) { item in
                     tile(for: item, stripWidth: nil)
                         .task(id: item.id) {
                             await loadThumbnail(for: item)
@@ -180,10 +185,10 @@ struct LibraryBrowserView: View {
         .frame(maxHeight: compact ? 360 : 520)
     }
 
-    private var libraryStrip: some View {
+    private func libraryStrip(_ items: [LibraryItem]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(appModel.filteredLibraryItems) { item in
+                ForEach(items) { item in
                     tile(for: item, stripWidth: 168)
                         .task(id: item.id) {
                             await loadThumbnail(for: item)
@@ -370,6 +375,7 @@ struct LibraryItemTile: View {
                 }
             )
             .accessibilityHint(onDoubleTapApply != nil ? "Double-click to apply." : "")
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
 
             Button(action: onFavorite) {
                 Image(systemName: item.favorited ? "heart.fill" : "heart")
@@ -380,6 +386,12 @@ struct LibraryItemTile: View {
             }
             .buttonStyle(.plain)
             .padding(6)
+            .help(item.favorited ? "Remove from favorites" : "Add to favorites")
+            .accessibilityLabel(
+                item.favorited
+                    ? "Remove \(item.displayName) from favorites"
+                    : "Add \(item.displayName) to favorites"
+            )
         }
     }
 

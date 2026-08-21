@@ -1,6 +1,6 @@
 # V2.2 App Store Implementation Charter
 
-**Status:** Milestone 1 engineering **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; Connect upload pending owner  
+**Status:** Milestone 1 **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; launch prep (Deskloop store name, in-app legal links, first-run card, hosted pages, final store copy) landed; Connect upload pending owner  
 **Roadmap:** [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  
 **Privacy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
@@ -151,7 +151,7 @@ Store copy must not claim lock-screen live video. After Direct ships, marketing 
 
 ## 6. Guidelines and standards
 
-Implementation (when started) must follow:
+Implementation must follow:
 
 - Repo [`guidelines.md`](../guidelines.md) and [`best_coding_practices.md`](../best_coding_practices.md)
 - [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) — especially 2.x performance, 3.1 payments, 5.1 privacy
@@ -170,7 +170,7 @@ This charter is **done** when:
 - Submission, privacy, Direct stub, and channel docs reflect App Store–first + trunk/flavors
 - KB ADR-008 amended; master plan and changelog updated
 
-**Next action after docs:** Start M1 engineering on `feature/mas-compliance` (not part of this documentation pass).
+**Next action:** M1 engineering is complete (2026-08-20). Remaining work is owner-gated on the Apple Developer membership — see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) for the Connect record, screenshots, and upload steps, and [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md) for canonical M1 status.
 
 ---
 

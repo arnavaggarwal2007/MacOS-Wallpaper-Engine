@@ -86,7 +86,7 @@ GeometryReader {
 
 ## Files Changed
 
-### 1. [HeroWallpaperView.swift](Personal%20Wallpaper%20Engine/UI/HeroWallpaperView.swift)
+### 1. [HeroWallpaperView.swift](../../Personal%20Wallpaper%20Engine/UI/HeroWallpaperView.swift)
 **Change:** Replace fixed `minHeight: 380` with responsive aspect ratio
 ```swift
 // Before
@@ -99,7 +99,7 @@ GeometryReader {
 ```
 **Impact:** Hero scales proportionally on any screen size
 
-### 2. [ModernHomeView.swift](Personal%20Wallpaper%20Engine/ModernHomeView.swift)
+### 2. [ModernHomeView.swift](../../Personal%20Wallpaper%20Engine/ModernHomeView.swift)
 **Changes:**
 - Add state: `@State private var isSidebarVisible = true`
 - Replace HStack layout with ZStack overlay
@@ -115,7 +115,7 @@ GeometryReader {
 - Status banners (applying, success, error messages)
 - Close button to toggle sidebar visibility
 
-### 3. [DisplaySwitcherView.swift](Personal%20Wallpaper%20Engine/UI/DisplaySwitcherView.swift)
+### 3. [DisplaySwitcherView.swift](../../Personal%20Wallpaper%20Engine/UI/DisplaySwitcherView.swift)
 **Change:** Adjust padding for stable display carousel height
 ```swift
 // Before

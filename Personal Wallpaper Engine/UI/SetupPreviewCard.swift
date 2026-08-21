@@ -18,6 +18,34 @@ struct SetupPreviewCard: View {
     }
 
     var body: some View {
+        if let onSelect {
+            // A `Button` rather than `onTapGesture`: the card is the primary way to restore a setup,
+            // and a bare gesture is invisible to VoiceOver and unreachable by keyboard.
+            Button(action: onSelect) { card }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(accessibilityDescription)
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+                .accessibilityHint("Restores this setup")
+        } else {
+            card
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(accessibilityDescription)
+        }
+    }
+
+    /// Spoken summary. Without this the combined element reads as a run of disconnected fragments.
+    private var accessibilityDescription: String {
+        var parts = ["Setup \(setup.name)"]
+        if isPinned { parts.append("pinned") }
+        if !setup.description.isEmpty { parts.append(setup.description) }
+        parts.append(setup.rendererMode == "web" ? "Web wallpaper" : "Video wallpaper")
+        parts.append("\(connectedDisplayCount) connected display\(connectedDisplayCount == 1 ? "" : "s")")
+        parts.append(setup.isMuted ? "muted" : "sound on")
+        return parts.joined(separator: ", ")
+    }
+
+    private var card: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -104,7 +132,6 @@ struct SetupPreviewCard: View {
         .scaleEffect(isHovered && !reduceMotion ? DesignTokens.Motion.hoverScale : 1)
         .animation(DesignTokens.Motion.hoverAnimation(reduceMotion: reduceMotion), value: isHovered)
         .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Corner.radius, style: .continuous))
-        .onTapGesture { onSelect?() }
         .onHover { isHovered = $0 }
     }
 

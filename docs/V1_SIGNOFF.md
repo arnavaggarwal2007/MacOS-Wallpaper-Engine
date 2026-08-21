@@ -23,7 +23,7 @@
 | XCTest unit suite | **Pass (added)** | CPUMetrics, QuickMode, SettingsStore persistence |
 | Distribution docs | **Pass** | [`DISTRIBUTION.md`](DISTRIBUTION.md), [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md), [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md), V2.2 App Store charters (2026-08-20) |
 
-**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0. V2.2 application code not started.
+**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0. V2.2 Milestone 1 application code shipped 2026-08-20 — [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md).
 
 ---
 
@@ -105,7 +105,7 @@ Source: [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § Phase 7 Closeout.
 ## Known gaps (accepted post Phase 9)
 
 - Lock-screen / screensaver — Phase 10 **research complete**; implementation V2.2 M2 — [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md), [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)
-- Mac App Store flavor / privacy manifest — V2.2 M1 (docs ready; code not started)
+- ~~Mac App Store flavor / privacy manifest~~ — **closed** by V2.2 M1 (2026-08-20): sandbox entitlements, `PrivacyInfo.xcprivacy`, build flavors, and update gating all shipped
 - Collection rotation / playlists — V2.1
 - Sparkle auto-update — Direct M3 ([`V2_2_DIRECT_IMPLEMENTATION.md`](V2_2_DIRECT_IMPLEMENTATION.md)); MAS uses App Store updates
 - Community wallpaper platform — out of local-first scope

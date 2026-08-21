@@ -14,8 +14,14 @@ final class AppViewModel: ObservableObject {
     @Published var isMuted: Bool
     @Published var scalingMode: VideoScalingMode
     @Published var isApplyingWallpaper = false
-    @Published var statusMessage: String?
-    @Published var errorMessage: String?
+    /// Transient confirmation ("Wallpaper applied…"). Expires on its own; see `scheduleBannerExpiry`.
+    @Published var statusMessage: String? {
+        didSet { scheduleBannerExpiry(for: .status) }
+    }
+    /// Transient failure text. Given longer on screen than `statusMessage` since it is actionable.
+    @Published var errorMessage: String? {
+        didSet { scheduleBannerExpiry(for: .error) }
+    }
     @Published var isPlaying: Bool = true
     /// Mirrors engine pause flags; used for apply-path gating. Prefer shouldShowPausedChrome for UI overlays.
     @Published private(set) var isGloballyPaused: Bool = false
@@ -40,23 +46,10 @@ final class AppViewModel: ObservableObject {
     // MARK: - Phase 7B Performance
     @Published var performanceProfile: PerformanceProfile = .balanced
     // MARK: - Phase 7C Diagnostics
-    @Published private(set) var estimatedCPUPercent: Double = 0
-    @Published private(set) var currentCPUPercent: Double = 0
-    @Published private(set) var instantCPUPercent: Double = 0
-    @Published private(set) var isCPUMeasurementReady = false
+    /// Deliberately not `@Published`: see `PerformanceDiagnosticsModel`. Observing this object from
+    /// `AppViewModel` would reintroduce the 1 Hz invalidation of the whole shell.
+    let diagnostics = PerformanceDiagnosticsModel()
     @Published var performanceSuggestion: PerformanceSuggestion?
-    @Published private(set) var engineDiagnostics: WallpaperManager.EngineDiagnosticsSnapshot = .init(
-        lifecycleState: .idle,
-        isPlaybackActive: false,
-        performanceProfile: .balanced,
-        sharedSessionAttachments: 0,
-        decodePathCount: 0,
-        heroSharesDesktopDecode: false,
-        coalesceTip: nil,
-        displayRows: [],
-        powerPolicyMessage: nil,
-        anyDisplayVisible: false
-    )
     private let performanceMonitor = PerformanceMonitor()
     private var recentCPUSamples: [Double] = []
     private var lastDiagnosticsRefreshAt: Date?
@@ -82,7 +75,6 @@ final class AppViewModel: ObservableObject {
     @Published var libraryRoots: [LibraryRoot] = []
     @Published var libraryItems: [LibraryItem] = []
     @Published var selectedLibraryItemID: String?
-    @Published var librarySearchText: String = ""
     @Published var libraryFavoritesOnly: Bool = false
     @Published var libraryRootFilterID: String?
     @Published private(set) var isLibraryScanning = false
@@ -112,7 +104,9 @@ final class AppViewModel: ObservableObject {
     private let logger = Logger(subsystem: "com.local.wallpaper", category: "AppViewModel")
     private var hasStarted = false
     private var selectedVideoURL: URL?
-    private var activeSecurityScopedVideoURL: URL?
+    /// Keeps sandbox access open for the lifetime of playback, not just the apply call.
+    private let securityScopes = SecurityScopedAccessRegistry()
+    private var bannerExpiryTasks: [BannerKind: Task<Void, Never>] = [:]
     private var lastVideoRestoreFailure: String?
     private var lastDisplaySignatures: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [:]
     /// Maps physical display (name + resolution) to the last `perDisplaySources` UserDefaults key — survives disconnect.
@@ -180,11 +174,6 @@ final class AppViewModel: ObservableObject {
         usePerDisplay = true
         settings.usePerDisplay = true
         syncFocusedDisplayIfNeeded()
-    }
-
-    @available(*, deprecated, message: "Per-display is always enabled.")
-    func toggleUsePerDisplay(_ enabled: Bool) {
-        ensurePerDisplayMode()
     }
 
     func syncFocusedDisplayIfNeeded() {
@@ -547,12 +536,9 @@ final class AppViewModel: ObservableObject {
             attempted.insert(marker)
 
             let playbackMode = perDisplayRendererMode(for: displayID)
-            let didStartScope = url.isFileURL ? url.startAccessingSecurityScopedResource() : false
-            defer {
-                if didStartScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
+            // Held past this call so renderer reloads keep working; released when this display's
+            // wallpaper is replaced or the display goes away.
+            securityScopes.begin(url, owner: String(displayID))
 
             switch await wallpaperManager.setPerDisplayWallpaper(
                 displayID: displayID,
@@ -863,12 +849,7 @@ final class AppViewModel: ObservableObject {
     }
 
     private func applyPerformanceSampleDeferred(_ metrics: PerformanceCPUMetrics) {
-        isCPUMeasurementReady = metrics.isReady
-        if metrics.isReady {
-            instantCPUPercent = metrics.instantPercent
-            currentCPUPercent = metrics.smoothedPercent
-            estimatedCPUPercent = metrics.averagePercent
-        }
+        diagnostics.apply(metrics)
 
         if metrics.isReady {
             recentCPUSamples.append(metrics.smoothedPercent)
@@ -878,20 +859,12 @@ final class AppViewModel: ObservableObject {
             evaluatePerformanceSuggestion()
         }
 
-        let shouldRefreshDiagnostics: Bool
-        if isDiagnosticsPanelVisible {
-            if let lastRefresh = lastDiagnosticsRefreshAt {
-                shouldRefreshDiagnostics = Date().timeIntervalSince(lastRefresh) >= 1
-            } else {
-                shouldRefreshDiagnostics = true
-            }
-        } else if let lastRefresh = lastDiagnosticsRefreshAt {
-            shouldRefreshDiagnostics = Date().timeIntervalSince(lastRefresh) >= 5
-        } else {
-            shouldRefreshDiagnostics = true
-        }
+        // Only the Diagnostics card renders this snapshot, so there is nothing to keep warm while
+        // the panel is closed. `setDiagnosticsPanelVisible(true)` refreshes on open.
+        guard isDiagnosticsPanelVisible else { return }
 
-        if shouldRefreshDiagnostics {
+        let elapsed = lastDiagnosticsRefreshAt.map { Date().timeIntervalSince($0) }
+        if elapsed == nil || elapsed! >= 1 {
             scheduleEngineDiagnosticsRefresh()
         }
     }
@@ -907,7 +880,7 @@ final class AppViewModel: ObservableObject {
     }
 
     private func refreshEngineDiagnostics() {
-        engineDiagnostics = wallpaperManager.diagnosticsSnapshot()
+        diagnostics.apply(wallpaperManager.diagnosticsSnapshot())
         lastDiagnosticsRefreshAt = Date()
     }
 
@@ -923,45 +896,36 @@ final class AppViewModel: ObservableObject {
         }
 
         let policy = PerformanceSuggestionPolicy.thresholds(
-            useTestMode: settings.useTestPerformanceSuggestionThresholds
+            useTestMode: useTestPerformanceSuggestionThresholds
         )
 
-        let suggestedProfile: PerformanceProfile?
-        let threshold: Double
-        switch performanceProfile {
-        case .maxQuality:
-            threshold = policy.maxToBalanced
-            suggestedProfile = .balanced
-        case .balanced:
-            guard PerformanceSuggestionPolicy.balancedSuggestionsEnabled else {
-                performanceSuggestion = nil
-                return
-            }
-            threshold = policy.balancedToBatterySaver
-            suggestedProfile = .batterySaver
-        case .batterySaver:
+        guard let gate = PerformanceSuggestionPolicy.systemPercentThreshold(
+            leaving: performanceProfile,
+            thresholds: policy
+        ) else {
             performanceSuggestion = nil
             return
         }
 
-        let window = Array(recentCPUSamples.suffix(policy.sustainedSampleWindow))
-        guard window.count >= policy.sustainedSampleWindow else {
+        // `recentCPUSamples` is on the per-core scale; the policy converts to system-wide share.
+        guard PerformanceSuggestionPolicy.isSustained(
+            perCoreSamples: recentCPUSamples,
+            aboveSystemPercent: gate.threshold,
+            thresholds: policy
+        ) else {
+            // Clearing this lets a genuine future spike surface a banner again. Leaving it set was
+            // why the banner never reappeared after its first showing.
             performanceSuggestion = nil
+            lastSuggestedProfile = nil
             return
         }
 
-        let aboveCount = window.filter { $0 > threshold }.count
-        let required = Int(ceil(Double(policy.sustainedSampleWindow) * policy.sustainedFraction))
-        guard aboveCount >= required else {
-            performanceSuggestion = nil
-            return
-        }
+        guard lastSuggestedProfile != gate.suggested else { return }
 
-        guard lastSuggestedProfile != suggestedProfile else { return }
-
-        let message = "Wallpaper CPU has averaged \(String(format: "%.0f", estimatedCPUPercent))% recently. Switch to \(suggestedProfile!.displayName) to reduce usage."
-        performanceSuggestion = PerformanceSuggestion(message: message, suggestedProfile: suggestedProfile!)
-        lastSuggestedProfile = suggestedProfile
+        let systemPercent = CPUMetricsFormatting.systemWidePercent(fromPerCore: diagnostics.averageCPUPercent)
+        let message = "Wallpaper playback has averaged \(String(format: "%.1f", systemPercent))% of your Mac's CPU recently. Switch to \(gate.suggested.displayName) to reduce usage."
+        performanceSuggestion = PerformanceSuggestion(message: message, suggestedProfile: gate.suggested)
+        lastSuggestedProfile = gate.suggested
     }
 
     func applySuggestedPerformanceProfile() {
@@ -982,11 +946,21 @@ final class AppViewModel: ObservableObject {
             performanceSuggestionSnoozedUntil = Date().addingTimeInterval(
                 Self.performanceSuggestionSnoozeSeconds
             )
+            // "Remind me later" means the banner should be allowed back once the snooze lapses.
+            lastSuggestedProfile = nil
         }
     }
 
+    /// Debug-only QA affordance for forcing the suggestion banner. Release builds always use
+    /// production thresholds, even if a `true` value persisted from a Debug run.
     var useTestPerformanceSuggestionThresholds: Bool {
-        get { settings.useTestPerformanceSuggestionThresholds }
+        get {
+            #if DEBUG
+            return settings.useTestPerformanceSuggestionThresholds
+            #else
+            return false
+            #endif
+        }
         set { settings.useTestPerformanceSuggestionThresholds = newValue }
     }
 
@@ -1038,7 +1012,15 @@ final class AppViewModel: ObservableObject {
             mapping: mapping,
             focusedSignatureBefore: focusedSignatureBefore
         )
+        releaseSecurityScopesForDisconnectedDisplays()
         await reapplyPersistedPerDisplayWallpapers()
+    }
+
+    /// Display IDs are reused after hotplug, so scopes keyed by a departed display must be released.
+    private func releaseSecurityScopesForDisconnectedDisplays() {
+        var live = Set(NSScreen.screens.map { String($0.displayID) })
+        live.insert(SecurityScopedAccessRegistry.unifiedOwner)
+        securityScopes.endAll(exceptOwners: live)
     }
 
     /// User-facing label for status messages (UI order + screen name, not raw `CGDirectDisplayID`).
@@ -1231,12 +1213,8 @@ final class AppViewModel: ObservableObject {
 
         let mode = perDisplayRendererMode(for: displayID)
         let scaling = perDisplayScalingMode(for: displayID)
-        let didStartScope = url.isFileURL ? url.startAccessingSecurityScopedResource() : false
-        defer {
-            if didStartScope {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
+        // See `applyPerDisplayWallpaper`: the scope must outlive this call.
+        securityScopes.begin(url, owner: String(displayID))
 
         switch await wallpaperManager.setPerDisplayWallpaper(
             displayID: displayID,
@@ -1493,23 +1471,51 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
     private func beginAccessingSelectedVideoURL(_ url: URL) -> Bool {
-        if activeSecurityScopedVideoURL != url {
-            endAccessingSelectedVideoURL()
-            let didStart = url.startAccessingSecurityScopedResource()
-            if didStart {
-                activeSecurityScopedVideoURL = url
-            }
-            return didStart
-        }
-
-        return true
+        securityScopes.begin(url, owner: SecurityScopedAccessRegistry.unifiedOwner)
     }
 
     private func endAccessingSelectedVideoURL() {
-        if let activeSecurityScopedVideoURL {
-            activeSecurityScopedVideoURL.stopAccessingSecurityScopedResource()
-            self.activeSecurityScopedVideoURL = nil
+        securityScopes.end(owner: SecurityScopedAccessRegistry.unifiedOwner)
+    }
+
+    // MARK: - Transient banners
+
+    private enum BannerKind: Hashable {
+        case status
+        case error
+
+        /// Errors stay up longer because the user may need to act on them.
+        var lifetime: TimeInterval {
+            switch self {
+            case .status: return 6
+            case .error: return 15
+            }
+        }
+    }
+
+    /// Retires a banner after its lifetime so a confirmation from ten minutes ago stops looking
+    /// like a description of the current state.
+    private func scheduleBannerExpiry(for kind: BannerKind) {
+        bannerExpiryTasks[kind]?.cancel()
+        bannerExpiryTasks[kind] = nil
+
+        let isVisible: Bool
+        switch kind {
+        case .status: isVisible = statusMessage != nil
+        case .error: isVisible = errorMessage != nil
+        }
+        guard isVisible else { return }
+
+        let lifetime = kind.lifetime
+        bannerExpiryTasks[kind] = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(lifetime * 1_000_000_000))
+            guard !Task.isCancelled, let self else { return }
+            switch kind {
+            case .status: self.statusMessage = nil
+            case .error: self.errorMessage = nil
+            }
         }
     }
 
@@ -2844,8 +2850,8 @@ final class AppViewModel: ObservableObject {
 
     func formattedDiagnosticsLine() -> String {
         let cpu = CPUMetricsFormatting.menuBarCPUText(
-            perCoreAverage: estimatedCPUPercent,
-            ready: isCPUMeasurementReady
+            perCoreAverage: diagnostics.averageCPUPercent,
+            ready: diagnostics.isCPUMeasurementReady
         )
         return "\(cpu) · \(formattedMemoryUsageMB())"
     }
@@ -2877,14 +2883,20 @@ final class AppViewModel: ObservableObject {
         selectedLibraryItemID = settings.lastUsedLibraryItemID
     }
 
-    var filteredLibraryItems: [LibraryItem] {
-        libraryItems.filter { item in
+    /// Library items matching the active chips and `searchText`.
+    ///
+    /// The query is owned by `LibraryBrowserView` rather than published here: as a `@Published`
+    /// property every keystroke invalidated every view observing this object, which is most of the
+    /// app.
+    func filteredLibraryItems(searchText: String) -> [LibraryItem] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        return libraryItems.filter { item in
             if libraryFavoritesOnly, !item.favorited { return false }
             if let rootID = libraryRootFilterID, item.rootID != rootID { return false }
-            let query = librarySearchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if query.isEmpty { return true }
+            guard !query.isEmpty else { return true }
             let haystack = "\(item.displayName) \(item.rootDisplayName) \(item.filePath)".lowercased()
-            return haystack.contains(query.lowercased())
+            return haystack.contains(query)
         }
     }
 

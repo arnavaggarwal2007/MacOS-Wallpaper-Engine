@@ -4,7 +4,7 @@ A macOS desktop wallpaper engine built in Swift that renders local video and web
 
 ## Overview
 
-Personal Wallpaper Engine plays local video files (and optional web sources) as animated macOS wallpapers. **Version 1 is complete:** engine core (Phases 1–5), wallpaper collections (6A), desktop setups (6B), and the four-tab UI final vision. **Version 2** Phases 7–10 (research) are complete; **V2.2** (App Store–first implementation) is tracked in [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) Part 3.
+Personal Wallpaper Engine — shipping on the Mac App Store as **Deskloop** — plays local video files (and optional web sources) as animated macOS wallpapers. **Version 1 is complete:** engine core (Phases 1–5), wallpaper collections (6A), desktop setups (6B), and the four-tab UI final vision. **Version 2** Phases 7–10 (research) are complete; **V2.2** (App Store–first implementation) is tracked in [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) Part 3.
 
 ## Features
 
@@ -22,6 +22,18 @@ Personal Wallpaper Engine plays local video files (and optional web sources) as 
 - Modern UI shell: four tabs with shared live wallpaper background (`AppWallpaperBackground`), glass chrome, and hero-first Home with scroll-reveal display carousel.
 
 ## Documentation
+
+### Canonical sources
+
+When documents disagree, these win. Everything else should link here rather than restate.
+
+| Topic | Canonical source |
+|-------|------------------|
+| Roadmap and phase status | This README's [Roadmap](#roadmap) table |
+| App Store M1 status | [`docs/M1_COMPLIANCE_CHECKLIST.md`](docs/M1_COMPLIANCE_CHECKLIST.md) |
+| CPU benchmarks and suggestion thresholds | [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) |
+| UI copy, naming rule, design tokens | [`DESIGN.md`](DESIGN.md) |
+| Architecture rationale and history | `Wallpaper Engine KB/` (sibling folder) |
 
 | Document | Purpose |
 |----------|---------|
@@ -90,7 +102,9 @@ Personal Wallpaper Engine/
 
 ## Development Workflow
 
-Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`). See `guidelines.md` and `best_coding_practices.md`. CI: `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh`.
+Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`). CI: `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh`.
+
+Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the docs under [`docs/`](docs/). Note that `guidelines.md`, `best_coding_practices.md`, and `update_KB_guidelines.md` are **local-only working notes** — they are gitignored and will not be present on a fresh clone, so nothing here treats them as required reading.
 
 ## Roadmap
 
@@ -111,4 +125,8 @@ Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`)
 
 ## Status
 
-**August 20, 2026:** Milestone 1 **engineering complete** on `feature/mas-compliance` — App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening + `network.client`. Docs: `M1_COMPLIANCE_CHECKLIST.md`, `WEB_WALLPAPERS.md`. **Next:** PR merge to `main`, owner Connect upload @ `v1.0`.
+**August 20, 2026:** Milestone 1 **complete and merged** — App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening + `network.client`. Launch prep also landed: the App Store display name is **Deskloop** (`INFOPLIST_KEY_CFBundleDisplayName`; bundle ID and Xcode target unchanged), in-app Privacy Policy and Support links, a first-run welcome card, and hosted pages under [`docs/`](docs/) for GitHub Pages. Docs: `M1_COMPLIANCE_CHECKLIST.md`, `WEB_WALLPAPERS.md`, `APP_STORE_SUBMISSION.md`.
+
+A pre-launch audit followed on the same day. Most visibly, the high-CPU suggestion banner fired on nearly every launch: its thresholds were calibrated from Debug-build measurements roughly five times lower than Release, and the message quoted per-core CPU, so an app using about 1% of the machine reported "averaged 14%". Thresholds are now expressed as system-wide share ([`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) §ADR-009). The same pass fixed resource leaks (observers, tasks, and a suspended continuation), two silent data-loss paths in settings persistence and display rekeying, dead screen-lock pause code, and several main-thread I/O and over-invalidation problems in the UI.
+
+**Next (owner):** enable GitHub Pages, capture screenshots, buy the Apple Developer Program, then Validate and upload.

@@ -14,6 +14,34 @@ final class SettingsStore {
             persistenceLogger.error("Failed to encode UserDefaults key \(key, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
+
+    static func quarantineKey(for key: String) -> String { "\(key).unreadableBackup" }
+
+    /// Decodes a JSON-encoded value, quarantining data it cannot read.
+    ///
+    /// `try?` would hide the failure here, and that is worse than it looks: the empty fallback is
+    /// assigned to a property whose `didSet` immediately writes it back, overwriting still-intact
+    /// stored data. A single decode hiccup would therefore erase the user's setups, collections, or
+    /// library permanently. Copying the raw bytes aside first keeps them recoverable and gives
+    /// support something to diagnose.
+    static func decodePersisted<T: Decodable>(
+        _ type: T.Type,
+        forKey key: String,
+        default fallback: T
+    ) -> T {
+        let defaults = UserDefaults.standard
+        guard let data = defaults.data(forKey: key) else { return fallback }
+
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            persistenceLogger.error(
+                "Could not decode UserDefaults key \(key, privacy: .public); quarantined \(data.count) bytes: \(error.localizedDescription, privacy: .public)"
+            )
+            defaults.set(data, forKey: quarantineKey(for: key))
+            return fallback
+        }
+    }
     static let shared = SettingsStore()
 
     private enum Keys {
@@ -57,82 +85,34 @@ final class SettingsStore {
         videoBookmarkData = UserDefaults.standard.data(forKey: Keys.videoBookmark)
         rendererMode = WallpaperRendererMode(rawValue: UserDefaults.standard.string(forKey: Keys.rendererMode) ?? WallpaperRendererMode.video.rawValue) ?? .video
         webURLString = UserDefaults.standard.string(forKey: Keys.webURL) ?? ""
-        // Load per-display sources (JSON encoded dictionary)
-        if let data = UserDefaults.standard.data(forKey: Keys.perDisplaySources) {
-            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-                perDisplaySources = decoded
-            } else {
-                perDisplaySources = [:]
-            }
-        } else {
-            perDisplaySources = [:]
-        }
+        perDisplaySources = Self.decodePersisted(
+            [String: String].self, forKey: Keys.perDisplaySources, default: [:]
+        )
         isMuted = UserDefaults.standard.bool(forKey: Keys.isMuted)
         scalingMode = VideoScalingMode(rawValue: UserDefaults.standard.string(forKey: Keys.scalingMode) ?? VideoScalingMode.resizeAspectFill.rawValue) ?? .resizeAspectFill
         debugDiagnosticsEnabled = UserDefaults.standard.bool(forKey: Keys.debugDiagnostics)  // Chunk 4E
         launchOnLoginEnabled = UserDefaults.standard.bool(forKey: Keys.launchOnLogin)  // Phase 5G
-        // Load per-display scaling modes (JSON encoded dictionary)
-        if let data = UserDefaults.standard.data(forKey: Keys.perDisplayScalingModes) {
-            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-                perDisplayScalingModes = decoded
-            } else {
-                perDisplayScalingModes = [:]
-            }
-        } else {
-            perDisplayScalingModes = [:]
-        }
-        // Load per-display renderer modes (JSON encoded dictionary) - Phase 7
-        if let data = UserDefaults.standard.data(forKey: Keys.perDisplayRendererModes) {
-            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-                perDisplayRendererModes = decoded
-            } else {
-                perDisplayRendererModes = [:]
-            }
-        } else {
-            perDisplayRendererModes = [:]
-        }
+        perDisplayScalingModes = Self.decodePersisted(
+            [String: String].self, forKey: Keys.perDisplayScalingModes, default: [:]
+        )
+        perDisplayRendererModes = Self.decodePersisted(
+            [String: String].self, forKey: Keys.perDisplayRendererModes, default: [:]
+        )
         usePerDisplay = true
         UserDefaults.standard.set(true, forKey: Keys.usePerDisplay)
-        if let data = UserDefaults.standard.data(forKey: Keys.perDisplayBookmarks) {
-            if let decoded = try? JSONDecoder().decode([String: Data].self, from: data) {
-                perDisplayBookmarks = decoded
-            } else {
-                perDisplayBookmarks = [:]
-            }
-        } else {
-            perDisplayBookmarks = [:]
-        }
-        // Load saved collections (Phase 6A): JSON encoded dictionary of collections keyed by name
-        if let data = UserDefaults.standard.data(forKey: Keys.savedCollections) {
-            if let decoded = try? JSONDecoder().decode([String: WallpaperCollection].self, from: data) {
-                savedCollections = decoded
-            } else {
-                savedCollections = [:]
-            }
-        } else {
-            savedCollections = [:]
-        }
-        // Load collection bookmarks (Phase 6A): JSON encoded dictionary keyed by collection name, then source URL
-        if let data = UserDefaults.standard.data(forKey: Keys.collectionBookmarks) {
-            if let decoded = try? JSONDecoder().decode([String: [String: Data]].self, from: data) {
-                collectionBookmarks = decoded
-            } else {
-                collectionBookmarks = [:]
-            }
-        } else {
-            collectionBookmarks = [:]
-        }
+        perDisplayBookmarks = Self.decodePersisted(
+            [String: Data].self, forKey: Keys.perDisplayBookmarks, default: [:]
+        )
+        savedCollections = Self.decodePersisted(
+            [String: WallpaperCollection].self, forKey: Keys.savedCollections, default: [:]
+        )
+        collectionBookmarks = Self.decodePersisted(
+            [String: [String: Data]].self, forKey: Keys.collectionBookmarks, default: [:]
+        )
         lastUsedCollectionName = UserDefaults.standard.string(forKey: Keys.lastUsedCollectionName)
-        // Load saved setups (Phase 6B): JSON encoded dictionary of setups keyed by name
-        if let data = UserDefaults.standard.data(forKey: Keys.savedSetups) {
-            if let decoded = try? JSONDecoder().decode([String: SavedSetup].self, from: data) {
-                savedSetups = decoded
-            } else {
-                savedSetups = [:]
-            }
-        } else {
-            savedSetups = [:]
-        }
+        savedSetups = Self.decodePersisted(
+            [String: SavedSetup].self, forKey: Keys.savedSetups, default: [:]
+        )
         currentSetupName = UserDefaults.standard.string(forKey: Keys.currentSetupName)
         pauseOnBattery = UserDefaults.standard.object(forKey: Keys.pauseOnBattery) as? Bool ?? false
         pauseOnLowBattery = UserDefaults.standard.object(forKey: Keys.pauseOnLowBattery) as? Bool ?? true
@@ -146,18 +126,8 @@ final class SettingsStore {
         }
         dismissPerformanceSuggestions = UserDefaults.standard.bool(forKey: Keys.dismissPerformanceSuggestions)
         useTestPerformanceSuggestionThresholds = UserDefaults.standard.bool(forKey: Keys.useTestPerformanceSuggestionThresholds)
-        if let data = UserDefaults.standard.data(forKey: Keys.libraryRoots),
-           let decoded = try? JSONDecoder().decode([LibraryRoot].self, from: data) {
-            libraryRoots = decoded
-        } else {
-            libraryRoots = []
-        }
-        if let data = UserDefaults.standard.data(forKey: Keys.libraryItems),
-           let decoded = try? JSONDecoder().decode([LibraryItem].self, from: data) {
-            libraryItems = decoded
-        } else {
-            libraryItems = []
-        }
+        libraryRoots = Self.decodePersisted([LibraryRoot].self, forKey: Keys.libraryRoots, default: [])
+        libraryItems = Self.decodePersisted([LibraryItem].self, forKey: Keys.libraryItems, default: [])
         if let scanDate = UserDefaults.standard.object(forKey: Keys.libraryLastScanDate) as? Date {
             libraryLastScanDate = scanDate
         } else {
@@ -177,12 +147,9 @@ final class SettingsStore {
             lastNonCustomQuickMode = .perDisplayCustom
         }
         pinnedSetupName = UserDefaults.standard.string(forKey: Keys.pinnedSetupName)
-        if let data = UserDefaults.standard.data(forKey: Keys.recentLibraryItemIDs),
-           let decoded = try? JSONDecoder().decode([String].self, from: data) {
-            recentLibraryItemIDs = decoded
-        } else {
-            recentLibraryItemIDs = []
-        }
+        recentLibraryItemIDs = Self.decodePersisted(
+            [String].self, forKey: Keys.recentLibraryItemIDs, default: []
+        )
         homeSidebarVisible = UserDefaults.standard.object(forKey: Keys.homeSidebarVisible) as? Bool ?? false
     }
 

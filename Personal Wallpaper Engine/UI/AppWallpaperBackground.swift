@@ -15,6 +15,10 @@ struct AppWallpaperBackground: View {
     var isGlobalDesktopPaused: Bool = false
     var pausePlayback: Bool = false
     @State private var managementThumbnail: NSImage?
+    @State private var staticImage: NSImage?
+
+    /// Generous enough for a full-window backdrop while still far cheaper than a full 4K decode.
+    private static let staticImageMaxPixelSize: CGFloat = 2048
 
     var body: some View {
         GeometryReader { proxy in
@@ -64,6 +68,9 @@ struct AppWallpaperBackground: View {
         .accessibilityHidden(true)
         .task(id: managementThumbnailTaskKey) {
             await loadManagementThumbnailIfNeeded()
+        }
+        .task(id: staticImageTaskKey) {
+            await loadStaticImageIfNeeded()
         }
     }
 
@@ -144,13 +151,39 @@ struct AppWallpaperBackground: View {
             }
             return nil
         }
-        if url.isFileURL, let image = NSImage(contentsOf: url), image.size != .zero {
-            return image
+        if url.isFileURL {
+            // Decoded by `loadStaticImageIfNeeded`. Reading the file here blocked the main thread on
+            // every body pass, at full source resolution and with no caching.
+            return staticImage
         }
         if appModel.rendererMode == .web {
             return NSWorkspace.shared.icon(for: UTType.internetLocation)
         }
         return NSWorkspace.shared.icon(for: .movie)
+    }
+
+    /// Identity of the still image to load, or `"none"` when the backdrop is a video or web source.
+    private var staticImageTaskKey: String {
+        guard heroVideoURL == nil,
+              let url = previewURL,
+              url.isFileURL,
+              !VideoWallpaperThumbnail.isVideoFile(url) else { return "none" }
+        return url.absoluteString
+    }
+
+    @MainActor
+    private func loadStaticImageIfNeeded() async {
+        guard staticImageTaskKey != "none", let url = previewURL else {
+            staticImage = nil
+            return
+        }
+
+        let loaded = await WallpaperThumbnailLoader.imageAsync(
+            for: url,
+            maxPixelSize: Self.staticImageMaxPixelSize
+        )
+        guard !Task.isCancelled else { return }
+        staticImage = loaded
     }
 
     @MainActor

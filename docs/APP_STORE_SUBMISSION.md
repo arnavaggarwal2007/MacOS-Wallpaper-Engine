@@ -1,6 +1,7 @@
-# Mac App Store Submission Guide
+# Mac App Store Submission Guide — Deskloop
 
-**Status:** Ready for use when Milestone 1 binary exists (2026-08-20)  
+**Status:** Copy and metadata final (2026-08-20). Remaining steps require an Apple Developer Program membership.  
+**Store name:** **Deskloop** (display name only — bundle ID and Xcode target are unchanged)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
 **Gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)  
@@ -10,14 +11,30 @@
 
 ## 1. Prerequisites
 
-| Requirement | Notes |
-|-------------|--------|
-| Apple Developer Program membership | Active |
-| App Store Connect app record | Create “Personal Wallpaper Engine” (or final public name) |
-| Mac App Store distribution certificate + provisioning | Xcode Automatic or Manual for `PWE App Store` scheme |
-| Marketing version + build | Increment `CURRENT_PROJECT_VERSION` every upload |
-| Privacy policy URL | Host [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) content |
-| Support URL | Same site or GitHub Discussions / Issues |
+| Requirement | Value / notes |
+|-------------|---------------|
+| Apple Developer Program membership | Individual — **Arnav Aggarwal** (owner action) |
+| App Store Connect app record | **Deskloop** |
+| Bundle ID | `Personal.Personal-Wallpaper-Engine` (unchanged by the display-name rename) |
+| Mac App Store distribution certificate + provisioning | Xcode Automatic for the `PWE App Store` scheme |
+| Marketing version + build | `1.0` / `1` for the first upload; increment `CURRENT_PROJECT_VERSION` every upload |
+| Privacy policy URL | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/` |
+| Support URL | `https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues` |
+| Review contact | Arnav Aggarwal · arnevaggarrwal@gmail.com · 408-892-7318 |
+
+### Enabling the hosted pages (one-time, owner action)
+
+The landing page and privacy policy are committed as static HTML under [`docs/`](.):
+[`index.html`](index.html) and [`privacy/index.html`](privacy/index.html), with `.nojekyll`
+so GitHub serves them verbatim.
+
+1. Push `main` to GitHub.
+2. Repository **Settings → Pages**.
+3. Source: **Deploy from a branch**; Branch: `main`; Folder: **`/docs`**; Save.
+4. Wait for the first deploy, then confirm both URLs load over HTTPS.
+
+The URLs are compiled into the app via [`AppLinks.swift`](../Personal%20Wallpaper%20Engine/AppLinks.swift),
+so they must resolve before submission.
 
 ---
 
@@ -33,38 +50,104 @@ Until the scheme exists, do not submit. Milestone 1 engineering creates it.
 
 ---
 
-## 3. App Store Connect metadata
+## 3. App Store Connect metadata (final copy — paste as-is)
 
-### Positioning
+### Identity
 
-**Subtitle / short pitch:** Native Mac live wallpaper engine — local files, no account.
+| Field | Value |
+|-------|-------|
+| App name | `Deskloop` |
+| Subtitle (30 char max) | `Live wallpapers for your Mac` (28) |
+| SKU | `pwe-mas-001` |
+| Primary category | Graphics & Design |
+| Secondary category | Utilities |
+| Price | Free |
+| Availability | All countries and regions |
+| License | Apple Standard EULA |
 
-**Description themes (honest):**
+**Naming rationale:** every established Mac competitor (Backdrop, Plash, Paper, Wallux, WallTune)
+avoids the word “Engine,” which reads as the Steam product. `Deskloop` keeps the store name short
+and distinctive and pushes discovery terms into the subtitle and keyword field, which is where
+Apple actually indexes them.
 
-- Local video (MP4/MOV) and optional web wallpapers
-- Multi-display and per-display assignment
-- Collections, desktop setups, local library
-- Quick modes and menu bar controls
-- Battery-aware pause and performance profiles
-- Free; optional tip (if IAP added in M2)
+### Keywords (100 char max, comma separated, no spaces)
 
-**Do not claim:**
+```text
+wallpaper,live wallpaper,video wallpaper,animated,desktop,multi monitor,screen,background
+```
 
-- Lock-screen live video (Tier C) — blocked on App Store
-- Community / Workshop library
-- Windows Wallpaper Engine compatibility
+### Description
 
-### Category
+```text
+Deskloop turns your own video files into live wallpapers for macOS.
 
-Prefer **Graphics & Design** (or **Utilities** — pick one and keep consistent across locales).
+Point it at an MP4 or MOV on your Mac and it plays behind your desktop icons, on one display or
+on every display independently. Nothing is uploaded, and no account is required.
 
-### Age rating / content
+FEATURES
+- Local video wallpapers (MP4, MOV) rendered behind your desktop icons
+- Per-display assignment, or one wallpaper spanning all displays
+- Collections to group wallpapers, and saved desktop setups you can restore
+- A local library that indexes folders of videos with thumbnail browsing
+- Quick modes and menu bar controls for switching without opening the window
+- Battery-aware pausing and explicit performance profiles
+- Drag and drop support for video files
+- Optional web wallpapers: render an https page or a local HTML file as your background
 
-No user-generated networked content in v1.0. Local media only; rating per Apple questionnaire (typically 4+ if no objectionable content is distributed by the app itself).
+PRIVACY
+Deskloop is local-first. No account, no analytics, no advertising, and no generative AI. Your
+wallpaper files never leave your Mac.
 
-### Keywords (examples — refine at submit time)
+NOTE
+Deskloop runs as a menu bar app. Click the menu bar icon to open the main window. It changes the
+desktop wallpaper only; it does not replace the macOS lock screen. Deskloop is not affiliated
+with, and does not import content from, Wallpaper Engine on Steam.
+```
 
-`wallpaper`, `live wallpaper`, `desktop`, `video wallpaper`, `multi monitor`, `mac`
+### What's New (version 1.0)
+
+```text
+First release.
+```
+
+### Promotional text (optional, 170 char max)
+
+```text
+Your own videos, playing behind your desktop icons. Per-display control, collections, and battery-aware performance. Local-first, no account.
+```
+
+**Do not claim:** lock-screen live video (Tier C, blocked on App Store), a community or Workshop
+library, or Wallpaper Engine compatibility.
+
+### Age rating questionnaire — pre-drafted answers
+
+| Question | Answer | Reason |
+|----------|--------|--------|
+| Cartoon or fantasy violence, realistic violence, guns | None | No game or narrative content |
+| Sexual content or nudity, mature or suggestive themes | None | App ships no content of its own |
+| Profanity or crude humor, horror or fear themes | None | |
+| Alcohol, tobacco, drug use or references | None | |
+| Chance-based activities (gambling, simulated gambling, loot boxes, contests) | None | Free app, no IAP in v1.0 |
+| Medical or wellness information | None | |
+| **Unrestricted web access** | **Yes** | Web wallpaper mode renders any user-entered `https` page in a `WKWebView` |
+| User-generated content | No | No accounts, feeds, sharing, or community |
+| Messaging and chat, social media | No | |
+| Advertising | No | |
+| Parental controls / age assurance | No | |
+
+**Expected result: 16+.** Under Apple's current tiers (4+, 9+, 13+, 16+, 18+), declaring
+unrestricted web access sets the rating to
+[16+](https://developer.apple.com/help/app-store-connect/reference/age-ratings).
+
+**Why declare it:** the user can point the web renderer at an arbitrary `https` page, which meets
+Apple's definition ("users can navigate to any webpage within the app"). Under-declaring this is a
+well-known metadata-rejection cause. The direct precedent is
+[Plash](https://apps.apple.com/us/app/plash/id1494023538?mt=12), the closest Mac App Store analogue,
+which ships at **16+** with "Contains Unrestricted Web Access."
+
+The alternative — dropping web wallpaper mode to reach 4+ — was considered and rejected: it is an
+established feature and Milestone 1 explicitly committed to keeping it. Revisit only if the 16+
+rating measurably hurts discovery.
 
 ---
 
@@ -95,22 +178,36 @@ Aligned with [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md):
 Paste into App Store Connect **App Review Information → Notes**:
 
 ```text
-Personal Wallpaper Engine is a menu-bar / agent-style Mac app (LSUIElement)
-that renders user-selected local video (or optional web URLs) as the desktop
-wallpaper behind icons.
+Deskloop is a menu bar / agent-style Mac app (LSUIElement) that renders a
+user-selected local video, or an optional user-supplied web page, as the desktop
+wallpaper behind the icons.
 
-How to open the main window:
-1. Click the status item in the menu bar (photo / wallpaper icon).
-2. Choose “Show Main Window” (or equivalent).
+HOW TO OPEN THE MAIN WINDOW
+The app has no Dock icon until a window is open. To open it:
+1. Click the Deskloop icon in the menu bar (top-right of the screen).
+2. Choose "Show Main Window."
 3. The Dock icon appears while the main window is visible.
 
-First-run / demo:
-1. Grant access when picking an MP4/MOV via the file picker or library folder.
-2. Apply to display(s) from Home.
-3. Optional: paste a web wallpaper URL in Settings (user-initiated network).
+On first launch the Home tab shows a "Welcome to Deskloop" card with the two
+actions needed to get started.
 
-No account. No analytics. No private APIs.
-Updates are delivered only through the Mac App Store (no Sparkle / external updater).
+HOW TO TEST IN UNDER A MINUTE
+1. Open the main window from the menu bar as above.
+2. Click "Choose Wallpaper" and pick any MP4 or MOV file. macOS will prompt for
+   file access; this uses the standard open panel and security-scoped bookmarks.
+3. The video begins playing as the desktop wallpaper behind the desktop icons.
+4. Optional web mode: Settings > Renderer Mode > Web, enter an https URL, then
+   Apply. Only https:// URLs and local HTML files are accepted.
+
+NOTES FOR REVIEW
+- No account, no login, no analytics SDKs, no advertising, no generative AI.
+- No private APIs. The app does not modify the macOS lock screen or screen saver.
+- Network access is used only when the user explicitly enters a web wallpaper URL.
+- The age rating declares Unrestricted Web Access because of that optional mode.
+- Updates are delivered only through the Mac App Store. There is no Sparkle or
+  other external updater in this build.
+- Deskloop is not affiliated with Wallpaper Engine on Steam and does not import
+  Steam Workshop content.
 ```
 
 Attach a short screen recording if Review has historically struggled with agent apps.
@@ -138,7 +235,9 @@ After Milestone 2, add: lock export sheet; Screen Saver settings callout.
 
 | Risk | Mitigation |
 |------|------------|
-| Reviewer cannot find UI (`LSUIElement`) | Clear review notes + screen recording |
+| Reviewer cannot find UI (`LSUIElement`) | Review notes section 5 + first-run welcome card + screen recording |
+| Age rating understated | Unrestricted Web Access declared → 16+ (matches Plash) |
+| Privacy policy URL dead at review time | Enable GitHub Pages before submitting (section 1) |
 | External payment / update link | MAS flavor must hide GitHub updates; tips only via IAP if unlocking nothing |
 | Private API detection | Never ship Tier C on MAS; no undocumented selectors |
 | Incomplete privacy | Nutrition labels + `PrivacyInfo.xcprivacy` + hosted policy |

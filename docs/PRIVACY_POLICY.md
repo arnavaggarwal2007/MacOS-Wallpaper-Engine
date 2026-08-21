@@ -1,16 +1,20 @@
-# Privacy Policy — Personal Wallpaper Engine
+# Privacy Policy — Deskloop
 
 **Last updated:** 2026-08-20  
-**Product:** Personal Wallpaper Engine (macOS)  
+**Product:** Deskloop (macOS)  
 **Applies to:** Mac App Store and any future direct-download builds unless a superseding policy is published
 
-This document is intended for hosting as the App Store Connect **Privacy Policy URL**. Replace bracketed placeholders before publishing.
+This document is the canonical source for the policy published at
+<https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/> and used as the
+App Store Connect **Privacy Policy URL**. When editing this file, update
+[`privacy/index.html`](privacy/index.html) in the same change — that is the page
+GitHub Pages actually serves.
 
 ---
 
 ## Summary
 
-Personal Wallpaper Engine is a **local-first** wallpaper application. It does **not** require an account and does **not** include analytics or advertising SDKs in the current product design. It does **not** use generative AI features.
+Deskloop is a **local-first** wallpaper application. It does **not** require an account and does **not** include analytics or advertising SDKs in the current product design. It does **not** use generative AI features.
 
 ---
 
@@ -49,7 +53,7 @@ This data stays on your device unless you choose to back up your Mac with your o
 ## Network use
 
 - **Default desktop video wallpapers** use local files only and do not require network access for playback.
-- **Optional web wallpapers:** If you enter or select a remote URL, the app may load that URL over the network at your request. Content and privacy practices of those third-party sites are outside our control.
+- **Optional web wallpapers:** If you enter or select a remote URL, the app may load that URL over the network at your request. Only `https://` addresses and local HTML files are accepted. Content and privacy practices of those third-party sites are outside our control, and we do not record which URLs you load.
 - **Mac App Store builds:** Updates are delivered by Apple through the Mac App Store. The app does not use a third-party auto-updater.
 - **Future direct-download builds:** May check for updates (for example via Sparkle). When that ships, this policy will be updated to describe update checks.
 
@@ -90,12 +94,11 @@ We may update this policy. The “Last updated” date will change; material cha
 
 ## Contact
 
-For privacy questions: **[YOUR CONTACT EMAIL]**  
-Support: **[YOUR SUPPORT URL]**
+For privacy questions: **arnevaggarrwal@gmail.com**  
+Support: <https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues>
 
 ---
 
 ## Developer
 
-**[YOUR LEGAL NAME OR ENTITY]**  
-**[OPTIONAL ADDRESS]**
+**Arnav Aggarwal**

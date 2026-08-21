@@ -100,7 +100,10 @@ struct TabbedMainView: View {
                     .padding(.bottom, 56)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.25), value: appModel.performanceSuggestion)
+                .animation(
+                    DesignTokens.Motion.selectionAnimation(reduceMotion: reduceMotion),
+                    value: appModel.performanceSuggestion
+                )
             }
         }
         .onWallpaperPreviewPauseChange { pauseWallpaperPreview = $0 }

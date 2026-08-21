@@ -45,9 +45,19 @@ This document does not invent labels, placeholder copy, or color hex values. If 
 
 ## 1. Product identity
 
-From [`README.md`](README.md):
+### Naming rule — Deskloop vs Personal Wallpaper Engine
 
-**Name:** Personal Wallpaper Engine
+The app ships to users as **Deskloop**. `Personal Wallpaper Engine` is the internal name only.
+
+| Use | Name | Where it comes from |
+|-----|------|---------------------|
+| Anything a user reads — UI copy, App Store listing, marketing, support pages, privacy policy | **Deskloop** | `INFOPLIST_KEY_CFBundleDisplayName`; read in code via `AppInfo.displayName` — never hardcode the literal |
+| Repo, Xcode project, target, scheme, bundle ID, file paths, developer docs, KB | `Personal Wallpaper Engine` | Unchanged; renaming would churn the project for no user benefit |
+
+New user-facing strings must interpolate `AppInfo.displayName` rather than either literal, so a future
+rename is a single Info.plist change. Historical docs keep the old name; do not retro-edit them.
+
+**Name:** Deskloop (user-facing) / Personal Wallpaper Engine (internal)
 
 **Description:**
 
@@ -377,6 +387,21 @@ Strings below are copied from Swift sources. Dynamic segments shown as `{placeho
 | Setup helper | `Restore and delete setups in the Setups tab.` |
 | Applying banner | `Applying wallpaper...` |
 
+### 7.1a First-run welcome card — `ModernHomeView.welcomeCard`
+
+Shown centered over the hero while no display has a wallpaper assigned, and not yet dismissed this
+session. There is no persisted "seen" flag: assigning a wallpaper hides it, and clearing every
+wallpaper brings it back.
+
+| Control / region | String |
+|------------------|--------|
+| Title | `Welcome to {AppInfo.displayName}` |
+| Body | `Pick an MP4 or MOV from your Mac and it plays as your desktop wallpaper, behind your icons. Nothing is uploaded.` |
+| Primary action | `Choose Wallpaper` |
+| Secondary action | `Browse Library` |
+| Tertiary action | `Dismiss` |
+| Accessibility label | `Welcome to {AppInfo.displayName}` |
+
 ### 7.2 Display selection modal
 
 | String |
@@ -479,7 +504,7 @@ Uses emoji prefixes in `SetupPreviewCard.swift`: `🌐 Web` / `🎬 Video`, `�
 | Scaling caption | `Default scaling for new assignments; per-display overrides apply on Home.` |
 | Mute caption | `Silences wallpaper playback in the app preview and engine.` |
 | Wallpaper Source | `No video selected` (when empty) |
-| Web | `Web Source URL`, placeholder `https://example.com/animated-background`, `Choose File`, `Apply` |
+| Web | `Web Source URL`, placeholder `https://example.com/wallpaper.html`, `Choose File`, `Apply` |
 | Video | `Choose Video`, `Apply to All Displays` |
 | Video caption | `Assign per display on the Home tab, or apply this source to every connected display here.` |
 | Performance | `Performance Profile` + profile `caption` values (§4.4) + static Balanced/Max Quality sentence (§4.4) |
@@ -490,7 +515,7 @@ Uses emoji prefixes in `SetupPreviewCard.swift`: `🌐 Web` / `🎬 Video`, `�
 | CPU measuring | `Measuring…` |
 | Per display heading | `Per display` |
 | Row format | `{sourceName} · shared|standalone · rate {rate}` + optional ` · visibility paused` |
-| Heavy CPU callout | `Elevated CPU is expected with {reasons}. Canonical baseline: same 1080p on all displays, unfocused (~2.5–3% Debug).` |
+| Heavy CPU callout | `Elevated CPU is expected with {reasons}. Canonical baseline: same 1080p on all displays, unfocused (~2.5–3% Debug).` — note the quoted baseline is a **Debug** figure; Release runs ~13.8% per-core (~1.15% of system on 12 cores) |
 | Battery | `Pause on Battery` / `Stops wallpaper playback while unplugged (MacBook).` |
 | | `Pause on Low Battery` / `Pauses when charge falls below the threshold.` |
 | | `Low battery threshold` |
@@ -507,7 +532,10 @@ Uses emoji prefixes in `SetupPreviewCard.swift`: `🌐 Web` / `🎬 Video`, `�
 | `Don't show again` |
 | Help: `Remind me later`, `Never show performance suggestions` |
 
-Dynamic message from `AppViewModel`: `Wallpaper CPU has averaged {percent}% recently. Switch to {profile.displayName} to reduce usage.`
+Dynamic message from `AppViewModel`: `Wallpaper playback has averaged {percent}% of your Mac's CPU recently. Switch to {profile.displayName} to reduce usage.`
+
+`{percent}` is **system-wide** share (one decimal), matching the `System CPU share` diagnostics row.
+It is not the per-core figure the other CPU rows show — see repo `docs/PERFORMANCE_TUNING.md` §ADR-009.
 
 ### 7.11 Global pause overlay
 

@@ -1,6 +1,6 @@
 # Web Wallpapers
 
-**Product:** Personal Wallpaper Engine (macOS)  
+**Product:** Deskloop (macOS)  
 **Renderer:** `WebRenderer` (`WKWebView` full-screen behind desktop icons)
 
 ---
@@ -54,6 +54,7 @@ App Sandbox was enabled **without** `com.apple.security.network.client`. Local `
 
 ## Mac App Store / privacy
 
+- This optional mode is why the App Store listing declares **Unrestricted Web Access** (age rating 16+) — see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) section 3.
 - Loading a remote URL is **user-initiated**; the developer does not collect URL history or page content.
 - Third-party site privacy practices are outside our control — disclose in [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md).
 - Nutrition labels: **Data Not Collected** by the developer.

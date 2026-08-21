@@ -223,7 +223,7 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 ## Phase 7C — Diagnostics & monitoring
 
 - **CPU sampling (7C.2.3):** 1s interval; instant (raw window), smoothed (slow EMA α=0.08), and 60s mean of instant samples. Primary source: `clock_gettime_nsec_np`; cross-check: `proc_pidinfo` + mach timebase.
-- **Suggestions (7E):** Max→Balanced at smoothed **10%**; Balanced→Battery Saver at smoothed **14%** (after 7E resolution caps). Test mode: 4%/3%.
+- **Suggestions (7E):** Max→Balanced at smoothed **10%** per-core; Balanced→Battery Saver at smoothed **14%** per-core (after 7E resolution caps). Test mode: 4%/3%. **Superseded 2026-08-20 — see ADR-009 below.**
 - **Settings → Diagnostics:** Profile, CPU, lifecycle, per-display source/decode path, heavy-scenario callout, test-threshold toggle, Restart Engine, Reset to Safe Default.
 - **Restart:** Disposes renderers, reapplies persisted wallpapers + coalesce; collections/setups unchanged.
 
@@ -403,13 +403,47 @@ while true; do ps -p $(pgrep -x 'Personal Wallpaper Engine') -o %cpu=; sleep 2; 
 2. **Battery Saver differentiation** — 4K→1080p downscale or aggressive WebRenderer idle (see deferred table).
 3. **Profile-aware hero cost** — Balanced static hero sooner after unfocus; Max keeps live hero longer.
 
-**After 7D re-benchmark, choose Balanced suggestion policy:**
+**After 7D re-benchmark, choose Balanced suggestion policy:** *(resolved by ADR-009 below — kept a
+high threshold, but expressed system-wide rather than per-core.)*
 
 - Remove Balanced→Battery Saver entirely, or
 - High threshold only (sustained smoothed >14–16%), or
 - Battery / Low Power Mode gated only.
 
 **Re-benchmark matrix:** Re-run rows in “7B re-measurement” for coalesced 1080p and P6 dual-decode scenarios per profile after each lever.
+
+---
+
+## ADR-009 — Suggestion thresholds moved to system-wide share (2026-08-20)
+
+Every Phase 7C/7D/7E threshold above is **per-core** and is superseded. Thresholds are now a share of
+**total system CPU capacity**.
+
+**Why the old values misfired.** They were per-core, matching the samples, so the units were
+consistent — but they were calibrated from Phase 7C *Debug* readings of ~2.5% per-core and never
+revisited after the Release benchmark run. Release canonical is ~13.75–14.17% per-core, above the 10%
+Max→Balanced gate, so the banner fired on nearly every launch. The message also printed the per-core
+average, so an app using ~1.15% of a 12-core Mac reported "averaged 14%".
+
+**Current values** (see `PerformanceSuggestionPolicy.swift`):
+
+| Gate | System-wide | 12-core equivalent (per-core) |
+|------|-------------|-------------------------------|
+| Max Quality → Balanced | 2.5% | ~30% |
+| Balanced → Battery Saver | 3.5% | ~42% |
+| Test mode (Debug only) | 0.5% / 0.5% | ~6% |
+
+Calibrated against the measured Release envelope in the Phase 7 Closeout matrix, which spans
+**0.47%–1.18% of system** on 12 cores across every profile and scenario. Release gates sit at roughly
+2x the top of that range; test gates sit deliberately below the baseline so QA can force the banner.
+
+Per-core thresholds were rejected as hardware-dependent: 14% per-core is 3.5% of a 4-core laptop but
+1.2% of a 12-core desktop, so one number cannot mean the same thing on both. `PerformanceSuggestionPolicy.isSustained`
+now owns the per-core → system-wide conversion, and `PerformanceSuggestionPolicyTests` pins both the
+conversion and the calibration.
+
+**To re-derive after new benchmarks:** measure the heaviest realistic scenario, divide by
+`activeProcessorCount` to get system-wide share, and set Max→Balanced at about twice that.
 
 ---
 

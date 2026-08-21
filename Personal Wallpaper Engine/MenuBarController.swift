@@ -113,6 +113,8 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
     private var recentsMenuItem: NSMenuItem?
     private var diagnosticsItem: NSMenuItem?
     private var launchAtLoginItem: NSMenuItem?
+    private var isMenuOpen = false
+    private var lastIconState: IconState?
     private var thumbnailTask: Task<Void, Never>?
 
     func setup(with viewModel: AppViewModel) {
@@ -133,10 +135,18 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
         self.menu = menu
         statusItem?.menu = menu
 
+        // `objectWillChange` fires for every view-model change, most of which the menu bar does not
+        // reflect. While the menu is closed only the status icon is visible, and `menuWillOpen`
+        // refreshes the full menu anyway, so titles are rebuilt at the point they can be seen.
         viewModel.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
-                self?.updateMenuState()
+                guard let self else { return }
+                if self.isMenuOpen {
+                    self.updateMenuState()
+                } else {
+                    self.updateIconFromViewModel()
+                }
             }
             .store(in: &cancellables)
 
@@ -147,6 +157,7 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         guard let viewModel else { return }
+        isMenuOpen = true
         viewModel.menuBarContextDisplayID = detectMenuBarDisplayID()
         rebuildDynamicSubmenus()
         refreshPreviewHeader()
@@ -154,6 +165,7 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
     }
 
     func menuDidClose(_ menu: NSMenu) {
+        isMenuOpen = false
         thumbnailTask?.cancel()
         viewModel?.menuBarContextDisplayID = nil
     }
@@ -480,6 +492,12 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
 
     // MARK: - State
 
+    /// Status-icon-only refresh for changes that arrive while the menu is closed.
+    private func updateIconFromViewModel() {
+        guard let viewModel else { return }
+        updateIcon(isPlaying: viewModel.isPlaying, isMuted: viewModel.isMuted)
+    }
+
     private func updateMenuState() {
         guard let menu, let viewModel else { return }
 
@@ -505,12 +523,27 @@ final class MenuBarController: NSObject, ObservableObject, NSMenuDelegate {
 
     private func updateIcon(isPlaying: Bool, isMuted: Bool) {
         guard let button = statusItem?.button else { return }
+        // Called on every view-model change, so skip the image allocation when nothing moved.
+        guard lastIconState != IconState(isPlaying: isPlaying, isMuted: isMuted) else { return }
+        lastIconState = IconState(isPlaying: isPlaying, isMuted: isMuted)
+
+        let name = AppInfo.displayName
+        let description = isMuted
+            ? "\(name), muted"
+            : (isPlaying ? "\(name), playing" : "\(name), paused")
+
         if #available(macOS 11.0, *) {
             let symbol = isMuted ? "speaker.slash.fill" : (isPlaying ? "play.fill" : "pause.fill")
-            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: description)
             button.title = ""
         } else {
             button.title = isMuted ? "🔇" : (isPlaying ? "▶" : "⏸")
         }
+        button.setAccessibilityLabel(description)
+    }
+
+    private struct IconState: Equatable {
+        let isPlaying: Bool
+        let isMuted: Bool
     }
 }

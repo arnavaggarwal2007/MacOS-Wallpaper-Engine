@@ -67,17 +67,36 @@ struct DisplayConfigurationMigrator {
         settings.perDisplayRendererModes = rekeyDictionary(settings.perDisplayRendererModes, mapping: mapping)
     }
 
-    private static func rekeyDictionary<Value>(
+    /// Moves per-display values onto their new display IDs.
+    ///
+    /// Built in a single pass over the original dictionary rather than by mutating a copy while
+    /// iterating `mapping`. Mutating in place made the outcome depend on `Dictionary`'s arbitrary
+    /// iteration order: for a chained mapping such as `1 → 2, 2 → 3`, visiting `1 → 2` first found
+    /// the destination still occupied and silently discarded display 1's wallpaper, while the other
+    /// order preserved both. `computeDisplayIDMapping` reserves each destination ID, so the mapping
+    /// is injective and remapped entries cannot collide with one another.
+    static func rekeyDictionary<Value>(
         _ dictionary: [String: Value],
         mapping: [String: String]
     ) -> [String: Value] {
-        var result = dictionary
-        for (oldKey, newKey) in mapping {
-            guard oldKey != newKey, let value = result.removeValue(forKey: oldKey) else { continue }
-            if result[newKey] == nil {
-                result[newKey] = value
+        var result: [String: Value] = [:]
+        var remapped: [String: Value] = [:]
+        result.reserveCapacity(dictionary.count)
+
+        for (key, value) in dictionary {
+            if let newKey = mapping[key], newKey != key {
+                remapped[newKey] = value
+            } else {
+                result[key] = value
             }
         }
+
+        // A remapped entry wins over whatever sat on its destination key: that ID has just been
+        // reassigned to a different physical screen, so the resident entry is the stale one.
+        for (key, value) in remapped {
+            result[key] = value
+        }
+
         return result
     }
 }

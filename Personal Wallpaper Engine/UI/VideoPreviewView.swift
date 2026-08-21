@@ -34,14 +34,12 @@ struct VideoPreviewView: NSViewRepresentable {
         context.coordinator.currentURL = videoURL
         context.coordinator.isPlaybackPaused = isPlaybackPaused
 
-        Task {
-            await loadAndPlay(
-                player: player,
-                url: videoURL,
-                shouldLoop: shouldLoop,
-                coordinator: context.coordinator
-            )
-        }
+        startLoad(
+            player: player,
+            url: videoURL,
+            shouldLoop: shouldLoop,
+            coordinator: context.coordinator
+        )
 
         return view
     }
@@ -56,14 +54,12 @@ struct VideoPreviewView: NSViewRepresentable {
         if context.coordinator.currentURL?.absoluteString != videoURL.absoluteString {
             context.coordinator.currentURL = videoURL
             context.coordinator.lastAppliedPauseState = nil
-            Task {
-                await loadAndPlay(
-                    player: context.coordinator.player ?? AVPlayer(),
-                    url: videoURL,
-                    shouldLoop: shouldLoop,
-                    coordinator: context.coordinator
-                )
-            }
+            startLoad(
+                player: context.coordinator.player ?? AVPlayer(),
+                url: videoURL,
+                shouldLoop: shouldLoop,
+                coordinator: context.coordinator
+            )
             return
         }
 
@@ -78,6 +74,25 @@ struct VideoPreviewView: NSViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
+
+    /// Starts a load, superseding any in-flight one so a slow earlier load cannot win the race and
+    /// leave the preview showing the wrong video.
+    private func startLoad(
+        player: AVPlayer,
+        url: URL,
+        shouldLoop: Bool,
+        coordinator: Coordinator
+    ) {
+        coordinator.loadTask?.cancel()
+        coordinator.loadTask = Task {
+            await loadAndPlay(
+                player: player,
+                url: url,
+                shouldLoop: shouldLoop,
+                coordinator: coordinator
+            )
+        }
+    }
 
     private func loadAndPlay(
         player: AVPlayer,
@@ -107,19 +122,25 @@ struct VideoPreviewView: NSViewRepresentable {
             return
         }
 
+        guard !Task.isCancelled else { return }
+
         let asset = AVURLAsset(url: url)
         let item = AVPlayerItem(asset: asset)
         PerformanceProfileConfiguration.apply(to: item, profile: SettingsStore.shared.performanceProfile)
 
-        coordinator.playerItemObserver = item.observe(\AVPlayerItem.status, options: [.initial, .new]) { item, _ in
-            guard debug else { return }
-            videoPreviewLogger.debug("playerItem.status = \(item.status.rawValue)")
+        // Status KVO exists purely for debug logging, so don't register it otherwise.
+        coordinator.playerItemObserver?.invalidate()
+        coordinator.playerItemObserver = nil
+        if debug {
+            coordinator.playerItemObserver = item.observe(\AVPlayerItem.status, options: [.initial, .new]) { item, _ in
+                videoPreviewLogger.debug("playerItem.status = \(item.status.rawValue)")
+            }
         }
 
+        // Unconditional: turning looping off must also drop the previous item's observer.
+        coordinator.removeLoopObserver()
+
         if shouldLoop {
-            if let observer = coordinator.loopObserver, let oldItem = coordinator.loopItem {
-                NotificationCenter.default.removeObserver(observer, name: .AVPlayerItemDidPlayToEndTime, object: oldItem)
-            }
             coordinator.loopItem = item
             coordinator.loopObserver = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
@@ -131,6 +152,8 @@ struct VideoPreviewView: NSViewRepresentable {
                 coordinator.player?.play()
             }
         }
+
+        guard !Task.isCancelled else { return }
 
         let shouldStartPlayback = !coordinator.isPlaybackPaused
         await MainActor.run {
@@ -155,11 +178,19 @@ struct VideoPreviewView: NSViewRepresentable {
         var currentURL: URL?
         var isPlaybackPaused = false
         var lastAppliedPauseState: Bool?
+        var loadTask: Task<Void, Never>?
 
-        deinit {
+        func removeLoopObserver() {
             if let observer = loopObserver, let item = loopItem {
                 NotificationCenter.default.removeObserver(observer, name: .AVPlayerItemDidPlayToEndTime, object: item)
             }
+            loopObserver = nil
+            loopItem = nil
+        }
+
+        deinit {
+            loadTask?.cancel()
+            removeLoopObserver()
             playerItemObserver?.invalidate()
             if let accessed = accessedURL { accessed.stopAccessingSecurityScopedResource() }
             player?.pause()

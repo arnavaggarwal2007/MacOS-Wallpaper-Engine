@@ -12,8 +12,10 @@ struct CollectionEditorView: View {
     @State private var sourceDrafts: [CollectionSourceDraft]
     @State private var validationMessage: String?
     @State private var nameValidationMessage: String?
-    @State private var browseIndex: Int?
-    @State private var libraryBrowseIndex: Int?
+    /// Which source row a file/library picker is filling in. Tracked by identity so adding or
+    /// removing rows while a picker is open cannot redirect the result to another row.
+    @State private var browseDraftID: CollectionSourceDraft.ID?
+    @State private var libraryBrowseDraftID: CollectionSourceDraft.ID?
     @State private var isFileImporterPresented = false
     @State private var isLibraryPickerPresented = false
 
@@ -116,42 +118,27 @@ struct CollectionEditorView: View {
                         CardSection(header: "Sources") {
                             VStack(alignment: .leading, spacing: 12) {
                                 if !sourceDrafts.isEmpty {
-                                    ForEach(sourceDrafts.indices, id: \.self) { index in
+                                    // Keyed by draft identity, not array position: with index
+                                    // identity, deleting a row left SwiftUI's per-row state (focus,
+                                    // partially typed URLs) attached to the wrong source.
+                                    ForEach($sourceDrafts) { $draft in
                                         CollectionSourceInput(
                                             isDisplayBound: collectionType == .displayBound,
-                                            onDelete: { removeSource(at: index) },
+                                            onDelete: { removeSource(id: draft.id) },
                                             onBrowse: {
-                                                browseIndex = index
+                                                browseDraftID = draft.id
                                                 isFileImporterPresented = true
                                             },
                                             onLibraryBrowse: {
-                                                libraryBrowseIndex = index
+                                                libraryBrowseDraftID = draft.id
                                                 isLibraryPickerPresented = true
                                             },
-                                            url: Binding(
-                                                get: { sourceDrafts[index].url },
-                                                set: { sourceDrafts[index].url = $0 }
-                                            ),
-                                            displayLabel: Binding(
-                                                get: { sourceDrafts[index].displayLabel },
-                                                set: { sourceDrafts[index].displayLabel = $0 }
-                                            ),
-                                            displayIDFallback: Binding(
-                                                get: { sourceDrafts[index].displayIDFallback },
-                                                set: { sourceDrafts[index].displayIDFallback = $0 }
-                                            ),
-                                            scalingMode: Binding(
-                                                get: { sourceDrafts[index].scalingMode },
-                                                set: { sourceDrafts[index].scalingMode = $0 }
-                                            ),
-                                            bookmark: Binding(
-                                                get: { sourceDrafts[index].bookmark },
-                                                set: { sourceDrafts[index].bookmark = $0 }
-                                            ),
-                                            captureError: Binding(
-                                                get: { sourceDrafts[index].captureError },
-                                                set: { sourceDrafts[index].captureError = $0 }
-                                            )
+                                            url: $draft.url,
+                                            displayLabel: $draft.displayLabel,
+                                            displayIDFallback: $draft.displayIDFallback,
+                                            scalingMode: $draft.scalingMode,
+                                            bookmark: $draft.bookmark,
+                                            captureError: $draft.captureError
                                         )
                                     }
                                 } else {
@@ -265,10 +252,10 @@ struct CollectionEditorView: View {
             allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
             allowsMultipleSelection: false
         ) { result in
-            guard let index = browseIndex else { return }
-            browseIndex = nil
+            guard let draftID = browseDraftID else { return }
+            browseDraftID = nil
 
-            guard sourceDrafts.indices.contains(index) else { return }
+            guard let index = sourceDrafts.firstIndex(where: { $0.id == draftID }) else { return }
 
             switch result {
             case .success(let urls):
@@ -304,9 +291,9 @@ struct CollectionEditorView: View {
         }
         .sheet(isPresented: $isLibraryPickerPresented) {
             LibraryPickerSheet { item, url in
-                guard let index = libraryBrowseIndex,
-                      sourceDrafts.indices.contains(index) else { return }
-                libraryBrowseIndex = nil
+                guard let draftID = libraryBrowseDraftID,
+                      let index = sourceDrafts.firstIndex(where: { $0.id == draftID }) else { return }
+                libraryBrowseDraftID = nil
                 sourceDrafts[index].url = url.absoluteString
                 let didStartAccess = url.startAccessingSecurityScopedResource()
                 defer {
@@ -349,9 +336,8 @@ struct CollectionEditorView: View {
         sourceDrafts.append(CollectionSourceDraft(order: sourceDrafts.count))
     }
     
-    private func removeSource(at index: Int) {
-        guard sourceDrafts.indices.contains(index) else { return }
-        sourceDrafts.remove(at: index)
+    private func removeSource(id: CollectionSourceDraft.ID) {
+        sourceDrafts.removeAll { $0.id == id }
 
         if sourceDrafts.isEmpty {
             sourceDrafts = [CollectionSourceDraft(order: 0)]
@@ -449,30 +435,12 @@ struct CollectionEditorView: View {
     }
 
     private func statusBanner(title: String, message: String, color: Color) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(color)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(DesignTokens.Typography.subtitle)
-                    .foregroundColor(DesignTokens.Colors.textPrimary)
-                Text(message)
-                    .font(DesignTokens.Typography.subtitle)
-                    .foregroundColor(DesignTokens.Colors.textSecondary)
-            }
-
-            Spacer()
-        }
-        .padding(12)
-        .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(color.opacity(0.12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(color.opacity(0.22), lineWidth: 1)
-                }
-        }
+        StatusBanner(
+            title: title,
+            message: message,
+            systemImage: "exclamationmark.triangle.fill",
+            tint: color
+        )
     }
 }
 
