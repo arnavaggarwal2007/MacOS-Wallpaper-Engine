@@ -1,11 +1,28 @@
 # Mac App Store Submission Guide — Deskloop
 
-**Status:** Copy and metadata final (2026-08-20). Remaining steps require an Apple Developer Program membership.  
+**Status:** Engineering and owner manual QA complete (2026-08-29). **Next:** Xcode signing → Connect record → Archive → Validate → metadata → Submit (checklist below).  
 **Store name:** **Deskloop** (display name only — bundle ID and Xcode target are unchanged)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
 **Gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)  
 **Related:** [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+
+---
+
+## Owner runway (after QA sign-off)
+
+Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29). Complete these in order:
+
+| Step | Action | Section |
+|------|--------|---------|
+| 1 | Xcode → Settings → Accounts → sign in; confirm Mac App Store distribution cert | §1 |
+| 2 | App Store Connect → create **Deskloop** app (`Personal.Personal-Wallpaper-Engine`, SKU `pwe-mas-001`) | §1 |
+| 3 | Archive scheme **`PWE App Store`** → **Validate App** → **Distribute** to Connect | §2 |
+| 4 | Paste metadata, privacy labels (Data Not Collected), age rating 16+, review notes | §3–5 |
+| 5 | Attach 6 screenshots | §6 |
+| 6 | Select build → **Submit for Review** | §2 |
+
+Version for first upload: **1.0 (1)** — see `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in the Xcode project.
 
 ---
 
@@ -22,7 +39,9 @@
 | Support URL | `https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues` |
 | Review contact | Arnav Aggarwal · arnevaggarrwal@gmail.com · 408-892-7318 |
 
-### Enabling the hosted pages (one-time, owner action)
+### Enabling the hosted pages (one-time — **done**)
+
+GitHub Pages is **live** (2026-08-23). Privacy and support URLs verified 2026-08-29.
 
 The landing page and privacy policy are committed as static HTML under [`docs/`](.):
 [`index.html`](index.html) and [`privacy/index.html`](privacy/index.html), with `.nojekyll`

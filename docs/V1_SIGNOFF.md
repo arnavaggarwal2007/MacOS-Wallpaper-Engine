@@ -12,18 +12,18 @@
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Automated build & smoke | **Pass** | `chunk7_regression.sh`; smoke failures fail CI (2026-06-21) |
+| Automated build & smoke | **Pass** | `chunk7_regression.sh` — build, smoke, unit tests (2026-08-28) |
 | UI revamp validation | **Pass** | User verified May 20, 2026 |
-| Functional matrix (manual) | **Pass** | Owner daily use + Phase 9 matrix **P** (2026-06-21) |
+| Functional matrix (manual) | **Pass** | Owner full PRE_RELEASE matrix **P** (2026-08-29); Phase 9 matrix **P** (2026-06-21) |
 | Phase 7B engine efficiency | **Pass** | [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) |
 | Phase 7C diagnostics UI | **Pass** | Per-core + system-wide CPU display |
 | Phase 7D–7G | **Pass** | Release 12-row benchmark matrix |
 | Phase 8 local library | **Pass** | [`PHASE_8_LIBRARY.md`](PHASE_8_LIBRARY.md) |
 | Phase 9 quick modes + menu bar | **Pass** | [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) — all rows **P** |
-| XCTest unit suite | **Pass (added)** | CPUMetrics, QuickMode, SettingsStore persistence |
+| XCTest unit suite | **Pass (expanded)** | Display mapping, migration, collections, SettingsStore — see [`TESTING.md`](TESTING.md) |
 | Distribution docs | **Pass** | [`DISTRIBUTION.md`](DISTRIBUTION.md), [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md), [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md), V2.2 App Store charters (2026-08-20) |
 
-**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0. V2.2 Milestone 1 application code shipped 2026-08-20 — [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md).
+**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. **Owner manual QA complete (2026-08-29).** Engineering and product sign-off are done; **Connect upload remains owner-gated** — follow [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md). Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0.
 
 ---
 
@@ -32,7 +32,7 @@
 | Milestone | Scope | Status | Date |
 |-----------|--------|--------|------|
 | Docs / charter (trunk + flavors, App Store first) | Roadmap Part 3 + submission/privacy docs | **Pass** | 2026-08-20 |
-| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-20); Connect upload **Owner** | 2026-08-20 |
+| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-28); Owner QA **Pass** (2026-08-29); Connect upload **Owner pending** | 2026-08-29 |
 | M2 — Tier A + Tier B (v1.1) | Lock export + screensaver | Pending | |
 | M3 — Direct DMG | Sparkle + tip link + conditional Tier C | Deferred | |
 
@@ -42,8 +42,10 @@
 |-------|---------|--------|------|
 | Debug smoke build | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_smoke.sh` | Pass | 2026-05-22 |
 | CI regression | `chunk7_regression.sh` | Pass | 2026-06-01 |
+| CI unit tests | `chunk7_regression.sh` (XCTest) | Pass | 2026-08-28 |
 | Phase 9 close-out Debug build | `xcodebuild` Debug | Pass | 2026-06-09 |
-| Unit tests | `xcodebuild test` | Pass | 2026-08-20 |
+| Unit tests (owner Cmd+U) | Xcode Test | Pass | 2026-08-29 |
+| Manual QA (PRE_RELEASE full matrix) | Owner hardware | Pass | 2026-08-29 |
 | M1 Release-AppStore build | `PWE App Store` / `Release-AppStore` | Pass | 2026-08-20 |
 | M1 regression | `chunk7_regression.sh` | Pass | 2026-08-20 |
 | Phase 1–9 audit build | `chunk7_regression.sh` | Pass | 2026-06-21 |

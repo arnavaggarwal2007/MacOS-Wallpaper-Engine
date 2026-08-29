@@ -655,7 +655,10 @@ Second grouping layer: named `WallpaperCollection` with `simple` or `displayBoun
 |------|---------------------------|
 | `simple`, 1 source | Same source to all connected displays |
 | `simple`, N sources | Map to displays in screen order; overflow message if more sources than displays |
-| `displayBound` | Match `displayLabel` / `displayIDFallback` to connected screens |
+| `displayBound`, explicit label/ID | Match named monitor (label wins over stale ID) or ID-only fallback; claimed IDs prevent double assignment |
+| `displayBound`, auto-detect | Fill unused displays in screen order after explicit bindings; warn if more auto-detect sources than free displays |
+
+**Binding semantics (v1.0):** Display-bound collections target **named physical monitors** (`NSScreen.localizedName`). Simple collections provide portable screen-order mapping. Slot-based “Display 1 / Display 2” identity that follows hardware order regardless of monitor model is post-launch ([[70 Master Plan/POST_LAUNCH_BACKLOG]] #6).
 
 ---
 

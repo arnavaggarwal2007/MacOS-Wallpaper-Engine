@@ -293,9 +293,16 @@ struct CollectionsTabView: View {
     }
 
     private func collectionMappingDescription(index: Int, source: CollectionSource, type: WallpaperCollection.CollectionType) -> String {
-        let displayInfo = type == .displayBound
-            ? (source.displayLabel ?? "Display \(index + 1)")
-            : "Display \(index + 1)"
+        let displayInfo: String
+        if type == .displayBound {
+            if DisplayBoundCollectionMapping.isAutoDetect(source) {
+                displayInfo = "Auto (screen order)"
+            } else {
+                displayInfo = source.displayLabel ?? source.displayIDFallback.map { "Display ID \($0)" } ?? "?"
+            }
+        } else {
+            displayInfo = "Display \(index + 1)"
+        }
         let fileInfo = URL(fileURLWithPath: source.url).lastPathComponent
         return "\(fileInfo) → \(displayInfo)"
     }

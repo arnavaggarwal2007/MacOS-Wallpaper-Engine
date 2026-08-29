@@ -794,7 +794,7 @@ final class AppViewModel: ObservableObject {
         await wallpaperManager.setRendererMode(rendererMode)
         await wallpaperManager.setPerformanceProfile(performanceProfile)
 
-        seedSettingsKeyBySignatureFromConnectedScreens()
+        migratePerDisplaySettingsOnColdStart()
         updateDisplaySignatureSnapshot()
         await wallpaperManager.startMonitoring()
 
@@ -1036,21 +1036,69 @@ final class AppViewModel: ObservableObject {
         lastDisplaySignatures = DisplayConfigurationMigrator.signatures(for: NSScreen.screens)
     }
 
-    private func seedSettingsKeyBySignatureFromConnectedScreens() {
-        for screen in NSScreen.screens {
-            let displayID = screen.displayID
-            let key = String(displayID)
-            guard settings.perDisplaySources[key] != nil
-                || settings.perDisplayBookmarks[key] != nil else { continue }
-            recordPerDisplaySettingsKey(for: displayID)
-        }
-    }
-
     /// Records which settings key owns data for a physical display (used when IDs change after hotplug).
     private func recordPerDisplaySettingsKey(for displayID: CGDirectDisplayID) {
         guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else { return }
         let signature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
-        settingsKeyBySignature[signature] = String(displayID)
+        let key = String(displayID)
+        settingsKeyBySignature[signature] = key
+        settings.setPerDisplaySignatureKey(signature.persistenceKey, settingsKey: key)
+    }
+
+    /// Re-keys orphaned per-display settings when display IDs changed between sessions.
+    private func migratePerDisplaySettingsOnColdStart() {
+        let screens = NSScreen.screens
+        let previousSnapshots = buildPreviousSignaturesForMigration(screens: screens)
+        let mapping = DisplayConfigurationMigrator.migrationMapping(
+            previousSignatures: previousSnapshots,
+            currentScreens: screens
+        )
+        applyPerDisplaySettingsMigration(mapping: mapping, previousSnapshots: previousSnapshots)
+    }
+
+    private func buildPreviousSignaturesForMigration(
+        screens: [NSScreen]
+    ) -> [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] {
+        var previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [:]
+
+        for (persistenceKey, settingsKey) in settings.perDisplaySignatureKeys {
+            guard let signature = DisplayConfigurationMigrator.DisplaySignature(persistenceKey: persistenceKey),
+                  let oldID = UInt32(settingsKey) else { continue }
+            let displayID = CGDirectDisplayID(oldID)
+            previous[displayID] = signature
+            settingsKeyBySignature[signature] = settingsKey
+        }
+
+        for screen in screens {
+            let displayID = screen.displayID
+            let key = String(displayID)
+            guard settings.perDisplaySources[key] != nil
+                || settings.perDisplayBookmarks[key] != nil else { continue }
+            let signature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
+            previous[displayID] = signature
+            recordPerDisplaySettingsKey(for: displayID)
+        }
+
+        return previous
+    }
+
+    private func applyPerDisplaySettingsMigration(
+        mapping: [String: String],
+        previousSnapshots: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature]
+    ) {
+        guard !mapping.isEmpty else { return }
+
+        DisplayConfigurationMigrator.rekeyPerDisplaySettings(in: settings, mapping: mapping)
+        logger.info("Re-keyed per-display settings for \(mapping.count) display(s) after configuration change")
+
+        for (oldKey, newKey) in mapping {
+            guard let oldID = UInt32(oldKey),
+                  let signature = previousSnapshots[CGDirectDisplayID(oldID)] else { continue }
+            settingsKeyBySignature[signature] = newKey
+            settings.setPerDisplaySignatureKey(signature.persistenceKey, settingsKey: newKey)
+        }
+
+        notifyDisplaySourcesChanged()
     }
 
     /// Includes disconnected displays so unplugged monitor settings can remap on replug.
@@ -1084,14 +1132,7 @@ final class AppViewModel: ObservableObject {
             currentScreens: screens
         )
         if !mapping.isEmpty {
-            DisplayConfigurationMigrator.rekeyPerDisplaySettings(in: settings, mapping: mapping)
-            logger.info("Re-keyed per-display settings for \(mapping.count) display(s) after configuration change")
-            notifyDisplaySourcesChanged()
-            for (oldKey, newKey) in mapping {
-                guard let oldID = UInt32(oldKey), UInt32(newKey) != nil,
-                      let signature = previousSnapshots[CGDirectDisplayID(oldID)] else { continue }
-                settingsKeyBySignature[signature] = newKey
-            }
+            applyPerDisplaySettingsMigration(mapping: mapping, previousSnapshots: previousSnapshots)
         }
         var nextSnapshots = DisplayConfigurationMigrator.signatures(for: screens)
         let representedSignatures = Set(nextSnapshots.values)
@@ -2060,93 +2101,125 @@ final class AppViewModel: ObservableObject {
     @MainActor
     private func applyDisplayBoundCollection(_ collection: WallpaperCollection) async -> Result<Void, WallpaperError> {
         var unmatchedWarnings: [String] = []
-        
+        var claimedDisplayIDs = Set<CGDirectDisplayID>()
+        var appliedCount = 0
+
+        let orderedDisplayIDs = orderedConnectedDisplayIDs()
+        let connectedDisplays = orderedDisplayIDs.map { displayID in
+            DisplayBoundCollectionMapping.ConnectedDisplay(
+                id: displayID,
+                name: wallpaperManager.displayControllers[displayID]?.displayName ?? ""
+            )
+        }
+
+        var explicitSources: [CollectionSource] = []
+        var autoDetectSources: [CollectionSource] = []
         for source in collection.sources {
-            let matchedDisplayID = resolveDisplayForSource(source: source)
-            
-            if let displayID = matchedDisplayID {
-                if let url = resolvedSourceURL(from: source.url, collectionName: collection.name) {
-                    syncPerDisplayFromCollection(
-                        displayID: displayID,
-                        collectionName: collection.name,
-                        source: source
-                    )
-                    let rendererMode: WallpaperRendererMode = url.isFileURL ? .video : .web
-                    let scalingMode = source.scalingMode.flatMap { VideoScalingMode(rawValue: $0) } ?? settings.scalingMode
-                    _ = await wallpaperManager.setPerDisplayWallpaper(
-                        displayID: displayID,
-                        url: url,
-                        rendererMode: rendererMode,
-                        scalingMode: scalingMode
-                    )
-                }
+            if DisplayBoundCollectionMapping.isAutoDetect(source) {
+                autoDetectSources.append(source)
             } else {
-                let displayInfo = source.displayLabel ?? source.displayIDFallback.map { String($0) } ?? "?"
-                let message = "Display \(displayInfo) not found"
+                explicitSources.append(source)
+            }
+        }
+
+        for source in explicitSources {
+            guard let displayID = DisplayBoundCollectionMapping.resolveExplicitBinding(
+                source: source,
+                connected: connectedDisplays,
+                claimed: &claimedDisplayIDs
+            ) else {
+                let displayInfo = source.displayLabel
+                    ?? source.displayIDFallback.map { String($0) }
+                    ?? "?"
+                let message = "Display \(displayInfo) not connected"
                 unmatchedWarnings.append(message)
                 logger.warning("Display-bound collection skip: \(message)")
+                continue
+            }
+
+            if await applyDisplayBoundSource(
+                source,
+                collectionName: collection.name,
+                displayID: displayID
+            ) {
+                appliedCount += 1
+                recordPerDisplaySettingsKey(for: displayID)
+            }
+        }
+
+        let autoDisplayIDs = DisplayBoundCollectionMapping.autoDetectDisplayIDs(
+            count: autoDetectSources.count,
+            orderedDisplayIDs: orderedDisplayIDs,
+            claimed: claimedDisplayIDs
+        )
+
+        if autoDetectSources.count > autoDisplayIDs.count {
+            let skipped = autoDetectSources.count - autoDisplayIDs.count
+            unmatchedWarnings.append(
+                "\(skipped) auto-detect source\(skipped == 1 ? "" : "s") skipped — not enough displays"
+            )
+        }
+
+        for (source, displayID) in zip(autoDetectSources, autoDisplayIDs) {
+            claimedDisplayIDs.insert(displayID)
+            if await applyDisplayBoundSource(
+                source,
+                collectionName: collection.name,
+                displayID: displayID
+            ) {
+                appliedCount += 1
+                recordPerDisplaySettingsKey(for: displayID)
             }
         }
 
         settings.lastUsedCollectionName = collection.name
-        
+
         refreshCollectionState()
         notifyDisplaySourcesChanged()
         evaluateQuickModeDrift(trigger: .collectionApplied)
+        await refreshDisplayState()
 
         if unmatchedWarnings.isEmpty {
-            statusMessage = "Collection '\(collection.name)' applied to matched displays."
+            statusMessage = "Collection '\(collection.name)' applied to \(appliedCount) display\(appliedCount == 1 ? "" : "s")."
             errorMessage = nil
-            
-            // PHASE 7: Sync display state for unified preview
-            await refreshDisplayState()
-            
             return .success(())
         }
 
-        let warningText = unmatchedWarnings.joined(separator: ", ")
-        statusMessage = "Applied to matched displays. Warnings:\n\(warningText)"
-        errorMessage = nil
-        
-        // PHASE 7: Sync display state for unified preview
-        await refreshDisplayState()
-        
-        return .success(())
+        let warningText = unmatchedWarnings.joined(separator: "; ")
+        if appliedCount > 0 {
+            statusMessage = "Applied to \(appliedCount) display\(appliedCount == 1 ? "" : "s"). \(warningText)"
+        } else {
+            statusMessage = "Collection '\(collection.name)' could not be applied. \(warningText)"
+        }
+        errorMessage = appliedCount > 0 ? nil : warningText
+        return appliedCount > 0 ? .success(()) : .failure(.internalError(description: warningText))
     }
-    
-    private func resolveDisplayForSource(source: CollectionSource) -> CGDirectDisplayID? {
-        // First attempt: ID match
-        if let displayIDFallback = source.displayIDFallback,
-           let controller = wallpaperManager.displayControllers.values.first(where: { $0.displayID == displayIDFallback }) {
-            return controller.displayID
+
+    @MainActor
+    private func applyDisplayBoundSource(
+        _ source: CollectionSource,
+        collectionName: String,
+        displayID: CGDirectDisplayID
+    ) async -> Bool {
+        guard let url = resolvedSourceURL(from: source.url, collectionName: collectionName) else {
+            return false
         }
-        
-        // Fallback: label match (case-insensitive partial or exact)
-        if let label = source.displayLabel {
-            for controller in wallpaperManager.displayControllers.values {
-                let screenName = controller.displayName ?? ""
-                // Exact match first
-                if screenName == label {
-                    return controller.displayID
-                }
-                // Fuzzy match: label appears anywhere in screen name
-                if screenName.contains(label) || label.contains(screenName) {
-                    logger.debug("Display-bound label fallback: '\(label)' matched '\(screenName)'")
-                    return controller.displayID
-                }
-            }
-        }
-        
-        // Auto-detect: both label and ID are nil, so apply to primary (first available) display
-        if source.displayLabel == nil && source.displayIDFallback == nil {
-            let displayIDs = orderedConnectedDisplayIDs()
-            if let primaryDisplayID = displayIDs.first {
-                logger.debug("Display-bound auto-detect: applying to primary display \(primaryDisplayID)")
-                return primaryDisplayID
-            }
-        }
-        
-        return nil
+
+        syncPerDisplayFromCollection(
+            displayID: displayID,
+            collectionName: collectionName,
+            source: source
+        )
+        let rendererMode: WallpaperRendererMode = url.isFileURL ? .video : .web
+        let scalingMode = source.scalingMode.flatMap { VideoScalingMode(rawValue: $0) } ?? settings.scalingMode
+        let result = await wallpaperManager.setPerDisplayWallpaper(
+            displayID: displayID,
+            url: url,
+            rendererMode: rendererMode,
+            scalingMode: scalingMode
+        )
+        if case .success = result { return true }
+        return false
     }
 
     private func refreshCollectionState() {

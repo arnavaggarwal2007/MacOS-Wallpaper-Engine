@@ -23,7 +23,17 @@ struct DisplayConfigurationMigrator {
         previousSignatures: [CGDirectDisplayID: DisplaySignature],
         currentScreens: [NSScreen]
     ) -> [String: String] {
-        let currentSignatures = signatures(for: currentScreens)
+        migrationMapping(
+            previousSignatures: previousSignatures,
+            currentSignatures: signatures(for: currentScreens)
+        )
+    }
+
+    /// Same as `migrationMapping(previousSignatures:currentScreens:)` but accepts pre-built signatures (unit tests).
+    static func migrationMapping(
+        previousSignatures: [CGDirectDisplayID: DisplaySignature],
+        currentSignatures: [CGDirectDisplayID: DisplaySignature]
+    ) -> [String: String] {
 
         var currentBySignature: [DisplaySignature: [CGDirectDisplayID]] = [:]
         for (displayID, signature) in currentSignatures {

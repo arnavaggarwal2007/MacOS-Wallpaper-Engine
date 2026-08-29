@@ -219,7 +219,7 @@ Research from codebase (Phases 1–9, post–June 2026 audit):
 | **Power / visibility** | `PowerPolicyManager`, `DesktopVisibilityTracker`, performance profiles |
 | **Local library** | `LocalLibraryManager`, thumbnails, drag-drop import |
 | **Distribution infra** | [`DISTRIBUTION.md`](DISTRIBUTION.md) — Developer ID, notarize, DMG; `UpdateChecker` opens GitHub releases (placeholder for Sparkle) |
-| **Tests / CI** | XCTest (8 tests), `chunk7_regression.sh`, smoke scripts |
+| **Tests / CI** | XCTest (~85 tests), `chunk7_regression.sh` (build + smoke + unit tests) |
 | **Deployment target** | macOS 15.0+ |
 | **Phase 10 features** | None shipped |
 

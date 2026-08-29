@@ -61,4 +61,81 @@ final class DisplayConfigurationMigratorTests: XCTestCase {
         let result = DisplayConfigurationMigrator.rekeyDictionary(bookmarks, mapping: ["1": "2", "2": "3"])
         XCTAssertEqual(result, ["2": Data([0x01]), "3": Data([0x02])])
     }
+
+    // MARK: - migrationMapping
+
+    private func signature(_ name: String, width: Int, height: Int) -> DisplayConfigurationMigrator.DisplaySignature {
+        let key = "\(name)|\(width)|\(height)"
+        return DisplayConfigurationMigrator.DisplaySignature(persistenceKey: key)!
+    }
+
+    func testMigrationMappingKeepsUnchangedDisplayIDs() {
+        let builtIn = signature("Built-in Retina Display", width: 1728, height: 1117)
+        let previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [1: builtIn]
+        let current: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [1: builtIn]
+
+        XCTAssertTrue(
+            DisplayConfigurationMigrator.migrationMapping(
+                previousSignatures: previous,
+                currentSignatures: current
+            ).isEmpty
+        )
+    }
+
+    func testMigrationMappingRemapsRepluggedExternalToNewID() {
+        let external = signature("LG UltraFine", width: 2560, height: 1440)
+        let previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: signature("Built-in Retina Display", width: 1728, height: 1117),
+            2: external,
+        ]
+        let current: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: signature("Built-in Retina Display", width: 1728, height: 1117),
+            3: external,
+        ]
+
+        XCTAssertEqual(
+            DisplayConfigurationMigrator.migrationMapping(
+                previousSignatures: previous,
+                currentSignatures: current
+            ),
+            ["2": "3"]
+        )
+    }
+
+    func testMigrationMappingHandlesIDReuseAcrossMonitors() {
+        let builtIn = signature("Built-in Retina Display", width: 1728, height: 1117)
+        let external = signature("LG UltraFine", width: 2560, height: 1440)
+        let previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: builtIn,
+            2: external,
+        ]
+        // Same IDs, swapped physical panels (common after hotplug).
+        let current: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: external,
+            2: builtIn,
+        ]
+
+        XCTAssertEqual(
+            DisplayConfigurationMigrator.migrationMapping(
+                previousSignatures: previous,
+                currentSignatures: current
+            ),
+            ["1": "2", "2": "1"]
+        )
+    }
+
+    func testMigrationMappingSkipsOrphanedPreviousDisplays() {
+        let missing = signature("Disconnected Panel", width: 1920, height: 1080)
+        let previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [5: missing]
+        let current: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: signature("Built-in Retina Display", width: 1728, height: 1117),
+        ]
+
+        XCTAssertTrue(
+            DisplayConfigurationMigrator.migrationMapping(
+                previousSignatures: previous,
+                currentSignatures: current
+            ).isEmpty
+        )
+    }
 }
