@@ -37,5 +37,7 @@
 ## Automated
 
 - `DisplayBoundCollectionMappingTests` — auto-detect round-robin, label-over-ID matching, signature persistence key round-trip
+- `DisplayConfigurationMigratorTests` — `rekeyDictionary`, `migrationMapping` (replug, swap, ID reuse, duplicate signatures)
+- `DisplayMigrationOrchestrationTests` — cold-start signature merge, disconnected-display augmentation, focused-display migration
 - `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_smoke.sh`
-- CI regression workflow (universal build)
+- CI regression workflow (`chunk7_regression.sh` — Debug + Release build, smoke, full XCTest suite)

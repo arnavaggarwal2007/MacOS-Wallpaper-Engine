@@ -78,19 +78,40 @@ if [ -x ./scripts/chunk7_smoke.sh ]; then
   fi
 fi
 
+# Build test bundles (plain `build` does not compile test-only targets)
+echo "\n--- Building for testing (Debug) ---"
+if ! TMPDIR="${TMPDIR:-/tmp}" "$XCODEBUILD" build-for-testing \
+  -project "Personal Wallpaper Engine.xcodeproj" \
+  -scheme "Personal Wallpaper Engine" \
+  -configuration Debug \
+  -derivedDataPath "$DERIVED" \
+  2>&1 | tee "$ARTIFACT_DIR/build-for-testing.log"
+then
+  echo "ERROR: build-for-testing failed (see $ARTIFACT_DIR/build-for-testing.log)" >&2
+  exit 1
+fi
+
+XCTEST_BUNDLE="$APP_PATH/Contents/PlugIns/Personal Wallpaper EngineTests.xctest"
+if [ ! -d "$XCTEST_BUNDLE" ]; then
+  echo "ERROR: Test bundle missing at $XCTEST_BUNDLE" >&2
+  exit 1
+fi
+
 # Unit tests (reuse DerivedData from Debug build above)
 echo "\n--- Unit tests (XCTest) ---"
+export XCODEBUILD_DESTINATION="platform=macOS,arch=$(uname -m)"
 if ! TMPDIR="${TMPDIR:-/tmp}" "$XCODEBUILD" test-without-building \
   -project "Personal Wallpaper Engine.xcodeproj" \
   -scheme "Personal Wallpaper Engine" \
   -configuration Debug \
-  -destination 'platform=macOS' \
   -derivedDataPath "$DERIVED" \
   2>&1 | tee "$ARTIFACT_DIR/unit-tests.log"
 then
+  unset XCODEBUILD_DESTINATION
   echo "ERROR: unit tests failed (see $ARTIFACT_DIR/unit-tests.log)" >&2
   exit 1
 fi
+unset XCODEBUILD_DESTINATION
 
 # Collect some metadata
 echo "\n--- Collecting metadata ---"

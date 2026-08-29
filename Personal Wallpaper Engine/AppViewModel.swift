@@ -1059,27 +1059,29 @@ final class AppViewModel: ObservableObject {
     private func buildPreviousSignaturesForMigration(
         screens: [NSScreen]
     ) -> [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] {
-        var previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [:]
-
-        for (persistenceKey, settingsKey) in settings.perDisplaySignatureKeys {
-            guard let signature = DisplayConfigurationMigrator.DisplaySignature(persistenceKey: persistenceKey),
-                  let oldID = UInt32(settingsKey) else { continue }
-            let displayID = CGDirectDisplayID(oldID)
-            previous[displayID] = signature
-            settingsKeyBySignature[signature] = settingsKey
+        var persistedSettingsKeys = Set<String>()
+        for screen in screens {
+            let key = String(screen.displayID)
+            if settings.perDisplaySources[key] != nil
+                || settings.perDisplayBookmarks[key] != nil {
+                persistedSettingsKeys.insert(key)
+            }
         }
 
-        for screen in screens {
-            let displayID = screen.displayID
-            let key = String(displayID)
-            guard settings.perDisplaySources[key] != nil
-                || settings.perDisplayBookmarks[key] != nil else { continue }
-            let signature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
-            previous[displayID] = signature
+        let outcome = DisplayMigrationOrchestration.previousSignaturesForColdStart(
+            perDisplaySignatureKeys: settings.perDisplaySignatureKeys,
+            persistedSettingsKeys: persistedSettingsKeys,
+            connectedSignatures: DisplayConfigurationMigrator.signatures(for: screens)
+        )
+
+        for (signature, key) in outcome.settingsKeyBySignature {
+            settingsKeyBySignature[signature] = key
+        }
+        for displayID in outcome.connectedDisplayIDsToPersist {
             recordPerDisplaySettingsKey(for: displayID)
         }
 
-        return previous
+        return outcome.previous
     }
 
     private func applyPerDisplaySettingsMigration(
@@ -1103,24 +1105,11 @@ final class AppViewModel: ObservableObject {
 
     /// Includes disconnected displays so unplugged monitor settings can remap on replug.
     private func augmentedPreviousSignatures(for screens: [NSScreen]) -> [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] {
-        var augmented = lastDisplaySignatures
-        let currentIDs = Set(screens.map(\.displayID))
-
-        for (signature, key) in settingsKeyBySignature {
-            guard let oldID = UInt32(key) else { continue }
-            let displayID = CGDirectDisplayID(oldID)
-            if augmented[displayID] == nil {
-                augmented[displayID] = signature
-            }
-        }
-
-        for (displayID, signature) in lastDisplaySignatures where !currentIDs.contains(displayID) {
-            if augmented[displayID] == nil {
-                augmented[displayID] = signature
-            }
-        }
-
-        return augmented
+        DisplayMigrationOrchestration.augmentedPreviousSignatures(
+            lastDisplaySignatures: lastDisplaySignatures,
+            settingsKeyBySignature: settingsKeyBySignature,
+            connectedDisplayIDs: Set(screens.map(\.displayID))
+        )
     }
 
     @discardableResult
@@ -1155,27 +1144,18 @@ final class AppViewModel: ObservableObject {
         mapping: [String: String],
         focusedSignatureBefore: DisplayConfigurationMigrator.DisplaySignature?
     ) {
-        guard let focused = focusedDisplayID else {
+        let currentSignatures = DisplayConfigurationMigrator.signatures(for: NSScreen.screens)
+        switch DisplayMigrationOrchestration.migrateFocusedDisplayID(
+            currentFocusedID: focusedDisplayID,
+            mapping: mapping,
+            focusedSignatureBefore: focusedSignatureBefore,
+            currentSignatures: currentSignatures
+        ) {
+        case .resolved(let newID):
+            focusedDisplayID = newID
+        case .needsSync:
             syncFocusedDisplayIfNeeded()
-            return
         }
-
-        if let newKey = mapping[String(focused)], let newID = UInt32(newKey) {
-            focusedDisplayID = CGDirectDisplayID(newID)
-            return
-        }
-
-        if let previousSignature = focusedSignatureBefore {
-            for screen in NSScreen.screens {
-                let signature = DisplayConfigurationMigrator.DisplaySignature(screen: screen)
-                if signature == previousSignature {
-                    focusedDisplayID = screen.displayID
-                    return
-                }
-            }
-        }
-
-        syncFocusedDisplayIfNeeded()
     }
 
     private func restorePersistedWallpapersOnLaunch() async {

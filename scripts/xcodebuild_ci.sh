@@ -14,13 +14,16 @@ if [[ "${CODE_SIGNING_ALLOWED:-YES}" == "NO" ]]; then
   )
 fi
 
+# Universal builds use generic/platform=macOS; XCTest needs a concrete arch (set via env).
+DEST="${XCODEBUILD_DESTINATION:-generic/platform=macOS}"
+
 if ((${#XCODEBUILD_CI_SETTINGS[@]} > 0)); then
   exec xcodebuild \
-    -destination 'generic/platform=macOS' \
+    -destination "$DEST" \
     "${XCODEBUILD_CI_SETTINGS[@]}" \
     "$@"
 else
   exec xcodebuild \
-    -destination 'generic/platform=macOS' \
+    -destination "$DEST" \
     "$@"
 fi

@@ -15,7 +15,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable
 
 ## Automated gates
 
-- [x] `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` — Debug + Release build, smoke, unit tests (2026-08-28)
+- [ ] `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` — Debug + Release build, smoke, unit tests (CI destination fix applied 2026-08-29; re-run locally and confirm GitHub workflow green)
 - [x] `xcodebuild test -scheme "Personal Wallpaper Engine" -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — unit tests pass (owner `Cmd+U` in Xcode, 2026-08-29; see [`TESTING.md`](TESTING.md))
 - [x] No new Swift compiler errors or warnings introduced (M1 branch)
 - [x] Release **PWE App Store** (`Release-AppStore`) configuration builds cleanly (2026-08-20)

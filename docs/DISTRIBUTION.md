@@ -144,7 +144,7 @@ Publish the privacy statement from [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) (hos
 CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh
 ```
 
-Smoke failures now fail the regression script. The regression script also runs unit tests after build. Run unit tests locally:
+Smoke failures now fail the regression script. The regression script runs `build-for-testing` before `test-without-building` (app-hosted tests are not built by plain `build`), then unit tests with a concrete `platform=macOS,arch=$(uname -m)` destination via `XCODEBUILD_DESTINATION` in [`scripts/chunk7_regression.sh`](../scripts/chunk7_regression.sh). Run unit tests locally:
 
 ```bash
 xcodebuild test \

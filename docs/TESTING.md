@@ -35,17 +35,26 @@ CODE_SIGNING_ALLOWED=NO xcodebuild test \
   -destination 'platform=macOS'
 ```
 
-After a full build, `test-without-building` is faster:
+After a full build, `test-without-building` is faster — but requires a prior `build-for-testing` (plain `build` does not compile app-hosted test bundles):
 
 ```bash
+CODE_SIGNING_ALLOWED=NO xcodebuild build-for-testing \
+  -scheme "Personal Wallpaper Engine" \
+  -destination 'platform=macOS,arch=$(uname -m)'
+
 CODE_SIGNING_ALLOWED=NO xcodebuild test-without-building \
   -scheme "Personal Wallpaper Engine" \
-  -destination 'platform=macOS'
+  -destination 'platform=macOS,arch=$(uname -m)'
 ```
+
+Or use `xcodebuild test`, which builds and runs in one step.
 
 ### CI
 
-`scripts/chunk7_regression.sh` runs Debug + Release build, smoke checks, then unit tests on every push to `main` (see `.github/workflows/chunk7_regression.yml`).
+`scripts/chunk7_regression.sh` runs Debug + Release build, smoke checks, `build-for-testing` (Debug), then unit tests on every push to `main` (see `.github/workflows/chunk7_regression.yml`).
+
+- **Builds** use `generic/platform=macOS` via [`scripts/xcodebuild_ci.sh`](../scripts/xcodebuild_ci.sh) (universal binary on headless runners).
+- **XCTest** sets `XCODEBUILD_DESTINATION="platform=macOS,arch=$(uname -m)"` so tests run on a concrete destination (required by modern Xcode; `generic/platform=macOS` fails with “Any Mac”).
 
 ---
 
@@ -79,6 +88,7 @@ After an agent adds or changes tests, run `Cmd+U` in Xcode and report any failur
 |------|--------|
 | `DisplayBoundCollectionMappingTests` | Display-bound apply resolution, auto-detect round-robin |
 | `DisplayConfigurationMigratorTests` | Per-display ID rekeying, `migrationMapping` |
+| `DisplayMigrationOrchestrationTests` | Cold-start signature merge, hotplug augmentation, focused-display migration |
 | `SettingsStorePersistenceTests` | UserDefaults quarantine, collection/setup CRUD, signature keys |
 | `WallpaperCollectionTests` | Name/URL validation, Codable |
 | `PerformanceSuggestionPolicyTests` | CPU suggestion thresholds |

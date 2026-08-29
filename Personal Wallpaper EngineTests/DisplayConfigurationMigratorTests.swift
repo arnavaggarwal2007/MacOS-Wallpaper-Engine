@@ -138,4 +138,47 @@ final class DisplayConfigurationMigratorTests: XCTestCase {
             ).isEmpty
         )
     }
+
+    func testMigrationMappingRemapsWhenSameIDRefersToDifferentMonitor() {
+        let builtIn = signature("Built-in Retina Display", width: 1728, height: 1117)
+        let external = signature("LG UltraFine", width: 2560, height: 1440)
+        let previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [1: builtIn]
+        let current: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: external,
+            2: builtIn,
+        ]
+
+        XCTAssertEqual(
+            DisplayConfigurationMigrator.migrationMapping(
+                previousSignatures: previous,
+                currentSignatures: current
+            ),
+            ["1": "2"]
+        )
+    }
+
+    func testMigrationMappingAssignsDistinctIDsForDuplicateSignatures() {
+        let panel = signature("Dell U2720Q", width: 2560, height: 1440)
+        let previous: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            1: panel,
+            2: panel,
+        ]
+        let current: [CGDirectDisplayID: DisplayConfigurationMigrator.DisplaySignature] = [
+            3: panel,
+            4: panel,
+        ]
+
+        XCTAssertEqual(
+            DisplayConfigurationMigrator.migrationMapping(
+                previousSignatures: previous,
+                currentSignatures: current
+            ),
+            ["1": "3", "2": "4"]
+        )
+    }
+
+    func testDisplaySignaturePersistenceKeyRejectsMalformedInput() {
+        XCTAssertNil(DisplayConfigurationMigrator.DisplaySignature(persistenceKey: "only|two"))
+        XCTAssertNil(DisplayConfigurationMigrator.DisplaySignature(persistenceKey: "name|abc|1080"))
+    }
 }
