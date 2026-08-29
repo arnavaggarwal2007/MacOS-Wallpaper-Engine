@@ -37,6 +37,7 @@ When documents disagree, these win. Everything else should link here rather than
 
 | Document | Purpose |
 |----------|---------|
+| [`docs/TESTING.md`](docs/TESTING.md) | Unit tests, manual matrix, agent write-only policy |
 | [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) | V1 gate: functional + performance baseline |
 | [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) | Consolidated release gate (incl. App Store) |
 | [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Direct download: signing, notarization, DMG; MAS pointers |
@@ -102,7 +103,7 @@ Personal Wallpaper Engine/
 
 ## Development Workflow
 
-Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`). CI: `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh`.
+Editing primarily in VSCode; build and debug via Xcode toolchains (`xcodebuild`). CI: `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` (build, smoke, unit tests). Owner runs XCTest in Xcode (`Cmd+U`) — see [`docs/TESTING.md`](docs/TESTING.md) and [`AGENTS.md`](AGENTS.md).
 
 Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the docs under [`docs/`](docs/). Note that `guidelines.md`, `best_coding_practices.md`, and `update_KB_guidelines.md` are **local-only working notes** — they are gitignored and will not be present on a fresh clone, so nothing here treats them as required reading.
 
@@ -119,7 +120,7 @@ Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the doc
 | Version 2 Phase 9 (quick modes + menu bar) | Complete — see `version2_developmental_roadmap.md` |
 | Version 2 Phase 10 (lock-screen + distribution research) | **Complete** — see Phase 10 docs above |
 | V2.2 docs + App Store–first charter (trunk + flavors) | **Complete** (2026-08-20) — see Part 3 in roadmap |
-| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Engineering complete** (2026-08-20) — merge + Connect upload pending |
+| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Engineering + owner QA complete** (2026-08-29) — Connect upload pending |
 | V2.2 Milestone 2 (Tier A + B on all flavors) | Planned after M1 |
 | V2.2 Milestone 3 (Direct DMG + Sparkle / Tier C) | Deferred after App Store |
 
@@ -129,4 +130,4 @@ Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the doc
 
 A pre-launch audit followed on the same day. Most visibly, the high-CPU suggestion banner fired on nearly every launch: its thresholds were calibrated from Debug-build measurements roughly five times lower than Release, and the message quoted per-core CPU, so an app using about 1% of the machine reported "averaged 14%". Thresholds are now expressed as system-wide share ([`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) §ADR-009). The same pass fixed resource leaks (observers, tasks, and a suspended continuation), two silent data-loss paths in settings persistence and display rekeying, dead screen-lock pause code, and several main-thread I/O and over-invalidation problems in the UI.
 
-**Next (owner):** enable GitHub Pages, capture screenshots, buy the Apple Developer Program, then Validate and upload.
+**Next (owner):** Follow [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) — Xcode signing, Connect app record, Archive, Validate, metadata, screenshots, Submit.

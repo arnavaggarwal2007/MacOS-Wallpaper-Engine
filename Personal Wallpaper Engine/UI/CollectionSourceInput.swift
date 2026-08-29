@@ -128,7 +128,7 @@ struct CollectionSourceInput: View {
                         .pickerStyle(.menu)
                     }
 
-                    Text("Leave display mapping on Auto-detect unless you need a specific monitor; scaling falls back to the collection default when unset.")
+                    Text("Auto-detect assigns each source to the next unused display in screen order (same as simple multi-source collections). Pick a monitor name when a source must always target that physical panel.")
                         .font(DesignTokens.Typography.subtitle)
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                 }

@@ -58,6 +58,7 @@ final class SettingsStore {
         static let perDisplayRendererModes = "perDisplayRendererModes"  // Phase 7: Per-display renderer modes
         static let usePerDisplay = "usePerDisplay" // Bool: whether to use per-display wallpapers
         static let perDisplayBookmarks = "perDisplayBookmarks" // Per-display security-scoped bookmarks
+        static let perDisplaySignatureKeys = "perDisplaySignatureKeys" // Screen signature → settings key (cold-start remap)
         static let savedCollections = "savedCollections"  // Phase 6A: Saved wallpaper collections
         static let collectionBookmarks = "collectionBookmarks"  // Phase 6A: Security-scoped bookmarks for collection sources
         static let lastUsedCollectionName = "lastUsedCollectionName"  // Phase 6A: Most recently used collection
@@ -102,6 +103,9 @@ final class SettingsStore {
         UserDefaults.standard.set(true, forKey: Keys.usePerDisplay)
         perDisplayBookmarks = Self.decodePersisted(
             [String: Data].self, forKey: Keys.perDisplayBookmarks, default: [:]
+        )
+        perDisplaySignatureKeys = Self.decodePersisted(
+            [String: String].self, forKey: Keys.perDisplaySignatureKeys, default: [:]
         )
         savedCollections = Self.decodePersisted(
             [String: WallpaperCollection].self, forKey: Keys.savedCollections, default: [:]
@@ -317,6 +321,17 @@ final class SettingsStore {
     // Per-display mapping: displayID (as string) -> security-scoped bookmark data
     var perDisplayBookmarks: [String: Data] {
         didSet { Self.persistEncoded(perDisplayBookmarks, forKey: Keys.perDisplayBookmarks) }
+    }
+
+    /// Maps a physical screen signature (name + resolution) to the UserDefaults key holding its wallpaper.
+    var perDisplaySignatureKeys: [String: String] {
+        didSet { Self.persistEncoded(perDisplaySignatureKeys, forKey: Keys.perDisplaySignatureKeys) }
+    }
+
+    func setPerDisplaySignatureKey(_ persistenceKey: String, settingsKey: String) {
+        var map = perDisplaySignatureKeys
+        map[persistenceKey] = settingsKey
+        perDisplaySignatureKeys = map
     }
 
     // Whether the app should use per-display wallpapers (true) or a single unified wallpaper (false)

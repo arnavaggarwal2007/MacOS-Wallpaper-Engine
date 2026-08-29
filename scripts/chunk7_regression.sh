@@ -78,6 +78,20 @@ if [ -x ./scripts/chunk7_smoke.sh ]; then
   fi
 fi
 
+# Unit tests (reuse DerivedData from Debug build above)
+echo "\n--- Unit tests (XCTest) ---"
+if ! TMPDIR="${TMPDIR:-/tmp}" "$XCODEBUILD" test-without-building \
+  -project "Personal Wallpaper Engine.xcodeproj" \
+  -scheme "Personal Wallpaper Engine" \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$DERIVED" \
+  2>&1 | tee "$ARTIFACT_DIR/unit-tests.log"
+then
+  echo "ERROR: unit tests failed (see $ARTIFACT_DIR/unit-tests.log)" >&2
+  exit 1
+fi
+
 # Collect some metadata
 echo "\n--- Collecting metadata ---"
 file "$DERIVED/Build/Products/Debug/Personal Wallpaper Engine.app/Contents/MacOS/Personal Wallpaper Engine" 2>/dev/null || true

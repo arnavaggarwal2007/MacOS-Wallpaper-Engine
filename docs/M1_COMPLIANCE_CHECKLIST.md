@@ -80,8 +80,8 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 
 | Check | Command | Result |
 |-------|---------|--------|
-| Regression | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` | **P** |
-| Unit tests | `xcodebuild test -scheme "Personal Wallpaper Engine"` | **P** (incl. new validator tests) |
+| Regression | `CODE_SIGNING_ALLOWED=NO ./scripts/chunk7_regression.sh` | **P** (build + smoke + unit tests) |
+| Unit tests | `xcodebuild test` or `Cmd+U` in Xcode (owner) | **P** — see [`TESTING.md`](TESTING.md) |
 | Release-AppStore build | `xcodebuild -scheme "PWE App Store" -configuration Release-AppStore` | **P** |
 | Privacy manifest in bundle | `Release-AppStore.app/Contents/Resources/PrivacyInfo.xcprivacy` | **P** |
 | Secrets scan | `rg` for keys/tokens/.p12/.env | **P** (no secrets) |
@@ -92,11 +92,11 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Remote https web wallpaper smoke | **Owner** | Settings → Web → paste https URL → Apply |
-| Local HTML via Choose File smoke | **Owner** | Full-screen animated HTML |
+| Remote https web wallpaper smoke | **P** | 2026-08-29 |
+| Local HTML via Choose File smoke | **P** | 2026-08-29 |
 | “Check for Updates” absent / MAS copy only | **P** | Code review + `UpdateCheckerTests` on Direct |
-| Core Phases 1–9 on Release-AppStore | **Owner** | [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) |
-| Organizer **Validate App** on signed archive | **Owner** | Requires distribution cert + upload |
+| Core Phases 1–9 on Release-AppStore | **P** | [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — owner sign-off 2026-08-29 |
+| Organizer **Validate App** on signed archive | **Owner** | Requires distribution cert + upload — see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §2 |
 | 1-hour soak | **N/A** | Optional unless Review requires |
 
 ---
@@ -114,7 +114,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 | Web URL placeholder | **P** | Reserved `example.com` documentation domain, `.html` form |
 | Privacy policy content filled | **P** | Contact, support, developer name; no placeholders remain |
 | Hosted pages committed | **P** | [`index.html`](index.html) + [`privacy/index.html`](privacy/index.html) with `.nojekyll` |
-| GitHub Pages enabled | **Owner** | Settings → Pages → `main` / `/docs` (submission guide §1) |
+| GitHub Pages enabled | **P** | Live 2026-08-23; privacy + support URLs verified 2026-08-29 |
 | Store copy final | **P** | Name, subtitle, description, keywords, What's New in submission guide §3 |
 | Age rating answers drafted | **P** | Unrestricted Web Access = Yes → **16+** (Plash precedent) |
 | Review notes | **P** | Rewritten for Deskloop with a one-minute test path |
@@ -152,5 +152,5 @@ Tier A/B/C · Sparkle · App Group / `.saver` · Steam · permanent channel bran
 
 | Role | Engineering M1 | Connect submit |
 |------|----------------|----------------|
-| Agent / CI | **P** (2026-08-20) | Docs + templates ready |
-| Owner | Review manual smoke | Host PP, Validate, Upload, tag |
+| Agent / CI | **P** (2026-08-28) | Docs + templates ready |
+| Owner | **P** manual QA (2026-08-29) | Validate, Upload, metadata, submit — see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) |
