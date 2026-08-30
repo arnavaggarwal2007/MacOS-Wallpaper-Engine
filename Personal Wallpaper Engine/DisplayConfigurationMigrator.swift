@@ -53,7 +53,8 @@ struct DisplayConfigurationMigrator {
             }
 
             guard let candidates = currentBySignature[oldSignature] else { continue }
-            guard let newID = candidates.first(where: { !usedNewIDs.contains($0) }) else { continue }
+            // Identical signatures are indistinguishable; pick the lowest unused display ID for stability.
+            guard let newID = candidates.sorted().first(where: { !usedNewIDs.contains($0) }) else { continue }
 
             if oldID != newID {
                 mapping[String(oldID)] = String(newID)
