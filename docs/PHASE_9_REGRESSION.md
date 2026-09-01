@@ -1,5 +1,7 @@
 # Phase 9 Regression Matrix (9A–9B + post-ship fixes)
 
+> **Release gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — this matrix is historical Phase 9 verification.
+
 **Status:** Close-out **complete** — audit pass 2026-06-21 (code review + prior owner verification)  
 **Build:** Debug — `xcodebuild` **BUILD SUCCEEDED** (2026-06-09); re-verified in Phase 1–9 audit (2026-06-21)  
 **KB:** `Wallpaper Engine KB/40 Bugs/Bug-Phase9-Quick-Mode-Hero-And-Menu-Bar.md`, `Bug-Management-Tab-Shell-Background-Geometry.md`

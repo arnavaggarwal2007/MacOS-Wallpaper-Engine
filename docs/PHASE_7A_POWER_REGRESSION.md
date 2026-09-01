@@ -1,5 +1,7 @@
 # Phase 7A — Power policy regression matrix
 
+> **Release gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — this matrix is historical Phase 7A verification.
+
 **Scope:** `PowerPolicyManager`, `WallpaperManager` power pause/resume, Settings → Battery & Power.
 
 **Pause behavior:** Pausing stops desktop `AVPlayer` playback and leaves the **current video frame visible** (frozen video on the last rendered frame). Play/pause is **global** — all connected displays pause and resume together. In-app hero preview pauses when globally paused; carousel tiles show a “Paused” scrim; a compact banner under the Home utility bar appears when paused.

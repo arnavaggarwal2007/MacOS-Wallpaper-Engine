@@ -1,6 +1,6 @@
 # Mac App Store Submission Guide — Deskloop
 
-**Status:** Engineering and owner manual QA complete (2026-08-29). **Next:** Xcode signing → Connect record → Archive → Validate → metadata → Submit (checklist below).  
+**Status:** Engineering and owner manual QA complete (2026-08-29). Regression gate **P** (2026-08-31). **Next:** Xcode signing → Connect record → Archive → Validate → metadata → Submit. **Launch gate:** [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md)  
 **Store name:** **Deskloop** (display name only — bundle ID and Xcode target are unchanged)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
@@ -65,7 +65,7 @@ so they must resolve before submission.
 4. Confirm `PrivacyInfo.xcprivacy` is in the bundle.
 5. Confirm MAS binary does **not** open external update URLs (GitHub releases).
 
-Until the scheme exists, do not submit. Milestone 1 engineering creates it.
+The **`PWE App Store`** scheme ships with Release-AppStore / `APP_STORE_BUILD` — use it for all archives.
 
 ---
 
@@ -268,9 +268,157 @@ After Milestone 2, add: lock export sheet; Screen Saver settings callout.
 ## 8. Post-submit
 
 - Respond to Resolution Center within 24–48 hours
-- Tag git `v1.0` (or `v1.0-mas`) on the commit uploaded
-- Update [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row with date
+- Tag git `v1.0` (or `v1.0-mas`) on the **commit you uploaded** — tagging at upload time is fine; record App Store **approval date** separately in sign-off docs
+- Update [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row with approval date (not upload date)
 - Changelog entry in KB `Project-Changelog.md`
+
+---
+
+## 9. Owner step-by-step guide
+
+Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29; regression **P** 2026-08-31). Sections **§3–§6** above hold paste-ready copy blocks. This section is the detailed walkthrough.
+
+### What's already done (skip)
+
+- Product code, M1 compliance flavor, privacy manifest, web allowlist
+- GitHub Pages live (privacy + landing URLs)
+- Full manual QA + unit tests (Cmd+U passed); **92** tests in repo
+- Marketing version **1.0**, build **1** — correct for first upload
+
+### Quick reference URLs
+
+| Purpose | Value |
+|---------|-------|
+| Privacy Policy | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/` |
+| Support | `https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues` |
+| Bundle ID | `Personal.Personal-Wallpaper-Engine` |
+| Store name | Deskloop |
+| SKU | `pwe-mas-001` |
+
+### Phase 1 — Xcode signing (~15 min)
+
+**1.1 Open the project**
+
+- Open `Personal Wallpaper Engine.xcodeproj` in Xcode.
+- In the scheme picker, select **`PWE App Store`** (not the default “Personal Wallpaper Engine” scheme).
+
+**1.2 Sign in to your Apple Developer account**
+
+- Xcode → Settings → **Accounts**.
+- Click **+** → Apple ID → sign in with the Apple ID tied to your paid Developer Program membership.
+- Select your team. You should see your team name and role (Account Holder or Admin).
+
+**1.3 Confirm signing for the App Store target**
+
+- Project Navigator → blue **Personal Wallpaper Engine** project.
+- Select the **Personal Wallpaper Engine** target (not the test target).
+- **Signing & Capabilities:**
+  - **Team:** your developer team
+  - **Signing:** Automatically manage signing is fine
+  - **Bundle Identifier:** `Personal.Personal-Wallpaper-Engine`
+- If Xcode shows a yellow warning, click **Try Again** or **Download Manual Profiles**.
+
+**1.4 Optional: verify certificates**
+
+- Accounts → select your team → **Manage Certificates…**
+- You want an **Apple Distribution** (Mac App Store) certificate. Xcode usually creates one on first archive.
+
+**1.5 Quick build check (optional)**
+
+- Scheme: **PWE App Store** → Product → Build (`Cmd+B`). Fix signing errors before archiving.
+
+### Phase 2 — App Store Connect app record (~20 min)
+
+**2.1 Create the app**
+
+- Go to [appstoreconnect.apple.com](https://appstoreconnect.apple.com).
+- **Apps** → **+** → **New App**.
+- Platforms: **macOS** · Name: **Deskloop** · Primary language: English (U.S.)
+- Bundle ID: `Personal.Personal-Wallpaper-Engine` (create App ID in Certificates, Identifiers & Profiles first if missing)
+- SKU: `pwe-mas-001` · User Access: Full Access → **Create**
+
+**2.2 Set required URLs early**
+
+App Information → set Privacy Policy and Support URLs from the table above. Save and confirm both load in a browser.
+
+**2.3 App Review contact**
+
+App Review Information: Arnav Aggarwal · 408-892-7318 · arnevaggarrwal@gmail.com. Paste review notes in Phase 5.
+
+### Phase 3 — Archive, validate, and upload (~30–60 min)
+
+**3.1 Prepare**
+
+- Scheme **PWE App Store**, destination **My Mac**.
+- Target **General:** Version **1.0**, Build **1** (do not change unless build 1 was already uploaded).
+
+**3.2 Archive**
+
+- Product → **Archive**. Organizer opens with the new archive.
+- If **Archive** is grayed out: destination must be **My Mac** and scheme **PWE App Store**.
+
+**3.3 Validate**
+
+- Organizer → select archive → **Validate App** → your team, Mac App Store distribution.
+- Fix errors before distributing (signing, entitlements).
+
+**3.4 Upload**
+
+- **Distribute App** → App Store Connect → **Upload** → follow wizard.
+
+**3.5 Processing**
+
+- Connect → Deskloop → build section. Status **Processing** (often 10–30 minutes).
+- When **Ready to Submit**, continue. Read Apple's email if processing fails.
+
+**3.6 Export compliance**
+
+- Encryption: Yes (HTTPS only). Exempt: Yes — `ITSAppUsesNonExemptEncryption=NO` is in the project.
+
+### Phase 4 — Store listing metadata (~30 min)
+
+On the version page (e.g. **1.0 Prepare for Submission**), use **§3** above for identity, keywords, description, What's New, and promotional text.
+
+### Phase 5 — Privacy, age rating, and review notes (~20 min)
+
+- **App Privacy:** Data Not Collected — matches [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md).
+- **Age rating:** use **§3** questionnaire — **Unrestricted Web Access = Yes** → expect **16+**.
+- **Review notes:** paste **§5** template. Optional: 30–60 s screen recording (menu bar → Show Main Window → Choose Wallpaper → video on desktop).
+
+### Phase 6 — Screenshots (~30–60 min)
+
+Capture per **§6** on clean macOS 15+, Release **PWE App Store** build. Recommended **1280×800** or **1440×900**. Upload all six for macOS.
+
+### Phase 7 — Submit for review (~10 min)
+
+1. Version page → **Build** → select build **1.0 (1)**.
+2. Final checklist: build ready, 6 screenshots, metadata, privacy URLs, App Privacy, age **16+**, review notes, contact info.
+3. **Submit for Review**. Status → **Waiting for Review** (hours to a few days typical).
+
+### Phase 8 — After submission
+
+- Monitor **Resolution Center** daily; respond within 24–48 hours.
+- **If approved:** choose release; tag uploaded commit `v1.0` if not already; update [`V1_SIGNOFF.md`](V1_SIGNOFF.md).
+- **If rejected:** see **§7** rejection playbook. Increment **Build** to 2, re-archive, re-upload.
+
+### What you do not need for v1.0 MAS
+
+- Direct DMG / notarization / Developer ID distribution
+- Milestone 2 (lock screen export, screensaver)
+- Version bump beyond **1.0 (1)** unless re-uploading after rejection
+- Code changes unless Validate App or Review fails
+
+### Order of operations (summary)
+
+1. Xcode: sign in + **PWE App Store** scheme  
+2. Connect: create Deskloop app + URLs  
+3. Xcode: Archive → Validate → Upload  
+4. Connect: wait for build processing  
+5. Connect: metadata + privacy + age rating + review notes  
+6. Connect: screenshots  
+7. Connect: select build → Submit for Review  
+8. Monitor Resolution Center → release when approved  
+
 
 ---
 

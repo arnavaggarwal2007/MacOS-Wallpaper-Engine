@@ -29,14 +29,18 @@ When documents disagree, these win. Everything else should link here rather than
 
 | Topic | Canonical source |
 |-------|------------------|
+| **Pre-launch go/no-go** | [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md) |
 | Roadmap and phase status | This README's [Roadmap](#roadmap) table |
 | App Store M1 status | [`docs/M1_COMPLIANCE_CHECKLIST.md`](docs/M1_COMPLIANCE_CHECKLIST.md) |
+| Doc index | [`docs/README.md`](docs/README.md) |
 | CPU benchmarks and suggestion thresholds | [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) |
 | UI copy, naming rule, design tokens | [`DESIGN.md`](DESIGN.md) |
 | Architecture rationale and history | `Wallpaper Engine KB/` (sibling folder) |
 
 | Document | Purpose |
 |----------|---------|
+| [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md) | Go/no-go gate before Archive / Submit |
+| [`docs/README.md`](docs/README.md) | Categorized documentation index |
 | [`docs/TESTING.md`](docs/TESTING.md) | Unit tests, manual matrix, agent write-only policy |
 | [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) | V1 gate: functional + performance baseline |
 | [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) | Consolidated release gate (incl. App Store) |
@@ -58,7 +62,7 @@ When documents disagree, these win. Everything else should link here rather than
 | [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 + V2.2 Part 3 |
 | [`docs/PHASE_9_QUICK_MODES.md`](docs/PHASE_9_QUICK_MODES.md) | Phase 9 quick modes + menu bar |
 | [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md) | Phase 9 regression matrix |
-| [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Full manual test matrix |
+| [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Archived — see [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) |
 | [`docs/archive/`](docs/archive/) | Historical roadmaps and phase validation notes |
 
 Knowledge base (Obsidian): sibling folder `Wallpaper Engine KB/` on Desktop — start at `10 Project Home.md` and `KB-Guide.md` (architecture, features, ADRs, changelog).
@@ -126,8 +130,8 @@ Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the doc
 
 ## Status
 
+**August 29–31, 2026:** M1 **engineering + owner QA complete** — full [`PRE_RELEASE_CHECKLIST`](docs/PRE_RELEASE_CHECKLIST.md) signed off 2026-08-29; **92** unit tests; owner regression `chunk7_regression.sh` **P** 2026-08-31. **Launch gate:** [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md). **Next (owner):** Connect upload per [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md).
+
 **August 20, 2026:** Milestone 1 **complete and merged** — App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening + `network.client`. Launch prep also landed: the App Store display name is **Deskloop** (`INFOPLIST_KEY_CFBundleDisplayName`; bundle ID and Xcode target unchanged), in-app Privacy Policy and Support links, a first-run welcome card, and hosted pages under [`docs/`](docs/) for GitHub Pages. Docs: `M1_COMPLIANCE_CHECKLIST.md`, `WEB_WALLPAPERS.md`, `APP_STORE_SUBMISSION.md`.
 
 A pre-launch audit followed on the same day. Most visibly, the high-CPU suggestion banner fired on nearly every launch: its thresholds were calibrated from Debug-build measurements roughly five times lower than Release, and the message quoted per-core CPU, so an app using about 1% of the machine reported "averaged 14%". Thresholds are now expressed as system-wide share ([`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) §ADR-009). The same pass fixed resource leaks (observers, tasks, and a suspended continuation), two silent data-loss paths in settings persistence and display rekeying, dead screen-lock pause code, and several main-thread I/O and over-invalidation problems in the UI.
-
-**Next (owner):** Follow [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) — Xcode signing, Connect app record, Archive, Validate, metadata, screenshots, Submit.

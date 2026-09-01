@@ -1,7 +1,7 @@
 # Milestone 1 — Mac App Store Compliance Checklist
 
-**Branch:** `feature/mas-compliance` → PR → `main`  
-**Tag (post-upload):** `v1.0`  
+**Branch:** `feature/mas-compliance` → merged to **`main`** (2026-08-20)  
+**Tag:** `v1.0` on upload commit is OK; record App Store **approval date** separately in [`V1_SIGNOFF.md`](V1_SIGNOFF.md)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  
 **Web wallpapers:** [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md)

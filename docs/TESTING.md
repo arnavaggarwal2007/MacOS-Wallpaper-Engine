@@ -84,6 +84,8 @@ After an agent adds or changes tests, run `Cmd+U` in Xcode and report any failur
 
 ## Test suite inventory
 
+**Count:** **92** `test*` methods across 12 files in `Personal Wallpaper EngineTests/` (2026-08-29).
+
 | File | Focus |
 |------|--------|
 | `DisplayBoundCollectionMappingTests` | Display-bound apply resolution, auto-detect round-robin |

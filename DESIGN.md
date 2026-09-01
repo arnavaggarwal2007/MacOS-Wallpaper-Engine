@@ -697,7 +697,9 @@ Defaults and engine policy—subordinate to Home pipeline.
 
 ## 12. Menu bar
 
-`MenuBarController` items:
+Phase 9B **menu bar control center** — see [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) (display-aware thumbnail, Quick Mode / Apply Saved / Recents, power shortcuts, Show Main Window, Preferences). Implementation: `MenuBarController.swift`.
+
+Legacy minimal items (superseded by control center for primary UX):
 
 | Item | Title states | Shortcut |
 |------|--------------|----------|

@@ -1,7 +1,7 @@
 # Version 1 Reference
 
 **Status:** Complete (Phases 1–6B + UI final vision)  
-**Last updated:** 2026-06-02  
+**Last updated:** 2026-08-31  
 **Branch:** `main`  
 **V2 status:** Phases 7–9 complete; **Phase 10 research complete** (2026-06-21); **V2.2 docs / App Store–first charter complete** (2026-08-20) — [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md), [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md), [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Knowledge base:** Sibling [`Wallpaper Engine KB/`](../../Wallpaper%20Engine%20KB/) — [`20 Architecture/00 Architecture Index`](../../Wallpaper%20Engine%20KB/20%20Architecture/00%20Architecture%20Index.md), [`30 Features/00 Features Index`](../../Wallpaper%20Engine%20KB/30%20Features/00%20Features%20Index.md)  
