@@ -1,6 +1,6 @@
 # Web Wallpapers
 
-**Product:** Loopscape (macOS)  
+**Product:** Deskface (macOS)  
 **Renderer:** `WebRenderer` (`WKWebView` full-screen behind desktop icons)
 
 ---

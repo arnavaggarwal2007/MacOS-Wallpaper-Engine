@@ -93,7 +93,7 @@ Complete before App Store Connect upload. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_
 - [x] Web URL allowlist: **https** + **file** only; navigation errors surfaced — [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md)
 - [x] “Check for Updates…” does **not** open GitHub / external updater (MAS flavor)
 - [x] No Tier C / private API code in MAS binary
-- [x] Bundle display name is **Loopscape**; copyright names Arnav Aggarwal
+- [x] Bundle display name is **Deskface**; copyright names Arnav Aggarwal
 - [x] In-app Privacy Policy + Support links present (Settings → System, Help menu)
 - [x] First-run welcome card appears until a wallpaper is assigned
 - [x] Privacy Policy and Support URLs resolve over HTTPS — **P** (GitHub Pages live 2026-08-23; in-app links verified 2026-08-29)

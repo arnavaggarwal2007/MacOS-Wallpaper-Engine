@@ -1,6 +1,6 @@
 # V2.2 App Store Implementation Charter
 
-**Status:** Milestone 1 **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; launch prep (Loopscape store name, in-app legal links, first-run card, hosted pages, final store copy) landed; Connect upload pending owner  
+**Status:** Milestone 1 **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; launch prep (Deskface store name, in-app legal links, first-run card, hosted pages, final store copy) landed; Connect upload pending owner  
 **Roadmap:** [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  
 **Privacy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  

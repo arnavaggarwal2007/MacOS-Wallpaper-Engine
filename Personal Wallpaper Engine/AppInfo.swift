@@ -3,7 +3,7 @@ import Foundation
 /// Bundle identity shown in the UI. Reads Info.plist so a display-name change
 /// (`INFOPLIST_KEY_CFBundleDisplayName`) never requires touching Swift code.
 enum AppInfo {
-    static let fallbackDisplayName = "Loopscape"
+    static let fallbackDisplayName = "Deskface"
 
     static var displayName: String {
         let info = Bundle.main.infoDictionary

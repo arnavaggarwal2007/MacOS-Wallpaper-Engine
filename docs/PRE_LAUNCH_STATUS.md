@@ -1,8 +1,8 @@
-# Pre-launch status — Loopscape (Mac App Store v1.0)
+# Pre-launch status — Deskface (Mac App Store v1.0)
 
 **Purpose:** Single go/no-go page before Xcode Archive and App Store Connect submission.  
 **Last updated:** 2026-08-31  
-**Store name:** Loopscape · **Bundle ID:** `Personal.Personal-Wallpaper-Engine`
+**Store name:** Deskface · **Bundle ID:** `Personal.Personal-Wallpaper-Engine`
 
 When documents disagree, this page and the [doc hierarchy](#doc-hierarchy) table win for launch readiness.
 
@@ -32,7 +32,7 @@ Engineering, owner manual QA, and the automated regression gate are **complete**
 Complete in order — detailed walkthrough in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §Owner runway and §9:
 
 1. Xcode → Accounts → sign in; confirm **PWE App Store** scheme signing
-2. App Store Connect → create **Loopscape** app record (if not already)
+2. App Store Connect → create **Deskface** app record (if not already)
 3. **Archive** → **Validate App** → **Distribute** to Connect
 4. Connect → privacy nutrition labels, age rating **16+**, review notes (§3–5)
 5. Attach **6 screenshots** (§6)

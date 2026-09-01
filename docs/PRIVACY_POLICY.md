@@ -1,7 +1,7 @@
-# Privacy Policy — Loopscape
+# Privacy Policy — Deskface
 
-**Last updated:** 2026-08-31  
-**Product:** Loopscape (macOS)  
+**Last updated:** 2026-09-01  
+**Product:** Deskface (macOS)  
 **Applies to:** Mac App Store and any future direct-download builds unless a superseding policy is published
 
 This document is the canonical source for the policy published at
@@ -14,7 +14,7 @@ GitHub Pages actually serves.
 
 ## Summary
 
-Loopscape is a **local-first** wallpaper application. It does **not** require an account and does **not** include analytics or advertising SDKs in the current product design. It does **not** use generative AI features.
+Deskface is a **local-first** wallpaper application. It does **not** require an account and does **not** include analytics or advertising SDKs in the current product design. It does **not** use generative AI features.
 
 ---
 
