@@ -1,7 +1,7 @@
-# Mac App Store Submission Guide — Deskloop
+# Mac App Store Submission Guide — Loopscape
 
 **Status:** Engineering and owner manual QA complete (2026-08-29). Regression gate **P** (2026-08-31). **Next:** Xcode signing → Connect record → Archive → Validate → metadata → Submit. **Launch gate:** [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md)  
-**Store name:** **Deskloop** (display name only — bundle ID and Xcode target are unchanged)  
+**Store name:** **Loopscape** (display name only — bundle ID and Xcode target are unchanged)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
 **Gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)  
@@ -16,7 +16,7 @@ Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE
 | Step | Action | Section |
 |------|--------|---------|
 | 1 | Xcode → Settings → Accounts → sign in; confirm Mac App Store distribution cert | §1 |
-| 2 | App Store Connect → create **Deskloop** app (`Personal.Personal-Wallpaper-Engine`, SKU `pwe-mas-001`) | §1 |
+| 2 | App Store Connect → create **Loopscape** app (`Personal.Personal-Wallpaper-Engine`, SKU `pwe-mas-001`) | §1 |
 | 3 | Archive scheme **`PWE App Store`** → **Validate App** → **Distribute** to Connect | §2 |
 | 4 | Paste metadata, privacy labels (Data Not Collected), age rating 16+, review notes | §3–5 |
 | 5 | Attach 6 screenshots | §6 |
@@ -31,7 +31,7 @@ Version for first upload: **1.0 (1)** — see `MARKETING_VERSION` / `CURRENT_PRO
 | Requirement | Value / notes |
 |-------------|---------------|
 | Apple Developer Program membership | Individual — **Arnav Aggarwal** (owner action) |
-| App Store Connect app record | **Deskloop** |
+| App Store Connect app record | **Loopscape** |
 | Bundle ID | `Personal.Personal-Wallpaper-Engine` (unchanged by the display-name rename) |
 | Mac App Store distribution certificate + provisioning | Xcode Automatic for the `PWE App Store` scheme |
 | Marketing version + build | `1.0` / `1` for the first upload; increment `CURRENT_PROJECT_VERSION` every upload |
@@ -75,7 +75,7 @@ The **`PWE App Store`** scheme ships with Release-AppStore / `APP_STORE_BUILD` �
 
 | Field | Value |
 |-------|-------|
-| App name | `Deskloop` |
+| App name | `Loopscape` |
 | Subtitle (30 char max) | `Live wallpapers for your Mac` (28) |
 | SKU | `pwe-mas-001` |
 | Primary category | Graphics & Design |
@@ -85,8 +85,8 @@ The **`PWE App Store`** scheme ships with Release-AppStore / `APP_STORE_BUILD` �
 | License | Apple Standard EULA |
 
 **Naming rationale:** every established Mac competitor (Backdrop, Plash, Paper, Wallux, WallTune)
-avoids the word “Engine,” which reads as the Steam product. `Deskloop` keeps the store name short
-and distinctive and pushes discovery terms into the subtitle and keyword field, which is where
+avoids the word “Engine,” which reads as the Steam product. `Loopscape` is distinctive and memorable,
+and pushes discovery terms into the subtitle and keyword field, which is where
 Apple actually indexes them.
 
 ### Keywords (100 char max, comma separated, no spaces)
@@ -98,7 +98,7 @@ wallpaper,live wallpaper,video wallpaper,animated,desktop,multi monitor,screen,b
 ### Description
 
 ```text
-Deskloop turns your own video files into live wallpapers for macOS.
+Loopscape turns your own video files into live wallpapers for macOS.
 
 Point it at an MP4 or MOV on your Mac and it plays behind your desktop icons, on one display or
 on every display independently. Nothing is uploaded, and no account is required.
@@ -114,12 +114,12 @@ FEATURES
 - Optional web wallpapers: render an https page or a local HTML file as your background
 
 PRIVACY
-Deskloop is local-first. No account, no analytics, no advertising, and no generative AI. Your
+Loopscape is local-first. No account, no analytics, no advertising, and no generative AI. Your
 wallpaper files never leave your Mac.
 
 NOTE
-Deskloop runs as a menu bar app. Click the menu bar icon to open the main window. It changes the
-desktop wallpaper only; it does not replace the macOS lock screen. Deskloop is not affiliated
+Loopscape runs as a menu bar app. Click the menu bar icon to open the main window. It changes the
+desktop wallpaper only; it does not replace the macOS lock screen. Loopscape is not affiliated
 with, and does not import content from, Wallpaper Engine on Steam.
 ```
 
@@ -197,17 +197,17 @@ Aligned with [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md):
 Paste into App Store Connect **App Review Information → Notes**:
 
 ```text
-Deskloop is a menu bar / agent-style Mac app (LSUIElement) that renders a
+Loopscape is a menu bar / agent-style Mac app (LSUIElement) that renders a
 user-selected local video, or an optional user-supplied web page, as the desktop
 wallpaper behind the icons.
 
 HOW TO OPEN THE MAIN WINDOW
 The app has no Dock icon until a window is open. To open it:
-1. Click the Deskloop icon in the menu bar (top-right of the screen).
+1. Click the Loopscape icon in the menu bar (top-right of the screen).
 2. Choose "Show Main Window."
 3. The Dock icon appears while the main window is visible.
 
-On first launch the Home tab shows a "Welcome to Deskloop" card with the two
+On first launch the Home tab shows a "Welcome to Loopscape" card with the two
 actions needed to get started.
 
 HOW TO TEST IN UNDER A MINUTE
@@ -225,7 +225,7 @@ NOTES FOR REVIEW
 - The age rating declares Unrestricted Web Access because of that optional mode.
 - Updates are delivered only through the Mac App Store. There is no Sparkle or
   other external updater in this build.
-- Deskloop is not affiliated with Wallpaper Engine on Steam and does not import
+- Loopscape is not affiliated with Wallpaper Engine on Steam and does not import
   Steam Workshop content.
 ```
 
@@ -292,7 +292,7 @@ Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE
 | Privacy Policy | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/` |
 | Support | `https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues` |
 | Bundle ID | `Personal.Personal-Wallpaper-Engine` |
-| Store name | Deskloop |
+| Store name | Loopscape |
 | SKU | `pwe-mas-001` |
 
 ### Phase 1 — Xcode signing (~15 min)
@@ -333,7 +333,7 @@ Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE
 
 - Go to [appstoreconnect.apple.com](https://appstoreconnect.apple.com).
 - **Apps** → **+** → **New App**.
-- Platforms: **macOS** · Name: **Deskloop** · Primary language: English (U.S.)
+- Platforms: **macOS** · Name: **Loopscape** · Primary language: English (U.S.)
 - Bundle ID: `Personal.Personal-Wallpaper-Engine` (create App ID in Certificates, Identifiers & Profiles first if missing)
 - SKU: `pwe-mas-001` · User Access: Full Access → **Create**
 
@@ -368,7 +368,7 @@ App Review Information: Arnav Aggarwal · 408-892-7318 · arnevaggarrwal@gmail.c
 
 **3.5 Processing**
 
-- Connect → Deskloop → build section. Status **Processing** (often 10–30 minutes).
+- Connect → Loopscape → build section. Status **Processing** (often 10–30 minutes).
 - When **Ready to Submit**, continue. Read Apple's email if processing fails.
 
 **3.6 Export compliance**
@@ -411,7 +411,7 @@ Capture per **§6** on clean macOS 15+, Release **PWE App Store** build. Recomme
 ### Order of operations (summary)
 
 1. Xcode: sign in + **PWE App Store** scheme  
-2. Connect: create Deskloop app + URLs  
+2. Connect: create Loopscape app + URLs  
 3. Xcode: Archive → Validate → Upload  
 4. Connect: wait for build processing  
 5. Connect: metadata + privacy + age rating + review notes  

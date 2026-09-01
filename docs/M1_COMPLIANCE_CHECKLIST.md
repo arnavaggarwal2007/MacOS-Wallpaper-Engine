@@ -105,7 +105,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Store display name locked | **P** | **Deskloop** via `INFOPLIST_KEY_CFBundleDisplayName`; bundle ID unchanged |
+| Store display name locked | **P** | **Loopscape** via `INFOPLIST_KEY_CFBundleDisplayName`; bundle ID unchanged |
 | Copyright string | **P** | `Copyright © 2026 Arnav Aggarwal. All rights reserved.` |
 | Broken update URL fixed | **P** | Pointed at a nonexistent org; now `arnavaggarwal2007/MacOS-Wallpaper-Engine` |
 | Outbound URLs centralized | **P** | [`AppLinks.swift`](../Personal%20Wallpaper%20Engine/AppLinks.swift); release notes excluded from MAS builds |
@@ -117,14 +117,14 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 | GitHub Pages enabled | **P** | Live 2026-08-23; privacy + support URLs verified 2026-08-29 |
 | Store copy final | **P** | Name, subtitle, description, keywords, What's New in submission guide §3 |
 | Age rating answers drafted | **P** | Unrestricted Web Access = Yes → **16+** (Plash precedent) |
-| Review notes | **P** | Rewritten for Deskloop with a one-minute test path |
+| Review notes | **P** | Rewritten for Loopscape with a one-minute test path |
 
 ## App Store Connect prep
 
 | Item | Status | Notes |
 |------|--------|-------|
 | Privacy nutrition labels = Data Not Collected | **Owner** | Match PP; web loads = user-initiated |
-| ASC app record (Graphics & Design) | **Owner** | Name **Deskloop**, bundle ID `Personal.Personal-Wallpaper-Engine` |
+| ASC app record (Graphics & Design) | **Owner** | Name **Loopscape**, bundle ID `Personal.Personal-Wallpaper-Engine` |
 | Screenshots (6 scenes) | **Owner** | [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §6 |
 | Export compliance answer | **Ready** | Standard encryption exempt (HTTPS only) |
 | Upload + Resolution Center | **Owner** | After signed archive from `main` |

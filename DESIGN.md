@@ -45,19 +45,19 @@ This document does not invent labels, placeholder copy, or color hex values. If 
 
 ## 1. Product identity
 
-### Naming rule — Deskloop vs Personal Wallpaper Engine
+### Naming rule — Loopscape vs Personal Wallpaper Engine
 
-The app ships to users as **Deskloop**. `Personal Wallpaper Engine` is the internal name only.
+The app ships to users as **Loopscape**. `Personal Wallpaper Engine` is the internal name only.
 
 | Use | Name | Where it comes from |
 |-----|------|---------------------|
-| Anything a user reads — UI copy, App Store listing, marketing, support pages, privacy policy | **Deskloop** | `INFOPLIST_KEY_CFBundleDisplayName`; read in code via `AppInfo.displayName` — never hardcode the literal |
+| Anything a user reads — UI copy, App Store listing, marketing, support pages, privacy policy | **Loopscape** | `INFOPLIST_KEY_CFBundleDisplayName`; read in code via `AppInfo.displayName` — never hardcode the literal |
 | Repo, Xcode project, target, scheme, bundle ID, file paths, developer docs, KB | `Personal Wallpaper Engine` | Unchanged; renaming would churn the project for no user benefit |
 
 New user-facing strings must interpolate `AppInfo.displayName` rather than either literal, so a future
 rename is a single Info.plist change. Historical docs keep the old name; do not retro-edit them.
 
-**Name:** Deskloop (user-facing) / Personal Wallpaper Engine (internal)
+**Name:** Loopscape (user-facing) / Personal Wallpaper Engine (internal)
 
 **Description:**
 
