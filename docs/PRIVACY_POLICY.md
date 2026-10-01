@@ -95,7 +95,7 @@ We may update this policy. The “Last updated” date will change; material cha
 ## Contact
 
 For privacy questions: **arnevaggarrwal@gmail.com**  
-Support: <https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues>
+Support: <https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/>
 
 ---
 

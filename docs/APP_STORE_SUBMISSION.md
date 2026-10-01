@@ -1,7 +1,7 @@
 # Mac App Store Submission Guide — Deskface
 
-**Status:** Engineering and owner manual QA complete (2026-08-29). Regression gate **P** (2026-08-31). **Next:** Xcode signing → Connect record → Archive → Validate → metadata → Submit. **Launch gate:** [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md)  
-**Store name:** **Deskface** (display name only — bundle ID and Xcode target are unchanged)  
+**Status:** Engineering and owner manual QA complete (2026-08-29). Regression gate **P** (2026-08-31). **Resubmit after Guideline 2.3.8 + 1.5 rejection (2026-09-17):** build **1.0 (2)**, installed name aligned to Deskface, Support URL → hosted `/support/` page.  
+**Store name:** **Deskface** (display + short name + App Store product name — bundle ID and Xcode target unchanged)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
 **Gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)  
@@ -11,18 +11,18 @@
 
 ## Owner runway (after QA sign-off)
 
-Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29). Complete these in order:
+Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29). For the **post-rejection resubmit**, complete these in order:
 
 | Step | Action | Section |
 |------|--------|---------|
-| 1 | Xcode → Settings → Accounts → sign in; confirm Mac App Store distribution cert | §1 |
-| 2 | App Store Connect → create **Deskface** app (`Personal.Personal-Wallpaper-Engine`, SKU `personal.personal-wallpaper-engine`) | §1 |
-| 3 | Archive scheme **`PWE App Store`** → **Validate App** → **Distribute** to Connect | §2 |
-| 4 | Paste metadata, privacy labels (Data Not Collected), age rating 16+, review notes | §3–5 |
-| 5 | Attach 6 screenshots | §6 |
-| 6 | Select build → **Submit for Review** | §2 |
+| 1 | Push `main` so GitHub Pages serves [`support/index.html`](support/index.html); confirm Support URL loads | §1 |
+| 2 | App Store Connect → App Information → Support URL = hosted `/support/` page | §1 |
+| 3 | Archive scheme **`PWE App Store`** (build **1.0 (2)**) → **Validate App** → **Distribute** to Connect | §2 |
+| 4 | Confirm archived `Info.plist` has `CFBundleDisplayName` + `CFBundleName` = Deskface; product `Deskface.app` | §2 |
+| 5 | Attach new build; keep listing name **Deskface**; paste Resolution Center reply (§7) | §7 / §9 |
+| 6 | **Submit for Review** | §9 |
 
-Version for first upload: **1.0 (1)** — see `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in the Xcode project.
+Marketing version remains **1.0**; build is **`CURRENT_PROJECT_VERSION` = 2**.
 
 ---
 
@@ -34,23 +34,23 @@ Version for first upload: **1.0 (1)** — see `MARKETING_VERSION` / `CURRENT_PRO
 | App Store Connect app record | **Deskface** |
 | Bundle ID | `Personal.Personal-Wallpaper-Engine` (unchanged by the display-name rename) |
 | Mac App Store distribution certificate + provisioning | Xcode Automatic for the `PWE App Store` scheme |
-| Marketing version + build | `1.0` / `1` for the first upload; increment `CURRENT_PROJECT_VERSION` every upload |
+| Marketing version + build | `1.0` / `2` for resubmit after 2.3.8 + 1.5 rejection; increment `CURRENT_PROJECT_VERSION` every upload |
 | Privacy policy URL | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/` |
-| Support URL | `https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues` |
+| Support URL | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/` |
 | Review contact | Arnav Aggarwal · arnevaggarrwal@gmail.com · 408-892-7318 |
 
-### Enabling the hosted pages (one-time — **done**)
+### Enabling the hosted pages (one-time — **done**; support page added 2026-09-25)
 
-GitHub Pages is **live** (2026-08-23). Privacy and support URLs verified 2026-08-29.
+GitHub Pages is **live** (2026-08-23). Privacy verified 2026-08-29. Hosted **Support** page added for Guideline **1.5** (do not use GitHub Issues as the Connect Support URL).
 
-The landing page and privacy policy are committed as static HTML under [`docs/`](.):
-[`index.html`](index.html) and [`privacy/index.html`](privacy/index.html), with `.nojekyll`
+The landing page, privacy policy, and support page are committed as static HTML under [`docs/`](.):
+[`index.html`](index.html), [`privacy/index.html`](privacy/index.html), and [`support/index.html`](support/index.html), with `.nojekyll`
 so GitHub serves them verbatim.
 
 1. Push `main` to GitHub.
 2. Repository **Settings → Pages**.
 3. Source: **Deploy from a branch**; Branch: `main`; Folder: **`/docs`**; Save.
-4. Wait for the first deploy, then confirm both URLs load over HTTPS.
+4. Wait for the first deploy, then confirm privacy, support, and landing URLs load over HTTPS.
 
 The URLs are compiled into the app via [`AppLinks.swift`](../Personal%20Wallpaper%20Engine/AppLinks.swift),
 so they must resolve before submission.
@@ -59,11 +59,12 @@ so they must resolve before submission.
 
 ## 2. Build and upload
 
-1. Archive with scheme **`PWE App Store`** (Release, `APP_STORE_BUILD`).
+1. Archive with scheme **`PWE App Store`** (Release-AppStore, `APP_STORE_BUILD`).
 2. Organizer → **Validate App** — fix any entitlement / privacy / bitcode issues.
 3. **Distribute App** → App Store Connect.
 4. Confirm `PrivacyInfo.xcprivacy` is in the bundle.
 5. Confirm MAS binary does **not** open external update URLs (GitHub releases).
+6. **Guideline 2.3.8 check:** In the archive, open `Deskface.app` → Show Package Contents → `Contents/Info.plist` and confirm `CFBundleDisplayName` and `CFBundleName` are both **Deskface**. The product must be **`Deskface.app`**. Bundle ID must remain `Personal.Personal-Wallpaper-Engine`.
 
 The **`PWE App Store`** scheme ships with Release-AppStore / `APP_STORE_BUILD` — use it for all archives.
 
@@ -256,11 +257,28 @@ After Milestone 2, add: lock export sheet; Screen Saver settings callout.
 | Reviewer cannot find UI (`LSUIElement`) | Review notes section 5 + first-run welcome card + screen recording |
 | Age rating understated | Unrestricted Web Access declared → 16+ (matches Plash) |
 | Privacy policy URL dead at review time | Enable GitHub Pages before submitting (section 1) |
+| **Guideline 2.3.8 — store name ≠ installed name** | Connect name **Deskface**; `CFBundleDisplayName` + `CFBundleName` = Deskface; Release-AppStore `PRODUCT_NAME` = Deskface (`Deskface.app`). **Do not** change the bundle ID. Verify archive Info.plist before upload. |
+| **Guideline 1.5 — Support URL not usable support** | Connect + `AppLinks.support` must be the hosted page `…/support/` (contact + FAQ). GitHub Issues alone is not enough. |
 | External payment / update link | MAS flavor must hide GitHub updates; tips only via IAP if unlocking nothing |
 | Private API detection | Never ship Tier C on MAS; no undocumented selectors |
 | Incomplete privacy | Nutrition labels + `PrivacyInfo.xcprivacy` + hosted policy |
 | Crash on launch without sample media | Graceful empty states; ship with clear first-run copy |
 | Web wallpaper network surprise | Entitlement present; disclose in privacy text |
+
+### Resolution Center reply template (2.3.8 + 1.5 resubmit)
+
+Paste when resubmitting after the 2026-09-17 rejection:
+
+```
+Thank you for the review feedback.
+
+Guideline 2.3.8: The installed app name now matches the App Store name. Both CFBundleDisplayName and CFBundleName are Deskface, and the App Store build product is Deskface.app. The bundle identifier is unchanged (Personal.Personal-Wallpaper-Engine).
+
+Guideline 1.5: The Support URL now points to our hosted support page with contact information and troubleshooting guidance:
+https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/
+
+Please let us know if anything else is needed.
+```
 
 ---
 
@@ -280,16 +298,17 @@ Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE
 ### What's already done (skip)
 
 - Product code, M1 compliance flavor, privacy manifest, web allowlist
-- GitHub Pages live (privacy + landing URLs)
+- GitHub Pages live (privacy + landing + **support** URLs)
 - Full manual QA + unit tests (Cmd+U passed); **92** tests in repo
-- Marketing version **1.0**, build **1** — correct for first upload
+- Marketing version **1.0**, build **2** — required for resubmit after rejection of **1.0 (1)**
+- Installed-name alignment: `CFBundleDisplayName` / `CFBundleName` = Deskface; App Store product `Deskface.app`
 
 ### Quick reference URLs
 
 | Purpose | Value |
 |---------|-------|
 | Privacy Policy | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/` |
-| Support | `https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues` |
+| Support | `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/` |
 | Bundle ID | `Personal.Personal-Wallpaper-Engine` |
 | Store name | Deskface |
 | SKU | `personal.personal-wallpaper-engine` |
@@ -390,33 +409,32 @@ Capture per **§6** on clean macOS 15+, Release **PWE App Store** build. Recomme
 
 ### Phase 7 — Submit for review (~10 min)
 
-1. Version page → **Build** → select build **1.0 (1)**.
-2. Final checklist: build ready, 6 screenshots, metadata, privacy URLs, App Privacy, age **16+**, review notes, contact info.
-3. **Submit for Review**. Status → **Waiting for Review** (hours to a few days typical).
+1. Version page → **Build** → select build **1.0 (2)** (or current `CURRENT_PROJECT_VERSION`).
+2. Final checklist: build ready, 6 screenshots, metadata, privacy + **support** URLs, App Privacy, age **16+**, review notes, contact info.
+3. Reply in Resolution Center with the §7 template if this is a resubmit after rejection.
+4. **Submit for Review**. Status → **Waiting for Review** (hours to a few days typical).
 
 ### Phase 8 — After submission
 
 - Monitor **Resolution Center** daily; respond within 24–48 hours.
 - **If approved:** choose release; tag uploaded commit `v1.0` if not already; update [`V1_SIGNOFF.md`](V1_SIGNOFF.md).
-- **If rejected:** see **§7** rejection playbook. Increment **Build** to 2, re-archive, re-upload.
+- **If rejected:** see **§7** rejection playbook. Increment **Build**, re-archive, re-upload.
 
 ### What you do not need for v1.0 MAS
 
 - Direct DMG / notarization / Developer ID distribution
 - Milestone 2 (lock screen export, screensaver)
-- Version bump beyond **1.0 (1)** unless re-uploading after rejection
-- Code changes unless Validate App or Review fails
+- Changing the **bundle ID** (breaks upgrades — Apple warns against this for 2.3.8 fixes)
+- Code changes beyond Validate App / Review failures (name + Support URL fixes already landed for build 2)
 
 ### Order of operations (summary)
 
-1. Xcode: sign in + **PWE App Store** scheme  
-2. Connect: create Deskface app + URLs  
-3. Xcode: Archive → Validate → Upload  
+1. Push Pages; confirm Support URL loads  
+2. Connect: set Support URL to `…/support/`  
+3. Xcode: **PWE App Store** Archive → Validate → Upload (build **2**)  
 4. Connect: wait for build processing  
-5. Connect: metadata + privacy + age rating + review notes  
-6. Connect: screenshots  
-7. Connect: select build → Submit for Review  
-8. Monitor Resolution Center → release when approved  
+5. Connect: select build + Resolution Center reply → Submit for Review  
+6. Monitor Resolution Center → release when approved  
 
 
 ---

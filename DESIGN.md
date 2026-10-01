@@ -51,8 +51,8 @@ The app ships to users as **Deskface**. `Personal Wallpaper Engine` is the inter
 
 | Use | Name | Where it comes from |
 |-----|------|---------------------|
-| Anything a user reads — UI copy, App Store listing, marketing, support pages, privacy policy | **Deskface** | `INFOPLIST_KEY_CFBundleDisplayName`; read in code via `AppInfo.displayName` — never hardcode the literal |
-| Repo, Xcode project, target, scheme, bundle ID, file paths, developer docs, KB | `Personal Wallpaper Engine` | Unchanged; renaming would churn the project for no user benefit |
+| Anything a user reads — UI copy, App Store listing, marketing, support pages, privacy policy | **Deskface** | `INFOPLIST_KEY_CFBundleDisplayName` + `INFOPLIST_KEY_CFBundleName`; App Store config also uses `PRODUCT_NAME = Deskface` (`Deskface.app`). Read in code via `AppInfo.displayName` — never hardcode the literal |
+| Repo, Xcode project, target, scheme, bundle ID, file paths, developer docs, KB | `Personal Wallpaper Engine` | Unchanged; renaming would churn the project for no user benefit. Bundle ID must never change (`Personal.Personal-Wallpaper-Engine`). |
 
 New user-facing strings must interpolate `AppInfo.displayName` rather than either literal, so a future
 rename is a single Info.plist change. Historical docs keep the old name; do not retro-edit them.

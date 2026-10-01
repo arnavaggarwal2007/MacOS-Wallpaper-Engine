@@ -94,9 +94,10 @@ Complete before App Store Connect upload. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_
 - [x] “Check for Updates…” does **not** open GitHub / external updater (MAS flavor)
 - [x] No Tier C / private API code in MAS binary
 - [x] Bundle display name is **Deskface**; copyright names Arnav Aggarwal
+- [x] `CFBundleName` is **Deskface**; Release-AppStore product is **Deskface.app** (Guideline 2.3.8)
 - [x] In-app Privacy Policy + Support links present (Settings → System, Help menu)
 - [x] First-run welcome card appears until a wallpaper is assigned
-- [x] Privacy Policy and Support URLs resolve over HTTPS — **P** (GitHub Pages live 2026-08-23; in-app links verified 2026-08-29)
+- [x] Privacy Policy and Support URLs resolve over HTTPS — **P** (Pages; Support = `/support/` not Issues — 2026-09-25)
 - [x] Web smoke: local HTML + one **https** URL on Release-AppStore — **P** (2026-08-29)
 - [ ] Organizer **Validate App** succeeds (signed archive — owner; see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §2)
 - [ ] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)

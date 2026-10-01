@@ -8,11 +8,11 @@ final class AppLinksTests: XCTestCase {
         }
     }
 
-    func testSupportLinkPointsAtTheProjectRepository() {
-        XCTAssertEqual(AppLinks.support.host, "github.com")
+    func testSupportLinkPointsAtHostedSupportPage() {
+        XCTAssertEqual(AppLinks.support.host, "arnavaggarwal2007.github.io")
         XCTAssertTrue(
-            AppLinks.support.path.hasPrefix("/arnavaggarwal2007/MacOS-Wallpaper-Engine"),
-            "Support link must resolve to the real repository, not a placeholder"
+            AppLinks.support.path.hasPrefix("/MacOS-Wallpaper-Engine/support"),
+            "Support link must resolve to the GitHub Pages support site, not Issues"
         )
     }
 

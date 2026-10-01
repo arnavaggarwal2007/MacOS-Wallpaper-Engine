@@ -7,7 +7,8 @@ import Foundation
 /// forbids pointing users at an external update channel.
 enum AppLinks {
     static let privacyPolicy = URL(string: "https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/privacy/")!
-    static let support = URL(string: "https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/issues")!
+    /// Hosted support page (Guideline 1.5). Do not point Connect or in-app Support at GitHub Issues.
+    static let support = URL(string: "https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/")!
 
     #if !APP_STORE_BUILD
     static let releaseNotes = URL(string: "https://github.com/arnavaggarwal2007/MacOS-Wallpaper-Engine/releases")!

@@ -105,19 +105,20 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Store display name locked | **P** | **Deskface** via `INFOPLIST_KEY_CFBundleDisplayName`; bundle ID unchanged |
+| Store display name locked | **P** | **Deskface** via `CFBundleDisplayName` + `CFBundleName`; Release-AppStore `PRODUCT_NAME` = Deskface; bundle ID unchanged |
 | Copyright string | **P** | `Copyright © 2026 Arnav Aggarwal. All rights reserved.` |
 | Broken update URL fixed | **P** | Pointed at a nonexistent org; now `arnavaggarwal2007/MacOS-Wallpaper-Engine` |
 | Outbound URLs centralized | **P** | [`AppLinks.swift`](../Personal%20Wallpaper%20Engine/AppLinks.swift); release notes excluded from MAS builds |
-| In-app Privacy Policy + Support links | **P** | Settings → System card, and Help menu |
+| In-app Privacy Policy + Support links | **P** | Settings → System card, and Help menu; Support → hosted `/support/` (Guideline 1.5) |
 | First-run guidance (Guideline 2.4.5 discoverability) | **P** | Welcome card on Home until a wallpaper is assigned |
 | Web URL placeholder | **P** | Reserved `example.com` documentation domain, `.html` form |
 | Privacy policy content filled | **P** | Contact, support, developer name; no placeholders remain |
-| Hosted pages committed | **P** | [`index.html`](index.html) + [`privacy/index.html`](privacy/index.html) with `.nojekyll` |
-| GitHub Pages enabled | **P** | Live 2026-08-23; privacy + support URLs verified 2026-08-29 |
+| Hosted pages committed | **P** | [`index.html`](index.html) + [`privacy/index.html`](privacy/index.html) + [`support/index.html`](support/index.html) with `.nojekyll` |
+| GitHub Pages enabled | **P** | Live 2026-08-23; privacy verified 2026-08-29; support page added 2026-09-25 (owner push) |
 | Store copy final | **P** | Name, subtitle, description, keywords, What's New in submission guide §3 |
 | Age rating answers drafted | **P** | Unrestricted Web Access = Yes → **16+** (Plash precedent) |
 | Review notes | **P** | Rewritten for Deskface with a one-minute test path |
+| Guideline 2.3.8 / 1.5 resubmit | **P (eng)** | Build **2**; see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §7 |
 
 ## App Store Connect prep
 
