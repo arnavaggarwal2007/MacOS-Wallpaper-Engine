@@ -1,6 +1,6 @@
 # Mac App Store Submission Guide — Deskface
 
-**Status:** Engineering and owner manual QA complete (2026-08-29). Regression gate **P** (2026-08-31). **Resubmit after Guideline 2.3.8 + 1.5 rejection (2026-09-17):** build **1.0 (2)**, installed name aligned to Deskface, Support URL → hosted `/support/` page.  
+**Status:** Deskface **1.0 (2)** resubmitted **2026-10-01** after the Guideline 2.3.8 + 1.5 rejection. **Waiting for Review.** Installed name is Deskface; Support URL is the hosted `/support/` page. Approval date is not set until Apple approves.  
 **Store name:** **Deskface** (display + short name + App Store product name — bundle ID and Xcode target unchanged)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
@@ -11,7 +11,7 @@
 
 ## Owner runway (after QA sign-off)
 
-Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29). For the **post-rejection resubmit**, complete these in order:
+Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29). The post-rejection resubmit below was **completed 2026-10-01**. Current state: **Waiting for Review**. The list is the record of what was submitted:
 
 | Step | Action | Section |
 |------|--------|---------|

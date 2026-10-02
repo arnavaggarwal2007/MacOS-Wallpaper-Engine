@@ -118,7 +118,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 | Store copy final | **P** | Name, subtitle, description, keywords, What's New in submission guide §3 |
 | Age rating answers drafted | **P** | Unrestricted Web Access = Yes → **16+** (Plash precedent) |
 | Review notes | **P** | Rewritten for Deskface with a one-minute test path |
-| Guideline 2.3.8 / 1.5 resubmit | **P (eng)** | Build **2**; see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §7 |
+| Guideline 2.3.8 / 1.5 resubmit | **Waiting for Review** | Build **1.0 (2)** submitted **2026-10-01**; [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §7 |
 
 ## App Store Connect prep
 
@@ -128,7 +128,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 | ASC app record (Graphics & Design) | **Owner** | Name **Deskface**, bundle ID `Personal.Personal-Wallpaper-Engine` |
 | Screenshots (6 scenes) | **Owner** | [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §6 |
 | Export compliance answer | **Ready** | Standard encryption exempt (HTTPS only) |
-| Upload + Resolution Center | **Owner** | After signed archive from `main` |
+| Upload + Resolution Center | **Waiting for Review** | Build **1.0 (2)** submitted **2026-10-01** |
 
 ---
 
@@ -139,7 +139,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable · **Owner** Requires
 | `feature/mas-compliance` merged to `main` | **P** | Fast-forward merge 2026-08-20 |
 | Branch deleted after merge | **Owner** | Optional cleanup |
 | Tag `v1.0` on uploaded commit | **P** | Tagged on `main` @ `65c5682` |
-| [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row | **P** | Engineering 2026-08-20; Connect upload **Owner** |
+| [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row | **Waiting for Review** | Submitted **2026-10-01**; approval date still blank |
 
 ---
 

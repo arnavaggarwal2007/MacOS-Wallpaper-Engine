@@ -1,6 +1,6 @@
 # V2.2 App Store Implementation Charter
 
-**Status:** Milestone 1 **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; launch prep (Deskface store name, in-app legal links, first-run card, hosted pages, final store copy) landed; Connect upload pending owner  
+**Status:** Milestone 1 **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; launch prep landed. Deskface **1.0 (2)** resubmitted **2026-10-01** and is **Waiting for Review**. Approval is not recorded yet.  
 **Roadmap:** [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  
 **Privacy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
@@ -94,12 +94,12 @@ Ship a review-safe Mac App Store build of the existing Phases 1–9 product.
 ### Acceptance criteria
 
 - [x] `feature/mas-compliance` merged to `main`; branch deleted
-- [ ] Release **PWE App Store** archive validates in Organizer / Transporter (owner, signed)
+- [x] Release **PWE App Store** archive validated and uploaded (build **1.0 (2)**, 2026-10-01)
 - [x] No external update URL reachable in MAS binary
 - [x] `PrivacyInfo.xcprivacy` present in app bundle
 - [x] Engineering rows in [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) / [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md)
-- [ ] Owner sign-off on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row (Connect upload)
-- [ ] Upload to App Store Connect complete per [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)
+- [ ] App Review approval date on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row (currently **Waiting for Review**)
+- [x] Upload to App Store Connect complete per [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) — **Waiting for Review**
 
 ---
 

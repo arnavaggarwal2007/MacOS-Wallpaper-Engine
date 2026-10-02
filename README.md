@@ -124,13 +124,15 @@ Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the doc
 | Version 2 Phase 9 (quick modes + menu bar) | Complete — see `version2_developmental_roadmap.md` |
 | Version 2 Phase 10 (lock-screen + distribution research) | **Complete** — see Phase 10 docs above |
 | V2.2 docs + App Store–first charter (trunk + flavors) | **Complete** (2026-08-20) — see Part 3 in roadmap |
-| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Engineering + owner QA complete** (2026-08-29) — Connect upload pending |
+| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Waiting for Review** — Deskface **1.0 (2)** resubmitted **2026-10-01** |
 | V2.2 Milestone 2 (Tier A + B on all flavors) | Planned after M1 |
 | V2.2 Milestone 3 (Direct DMG + Sparkle / Tier C) | Deferred after App Store |
 
 ## Status
 
-**August 29–31, 2026:** M1 **engineering + owner QA complete** — full [`PRE_RELEASE_CHECKLIST`](docs/PRE_RELEASE_CHECKLIST.md) signed off 2026-08-29; **92** unit tests; owner regression `chunk7_regression.sh` **P** 2026-08-31. **Launch gate:** [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md). **Next (owner):** Connect upload per [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md).
+**October 1, 2026:** Deskface **1.0 (2)** resubmitted to App Review after the Guideline 2.3.8 (installed name) and 1.5 (Support URL) rejection. Connect Support URL is the hosted page. Status: **Waiting for Review**. **Next:** monitor Resolution Center. Approval is not recorded until Apple approves. Launch gate: [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md).
+
+**August 29–31, 2026:** M1 **engineering + owner QA complete** — full [`PRE_RELEASE_CHECKLIST`](docs/PRE_RELEASE_CHECKLIST.md) signed off 2026-08-29; **92** unit tests; owner regression `chunk7_regression.sh` **P** 2026-08-31.
 
 **August 20, 2026:** Milestone 1 **complete and merged** — App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening + `network.client`. Launch prep also landed: the App Store display name is **Deskface** (`INFOPLIST_KEY_CFBundleDisplayName`; bundle ID and Xcode target unchanged), in-app Privacy Policy and Support links, a first-run welcome card, and hosted pages under [`docs/`](docs/) for GitHub Pages. Docs: `M1_COMPLIANCE_CHECKLIST.md`, `WEB_WALLPAPERS.md`, `APP_STORE_SUBMISSION.md`.
 

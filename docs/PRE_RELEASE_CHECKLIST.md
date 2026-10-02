@@ -85,7 +85,7 @@ fires is as wrong as one that always does.
 
 ## Distribution — Mac App Store (Milestone 1+)
 
-Complete before App Store Connect upload. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md).
+Deskface **1.0 (2)** was submitted **2026-10-01** and is **Waiting for Review**. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md). Approval sign-off stays open until Apple approves.
 
 - [x] Built with **`PWE App Store`** scheme / `APP_STORE_BUILD`
 - [x] `PrivacyInfo.xcprivacy` present in the archived app
@@ -99,11 +99,11 @@ Complete before App Store Connect upload. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_
 - [x] First-run welcome card appears until a wallpaper is assigned
 - [x] Privacy Policy and Support URLs resolve over HTTPS — **P** (Pages; Support = `/support/` not Issues — 2026-09-25)
 - [x] Web smoke: local HTML + one **https** URL on Release-AppStore — **P** (2026-08-29)
-- [ ] Organizer **Validate App** succeeds (signed archive — owner; see [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §2)
+- [x] Organizer **Validate App** and upload of build **1.0 (2)** (submitted **2026-10-01**)
 - [ ] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
 - [ ] Review notes pasted in Connect ([`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §5)
 - [ ] Screenshots attached per submission guide (§6)
-- [ ] Owner sign-off on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 Connect upload row (after submit)
+- [ ] App Review approval date on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) — currently **Waiting for Review**
 
 ---
 

@@ -1,5 +1,7 @@
 # App Store owner steps (quick index)
 
+**Current state (2026-10-01):** Deskface **1.0 (2)** is **Waiting for Review**. The list below is the path already taken. Next step is to monitor Resolution Center until Apple approves.
+
 **Canonical guide:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) — paste-ready copy in §3–§6; detailed walkthrough in **§9**.
 
 **Launch gate:** [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md)

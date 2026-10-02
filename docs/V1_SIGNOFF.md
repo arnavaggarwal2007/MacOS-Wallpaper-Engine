@@ -23,7 +23,7 @@
 | XCTest unit suite | **Pass (expanded)** | Display mapping, migration, collections, SettingsStore — see [`TESTING.md`](TESTING.md) |
 | Distribution docs | **Pass** | [`DISTRIBUTION.md`](DISTRIBUTION.md), [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md), [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md), V2.2 App Store charters (2026-08-20) |
 
-**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. **Owner manual QA complete (2026-08-29).** Engineering and product sign-off are done; **Connect upload remains owner-gated** — follow [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md). Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0.
+**Recommendation:** Phases 1–9 **complete and hardened** as the App Store Milestone 1 product baseline. **Owner manual QA complete (2026-08-29).** Engineering and product sign-off are done. Deskface **1.0 (2)** was resubmitted **2026-10-01** and is **Waiting for Review**. Record the approval date here when Apple approves. Phase 10 research complete; **launch order:** App Store first, then Direct — [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0.
 
 ---
 
@@ -32,7 +32,7 @@
 | Milestone | Scope | Status | Date |
 |-----------|--------|--------|------|
 | Docs / charter (trunk + flavors, App Store first) | Roadmap Part 3 + submission/privacy docs | **Pass** | 2026-08-20 |
-| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-28); Owner QA **Pass** (2026-08-29); Connect upload **Owner pending** | 2026-08-29 |
+| M1 — Mac App Store compliance + submit v1.0 | Flavor, privacy manifest, Connect | Engineering **Pass** (2026-08-28); Owner QA **Pass** (2026-08-29); **1.0 (2)** resubmitted **Waiting for Review** (approval date blank) | 2026-10-01 |
 | M2 — Tier A + Tier B (v1.1) | Lock export + screensaver | Pending | |
 | M3 — Direct DMG | Sparkle + tip link + conditional Tier C | Deferred | |
 

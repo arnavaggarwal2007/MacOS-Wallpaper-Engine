@@ -1,16 +1,16 @@
 # Pre-launch status — Deskface (Mac App Store v1.0)
 
 **Purpose:** Single go/no-go page before Xcode Archive and App Store Connect submission.  
-**Last updated:** 2026-09-25  
-**Store name:** Deskface · **Bundle ID:** `Personal.Personal-Wallpaper-Engine` · **Build for resubmit:** `1.0 (2)`
+**Last updated:** 2026-10-01  
+**Store name:** Deskface · **Bundle ID:** `Personal.Personal-Wallpaper-Engine` · **Build in review:** `1.0 (2)`
 
 When documents disagree, this page and the [doc hierarchy](#doc-hierarchy) table win for launch readiness.
 
 ---
 
-## Verdict: GO for owner resubmit (2.3.8 + 1.5 fixes)
+## Verdict: Waiting for Review
 
-Engineering, owner manual QA, and the automated regression gate are **complete**. Naming and Support URL fixes for the **2026-09-17** rejection are landed in-repo. Remaining work is **owner-only**: push Pages, set Connect Support URL, archive build **2**, reply in Resolution Center, Submit.
+Deskface **1.0 (2)** was resubmitted **2026-10-01** after the Guideline 2.3.8 and 1.5 rejection. The hosted support page is live and the Connect Support URL points at it. App Review has the build. **Next:** monitor Resolution Center. Do not record an approval date until Apple approves.
 
 ---
 
@@ -22,36 +22,34 @@ Engineering, owner manual QA, and the automated regression gate are **complete**
 | **Owner manual QA** | **Complete** | [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — signed off **2026-08-29** |
 | **Unit tests (92)** | **Complete** | Owner `Cmd+U` **P** 2026-08-29; inventory in [`TESTING.md`](TESTING.md) — re-run after Support URL / naming changes |
 | **Regression script** | **Complete** | Owner `chunk7_regression.sh` **P** **2026-08-31** (Debug + Release build, smoke, XCTest) |
-| **Hosted URLs** | **Complete (eng)** | Privacy + landing live; **Support** page at [`support/index.html`](support/index.html) — owner must push and verify live |
+| **Hosted URLs** | **Complete** | Privacy, landing, and **Support** (`…/support/`) live; Connect Support URL updated |
 | **2.3.8 installed name** | **Complete (eng)** | `CFBundleDisplayName` + `CFBundleName` = Deskface; Release-AppStore `PRODUCT_NAME` = Deskface |
 | **App Store copy** | **Complete** | [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) — paste-ready metadata + Resolution Center reply |
 
 ---
 
-## Remaining before Submit (owner only)
+## Resubmit checklist (done 2026-10-01)
 
-Complete in order — detailed walkthrough in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §Owner runway and §9:
+1. Support page live at `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/`
+2. App Store Connect Support URL set to that page
+3. Archived scheme **`PWE App Store`**, build **1.0 (2)**, validated, and uploaded
+4. Resolution Center reply sent; listing name remains **Deskface**; bundle ID unchanged
+5. **Submitted for Review** — status **Waiting for Review**
 
-1. Push `main` → confirm `https://arnavaggarwal2007.github.io/MacOS-Wallpaper-Engine/support/` loads
-2. App Store Connect → App Information → Support URL = hosted `/support/` page (not GitHub Issues)
-3. **Archive** scheme **`PWE App Store`** (build **1.0 (2)**) → **Validate App** → **Distribute** to Connect
-4. Verify archive: Deskface display/short name + `Deskface.app`; bundle ID unchanged
-5. Attach build; paste Resolution Center reply ([`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §7)
-6. **Submit for Review**
-7. After approval: update [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 Connect row
+## After approval
+
+Update [`V1_SIGNOFF.md`](V1_SIGNOFF.md) with the App Review approval date. That date is still open.
 
 ---
 
 ## Go/no-go checklist
 
-Proceed to Xcode/Connect when:
-
 - [x] Engineering + owner QA complete (this page)
 - [x] Regression gate (`chunk7_regression.sh`) — owner **P** 2026-08-31
 - [x] Installed name + Support URL eng fixes landed (2026-09-25)
-- [ ] Support page live on GitHub Pages (owner push + browser check)
-- [ ] Apple Developer Program active (owner confirmed enrolled)
-- [ ] You accept **16+** age rating (unrestricted web access for optional web wallpapers)
+- [x] Support page live on GitHub Pages
+- [x] Build **1.0 (2)** submitted — **Waiting for Review** (2026-10-01)
+- [ ] App Review approval recorded in [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
 
 ---
 
