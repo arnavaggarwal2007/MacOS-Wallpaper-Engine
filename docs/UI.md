@@ -1,8 +1,8 @@
-# UI Reference — Final Vision
+# UI
 
-**Status:** Complete (merged to `main`, May 2026)  
+**Status:** Shipped in Deskface 1.0 (four tabs, merged to `main` May 2026)  
 **KB:** `Wallpaper Engine KB/30 Features/Feature-UI-Final-Vision.md`  
-**Validation:** User sign-off May 20, 2026; automated checks in [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
+**Validation:** Owner sign-off May 20, 2026; checks in [`RELEASE_RECORD.md`](RELEASE_RECORD.md)
 
 ---
 
@@ -118,7 +118,7 @@ Removed in Phase 4d (May 2026).
 | 3 | Always per-display, Home browse | `docs/archive/PHASE_3_VALIDATION.md` |
 | 4 | Shared background, glass, scroll perf | `docs/archive/PHASE_4_VALIDATION.md` |
 
-Automated: `chunk7_smoke.sh`, `chunk7_regression.sh` — see [`V1_SIGNOFF.md`](V1_SIGNOFF.md).
+Automated: `chunk7_smoke.sh`, `chunk7_regression.sh` — see [`RELEASE_RECORD.md`](RELEASE_RECORD.md).
 
 ---
 

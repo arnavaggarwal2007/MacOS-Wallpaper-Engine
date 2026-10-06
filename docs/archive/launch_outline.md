@@ -1,5 +1,7 @@
 # App Store owner steps (quick index)
 
+**Archived.** Deskface **1.0 (2)** has been live since **October 6, 2026**. See [`../RELEASE_RECORD.md`](../RELEASE_RECORD.md).
+
 **Current state (2026-10-01):** Deskface **1.0 (2)** is **Waiting for Review**. The list below is the path already taken. Next step is to monitor Resolution Center until Apple approves.
 
 **Canonical guide:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) — paste-ready copy in §3–§6; detailed walkthrough in **§9**.

@@ -24,7 +24,7 @@ enum PerformanceSuggestionPolicy {
         let sustainedFraction: Double
 
         /// Roughly twice the heaviest Release measurement. The benchmark envelope in
-        /// `docs/PERFORMANCE_TUNING.md` spans 0.47%–1.18% of system on 12 cores across every
+        /// `docs/PERFORMANCE.md` spans 0.47%–1.18% of system on 12 cores across every
         /// profile and scenario, so these leave headroom for normal operation while still firing on
         /// hardware where the wallpaper costs a real share of the machine.
         static let release = Thresholds(

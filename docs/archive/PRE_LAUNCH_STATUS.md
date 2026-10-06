@@ -1,5 +1,7 @@
 # Pre-launch status — Deskface (Mac App Store v1.0)
 
+**Archived.** Deskface **1.0 (2)** has been live since **October 6, 2026**. Current record: [`../RELEASE_RECORD.md`](../RELEASE_RECORD.md). The text below is the gate as it stood on October 1, 2026.
+
 **Purpose:** Single go/no-go page before Xcode Archive and App Store Connect submission.  
 **Last updated:** 2026-10-01  
 **Store name:** Deskface · **Bundle ID:** `Personal.Personal-Wallpaper-Engine` · **Build in review:** `1.0 (2)`

@@ -84,4 +84,4 @@ App Sandbox was enabled **without** `com.apple.security.network.client`. Local `
 - `AppViewModel.swift` — apply path validation
 - `SettingsTabView.swift` — Web URL field + Choose File importer
 
-See [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md) for compliance sign-off.
+Compliance sign-off for 1.0 is archived at [`archive/M1_COMPLIANCE_CHECKLIST.md`](archive/M1_COMPLIANCE_CHECKLIST.md).

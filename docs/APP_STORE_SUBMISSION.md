@@ -1,17 +1,17 @@
 # Mac App Store Submission Guide — Deskface
 
-**Status:** Deskface **1.0 (2)** resubmitted **2026-10-01** after the Guideline 2.3.8 + 1.5 rejection. **Waiting for Review.** Installed name is Deskface; Support URL is the hosted `/support/` page. Approval date is not set until Apple approves.  
+**Status:** Deskface **1.0 (2)** has been **live on the Mac App Store since October 6, 2026.** This guide is the procedure for the next update. The 2.3.8 and 1.5 rejection notes below stay as the record of the 1.0 resubmit.  
 **Store name:** **Deskface** (display + short name + App Store product name — bundle ID and Xcode target unchanged)  
-**Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  
+**Next feature spec:** [`MILESTONE_2.md`](MILESTONE_2.md)  
 **Privacy copy:** [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)  
-**Gate:** [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)  
+**Gate:** [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)  
 **Related:** [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 
 ---
 
 ## Owner runway (after QA sign-off)
 
-Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29). The post-rejection resubmit below was **completed 2026-10-01**. Current state: **Waiting for Review**. The list is the record of what was submitted:
+Engineering and manual QA for 1.0 are complete ([`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — 2026-08-29). The list below is the record of the **2026-10-01** resubmit. That build has been **live since October 6, 2026**.
 
 | Step | Action | Section |
 |------|--------|---------|
@@ -286,14 +286,14 @@ Please let us know if anything else is needed.
 
 - Respond to Resolution Center within 24–48 hours
 - Tag git `v1.0` (or `v1.0-mas`) on the **commit you uploaded** — tagging at upload time is fine; record App Store **approval date** separately in sign-off docs
-- Update [`V1_SIGNOFF.md`](V1_SIGNOFF.md) M1 row with approval date (not upload date)
+- Approval is recorded in [`RELEASE_RECORD.md`](RELEASE_RECORD.md): Deskface **1.0 (2)**, **October 6, 2026**.
 - Changelog entry in KB `Project-Changelog.md`
 
 ---
 
 ## 9. Owner step-by-step guide
 
-Engineering and manual QA are complete ([`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — 2026-08-29; regression **P** 2026-08-31). Sections **§3–§6** above hold paste-ready copy blocks. This section is the detailed walkthrough.
+Engineering and manual QA are complete ([`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — 2026-08-29; regression **P** 2026-08-31). Sections **§3–§6** above hold paste-ready copy blocks. This section is the detailed walkthrough.
 
 ### What's already done (skip)
 
@@ -417,7 +417,7 @@ Capture per **§6** on clean macOS 15+, Release **PWE App Store** build. Recomme
 ### Phase 8 — After submission
 
 - Monitor **Resolution Center** daily; respond within 24–48 hours.
-- **If approved:** choose release; tag uploaded commit `v1.0` if not already; update [`V1_SIGNOFF.md`](V1_SIGNOFF.md).
+- **Approved and released:** Deskface **1.0 (2)** has been live since **October 6, 2026**. Record is [`RELEASE_RECORD.md`](RELEASE_RECORD.md).
 - **If rejected:** see **§7** rejection playbook. Increment **Build**, re-archive, re-upload.
 
 ### What you do not need for v1.0 MAS
@@ -441,7 +441,7 @@ Capture per **§6** on clean macOS 15+, Release **PWE App Store** build. Recomme
 
 ## References
 
-- [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)
+- [`archive/V2_2_APP_STORE_IMPLEMENTATION.md`](archive/V2_2_APP_STORE_IMPLEMENTATION.md)
 - [`DISTRIBUTION.md`](DISTRIBUTION.md) § Mac App Store
-- [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) Appendix A
-- [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)
+- [`CHANNELS.md`](CHANNELS.md)
+- [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)

@@ -75,8 +75,8 @@ After an agent adds or changes tests, run `Cmd+U` in Xcode and report any failur
 
 ## When not to unit-test (manual instead)
 
-- Multi-display hotplug visuals — [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md)
-- CPU suggestion banner on real hardware — [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) § Performance
+- Multi-display hotplug visuals — [`archive/regression/HOTPLUG_REGRESSION.md`](archive/regression/HOTPLUG_REGRESSION.md)
+- CPU suggestion banner on real hardware — [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) § Performance
 - Security-scoped bookmark survival across relaunch
 - App Store sandbox end-to-end
 
@@ -113,7 +113,7 @@ After an agent adds or changes tests, run `Cmd+U` in Xcode and report any failur
 
 ## Related
 
-- [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) — release gate
+- [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) — release gate
 - [`DISTRIBUTION.md`](DISTRIBUTION.md) §8 — CI commands
-- [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) — display manual matrix
+- [`archive/regression/HOTPLUG_REGRESSION.md`](archive/regression/HOTPLUG_REGRESSION.md) — display manual matrix
 - [`AGENTS.md`](../AGENTS.md) — agent write-only XCTest policy

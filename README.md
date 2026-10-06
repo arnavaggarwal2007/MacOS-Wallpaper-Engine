@@ -4,7 +4,7 @@ A macOS desktop wallpaper engine built in Swift that renders local video and web
 
 ## Overview
 
-Personal Wallpaper Engine — shipping on the Mac App Store as **Deskface** — plays local video files (and optional web sources) as animated macOS wallpapers. **Version 1 is complete:** engine core (Phases 1–5), wallpaper collections (6A), desktop setups (6B), and the four-tab UI final vision. **Version 2** Phases 7–10 (research) are complete; **V2.2** (App Store–first implementation) is tracked in [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) Part 3.
+Personal Wallpaper Engine — shipping on the Mac App Store as **Deskface** — plays local video files (and optional web sources) as animated macOS wallpapers. **Deskface 1.0** includes the desktop engine, collections, setups, the four-tab UI, performance profiles, the local library, and quick modes with a menu bar. **Next:** [Milestone 2](ROADMAP.md) (video screensaver and static lock-screen export).
 
 ## Features
 
@@ -23,49 +23,34 @@ Personal Wallpaper Engine — shipping on the Mac App Store as **Deskface** — 
 
 ## Documentation
 
-### Canonical sources
-
-When documents disagree, these win. Everything else should link here rather than restate.
+When documents disagree, the table below wins. The index is [`docs/README.md`](docs/README.md).
 
 | Topic | Canonical source |
 |-------|------------------|
-| **Pre-launch go/no-go** | [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md) |
-| Roadmap and phase status | This README's [Roadmap](#roadmap) table |
-| App Store M1 status | [`docs/M1_COMPLIANCE_CHECKLIST.md`](docs/M1_COMPLIANCE_CHECKLIST.md) |
-| Doc index | [`docs/README.md`](docs/README.md) |
-| CPU benchmarks and suggestion thresholds | [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) |
-| UI copy, naming rule, design tokens | [`DESIGN.md`](DESIGN.md) |
-| Architecture rationale and history | `Wallpaper Engine KB/` (sibling folder) |
+| What ships next | [`ROADMAP.md`](ROADMAP.md) |
+| Milestone 2 (screensaver and lock export) | [`docs/MILESTONE_2.md`](docs/MILESTONE_2.md) |
+| Release record | [`docs/RELEASE_RECORD.md`](docs/RELEASE_RECORD.md) |
+| QA matrix | [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) |
+| CPU and suggestion thresholds | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
+| UI copy, naming, design tokens | [`DESIGN.md`](DESIGN.md) |
+| Architecture and history | `Wallpaper Engine KB/` (sibling folder) |
 
 | Document | Purpose |
 |----------|---------|
-| [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md) | Go/no-go gate before Archive / Submit |
-| [`docs/README.md`](docs/README.md) | Categorized documentation index |
-| [`docs/TESTING.md`](docs/TESTING.md) | Unit tests, manual matrix, agent write-only policy |
-| [`docs/V1_SIGNOFF.md`](docs/V1_SIGNOFF.md) | V1 gate: functional + performance baseline |
-| [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) | Consolidated release gate (incl. App Store) |
-| [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Direct download: signing, notarization, DMG; MAS pointers |
-| [`docs/DISTRIBUTION_CHANNELS.md`](docs/DISTRIBUTION_CHANNELS.md) | App Store vs Direct vs Steam strategy |
-| [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) | Mac App Store Connect + review guide |
-| [`docs/M1_COMPLIANCE_CHECKLIST.md`](docs/M1_COMPLIANCE_CHECKLIST.md) | M1 engineering + Connect sign-off matrix |
-| [`docs/WEB_WALLPAPERS.md`](docs/WEB_WALLPAPERS.md) | Web renderer usage, schemes, sandbox |
-| [`docs/V2_2_APP_STORE_IMPLEMENTATION.md`](docs/V2_2_APP_STORE_IMPLEMENTATION.md) | V2.2 M1/M2 charter (trunk + flavors) |
-| [`docs/V2_2_DIRECT_IMPLEMENTATION.md`](docs/V2_2_DIRECT_IMPLEMENTATION.md) | Direct DMG stub (after App Store) |
-| [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) | Hostable privacy policy |
-| [`docs/PHASE_10A_FEASIBILITY.md`](docs/PHASE_10A_FEASIBILITY.md) | Phase 10A: lock-screen/screensaver feasibility |
-| [`docs/PHASE_10B_SCREENSAVER_RESEARCH.md`](docs/PHASE_10B_SCREENSAVER_RESEARCH.md) | Phase 10B: screensaver research |
-| [`docs/PHASE_10C_LOCK_SCREEN_RESEARCH.md`](docs/PHASE_10C_LOCK_SCREEN_RESEARCH.md) | Phase 10C: lock-screen research |
-| [`docs/PHASE_10_SUMMARY.md`](docs/PHASE_10_SUMMARY.md) | Phase 10 executive summary |
-| [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md) | V1 feature inventory and architecture |
-| [`DESIGN.md`](DESIGN.md) | Design spec (product shape, tokens, copy catalog) |
-| [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) | UI spec (tabs, layout, flows) |
-| [`version2_developmental_roadmap.md`](version2_developmental_roadmap.md) | Phases 7–10 + V2.2 Part 3 |
-| [`docs/PHASE_9_QUICK_MODES.md`](docs/PHASE_9_QUICK_MODES.md) | Phase 9 quick modes + menu bar |
-| [`docs/PHASE_9_REGRESSION.md`](docs/PHASE_9_REGRESSION.md) | Phase 9 regression matrix |
-| [`PRODUCTION_TEST_CHECKLIST.md`](PRODUCTION_TEST_CHECKLIST.md) | Archived — see [`docs/PRE_RELEASE_CHECKLIST.md`](docs/PRE_RELEASE_CHECKLIST.md) |
-| [`docs/archive/`](docs/archive/) | Historical roadmaps and phase validation notes |
+| [`docs/README.md`](docs/README.md) | Documentation index |
+| [`docs/UI.md`](docs/UI.md) | Tabs, layout, flows |
+| [`docs/LIBRARY.md`](docs/LIBRARY.md) | Local library |
+| [`docs/QUICK_MODES.md`](docs/QUICK_MODES.md) | Quick modes and menu bar |
+| [`docs/WEB_WALLPAPERS.md`](docs/WEB_WALLPAPERS.md) | Web renderer, sandbox, URL allowlist |
+| [`docs/CHANNELS.md`](docs/CHANNELS.md) | App Store, Direct, and Steam |
+| [`docs/DIRECT_PLAN.md`](docs/DIRECT_PLAN.md) | Milestone 3 stub |
+| [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Signing, notarization, DMG |
+| [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) | App Store Connect guide |
+| [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) | Privacy policy |
+| [`docs/TESTING.md`](docs/TESTING.md) | Unit tests and agent policy |
+| [`docs/archive/`](docs/archive/) | Old roadmaps, phase research, and regression matrices |
 
-Knowledge base (Obsidian): sibling folder `Wallpaper Engine KB/` on Desktop — start at `10 Project Home.md` and `KB-Guide.md` (architecture, features, ADRs, changelog).
+Knowledge base (Obsidian): sibling folder `Wallpaper Engine KB/` — start at `10 Project Home.md` and `KB-Guide.md`.
 
 ## Tech Stack
 
@@ -91,7 +76,7 @@ Core persistence is handled through `SettingsStore`. The UI layer uses SwiftUI w
 
 ```text
 Personal Wallpaper Engine/
-├── docs/                    # V1 sign-off, references, archive
+├── docs/                    # Living references, release docs, archive
 ├── Personal_Wallpaper_EngineApp.swift
 ├── TabbedMainView.swift
 ├── ModernHomeView.swift
@@ -115,25 +100,19 @@ Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the doc
 
 | Area | Status |
 |------|--------|
-| Phases 1–5 (core engine, web, per-display, menu bar, launch-on-login) | Complete |
-| Phase 6A (wallpaper collections) | Complete |
-| Phase 6B (desktop setups) | Complete |
-| UI final vision (4 tabs, app-wide background, glass tabs) | Complete — merged to `main` May 2026 |
-| Version 2 Phase 7 (performance, power, diagnostics — 7A–7G) | Complete — signed off 2026-06-01; see `docs/PERFORMANCE_TUNING.md` |
-| Version 2 Phase 8 (local library — 8A–8C) | Complete — see [`docs/PHASE_8_LIBRARY.md`](docs/PHASE_8_LIBRARY.md) |
-| Version 2 Phase 9 (quick modes + menu bar) | Complete — see `version2_developmental_roadmap.md` |
-| Version 2 Phase 10 (lock-screen + distribution research) | **Complete** — see Phase 10 docs above |
-| V2.2 docs + App Store–first charter (trunk + flavors) | **Complete** (2026-08-20) — see Part 3 in roadmap |
-| V2.2 Milestone 1 (MAS compliance / App Store v1.0) | **Waiting for Review** — Deskface **1.0 (2)** resubmitted **2026-10-01** |
-| V2.2 Milestone 2 (Tier A + B on all flavors) | Planned after M1 |
-| V2.2 Milestone 3 (Direct DMG + Sparkle / Tier C) | Deferred after App Store |
+| Deskface 1.0 (desktop engine, collections, setups, UI, performance, library, quick modes, menu bar) | **Live** on the Mac App Store since October 6, 2026 — version **1.0 (2)** |
+| Milestone 2 (screensaver and static lock export) | **Next** — [`docs/MILESTONE_2.md`](docs/MILESTONE_2.md) |
+| Milestone 3 (Direct download, Sparkle, live lock video) | Later — [`docs/DIRECT_PLAN.md`](docs/DIRECT_PLAN.md) |
+| Backlog (view-model split, accessibility, localization, tests) | After launch — knowledge base `POST_LAUNCH_BACKLOG.md` |
+
+Full map: [`ROADMAP.md`](ROADMAP.md).
 
 ## Status
 
-**October 1, 2026:** Deskface **1.0 (2)** resubmitted to App Review after the Guideline 2.3.8 (installed name) and 1.5 (Support URL) rejection. Connect Support URL is the hosted page. Status: **Waiting for Review**. **Next:** monitor Resolution Center. Approval is not recorded until Apple approves. Launch gate: [`docs/PRE_LAUNCH_STATUS.md`](docs/PRE_LAUNCH_STATUS.md).
+**October 6, 2026:** Deskface **1.0 (2)** is on the Mac App Store. Next work is Milestone 2. Record: [`docs/RELEASE_RECORD.md`](docs/RELEASE_RECORD.md).
 
-**August 29–31, 2026:** M1 **engineering + owner QA complete** — full [`PRE_RELEASE_CHECKLIST`](docs/PRE_RELEASE_CHECKLIST.md) signed off 2026-08-29; **92** unit tests; owner regression `chunk7_regression.sh` **P** 2026-08-31.
+**August 29–31, 2026:** Milestone 1 engineering and owner QA finished — [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) signed off 2026-08-29; **92** unit tests; owner regression `chunk7_regression.sh` **P** 2026-08-31.
 
-**August 20, 2026:** Milestone 1 **complete and merged** — App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening + `network.client`. Launch prep also landed: the App Store display name is **Deskface** (`INFOPLIST_KEY_CFBundleDisplayName`; bundle ID and Xcode target unchanged), in-app Privacy Policy and Support links, a first-run welcome card, and hosted pages under [`docs/`](docs/) for GitHub Pages. Docs: `M1_COMPLIANCE_CHECKLIST.md`, `WEB_WALLPAPERS.md`, `APP_STORE_SUBMISSION.md`.
+**August 20, 2026:** App Store flavor (`PWE App Store`), privacy manifest, update gating, web URL hardening, and `network.client` merged. The store name is **Deskface**. Bundle ID and the Xcode target name are unchanged.
 
-A pre-launch audit followed on the same day. Most visibly, the high-CPU suggestion banner fired on nearly every launch: its thresholds were calibrated from Debug-build measurements roughly five times lower than Release, and the message quoted per-core CPU, so an app using about 1% of the machine reported "averaged 14%". Thresholds are now expressed as system-wide share ([`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md) §ADR-009). The same pass fixed resource leaks (observers, tasks, and a suspended continuation), two silent data-loss paths in settings persistence and display rekeying, dead screen-lock pause code, and several main-thread I/O and over-invalidation problems in the UI.
+A pre-launch audit the same day recalibrated the high-CPU suggestion banner. Thresholds had been taken from Debug builds and the message quoted per-core CPU, so an app using about 1% of the machine reported “averaged 14%”. Thresholds are now a system-wide share ([`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)). That pass also fixed resource leaks, two silent data-loss paths, dead screen-lock pause code, and main-thread I/O in the UI.

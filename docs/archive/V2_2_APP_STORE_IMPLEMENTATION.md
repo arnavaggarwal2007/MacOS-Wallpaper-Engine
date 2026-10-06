@@ -1,5 +1,7 @@
 # V2.2 App Store Implementation Charter
 
+**Archived.** Deskface **1.0 (2)** has been live since **October 6, 2026**. Next spec: [`../MILESTONE_2.md`](../MILESTONE_2.md). Roadmap: [`../../ROADMAP.md`](../../ROADMAP.md).
+
 **Status:** Milestone 1 **complete** (2026-08-20) — merged to `main`, tagged `v1.0`; launch prep landed. Deskface **1.0 (2)** resubmitted **2026-10-01** and is **Waiting for Review**. Approval is not recorded yet.  
 **Roadmap:** [`version2_developmental_roadmap.md`](../version2_developmental_roadmap.md) Part 3  
 **Submission:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)  

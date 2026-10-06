@@ -1,63 +1,58 @@
 # Documentation index
 
-Categorized map of repo docs. **Launch gate:** start at [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md).
+Living docs only. Older phase writeups, launch gates, and research are in [`archive/`](archive/).
 
-When documents disagree, see the hierarchy table in [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md#doc-hierarchy).
+When documents disagree, this table wins.
 
----
+| Topic | Canonical source |
+|-------|------------------|
+| What ships next | [`../ROADMAP.md`](../ROADMAP.md) |
+| Milestone 2 build spec | [`MILESTONE_2.md`](MILESTONE_2.md) |
+| What shipped, and when | [`RELEASE_RECORD.md`](RELEASE_RECORD.md) |
+| QA before a release | [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) |
+| UI, copy, naming | [`../DESIGN.md`](../DESIGN.md), [`UI.md`](UI.md) |
+| Tests | [`TESTING.md`](TESTING.md), [`../AGENTS.md`](../AGENTS.md) |
+| Architecture history | `Wallpaper Engine KB/` |
 
-## Launch
+## Now
 
 | Document | Purpose |
 |----------|---------|
-| [`PRE_LAUNCH_STATUS.md`](PRE_LAUNCH_STATUS.md) | Go/no-go gate before Archive / Submit |
-| [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) | Consolidated release matrix (engine, product, MAS) |
-| [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) | Connect metadata, review notes, owner step-by-step |
-| [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md) | M1 engineering + Connect sign-off matrix |
-| [`V1_SIGNOFF.md`](V1_SIGNOFF.md) | V1 functional + performance sign-off record |
-| [`launch_outline.md`](launch_outline.md) | Quick index → `APP_STORE_SUBMISSION.md` |
+| [`../ROADMAP.md`](../ROADMAP.md) | Milestones, flavors, backlog pointer |
+| [`MILESTONE_2.md`](MILESTONE_2.md) | Screensaver and static lock export |
+| [`RELEASE_RECORD.md`](RELEASE_RECORD.md) | Deskface 1.0 (2) live October 6, 2026 |
+| [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) | Release QA matrix |
+| [`DIRECT_PLAN.md`](DIRECT_PLAN.md) | Milestone 3 stub |
 
----
+## How the app works
+
+| Document | Purpose |
+|----------|---------|
+| [`../DESIGN.md`](../DESIGN.md) | Product shape, tokens, copy |
+| [`UI.md`](UI.md) | Tabs, layout, flows |
+| [`LIBRARY.md`](LIBRARY.md) | Local library |
+| [`QUICK_MODES.md`](QUICK_MODES.md) | Quick modes and menu bar |
+| [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md) | Web renderer and URL allowlist |
+| [`PERFORMANCE.md`](PERFORMANCE.md) | CPU scale, profiles, suggestion thresholds |
+
+## How to ship
+
+| Document | Purpose |
+|----------|---------|
+| [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) | Connect metadata and review notes |
+| [`DISTRIBUTION.md`](DISTRIBUTION.md) | Signing, notarization, DMG |
+| [`CHANNELS.md`](CHANNELS.md) | App Store, Direct, Steam |
+| [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) | Privacy policy |
 
 ## Testing
 
 | Document | Purpose |
 |----------|---------|
-| [`TESTING.md`](TESTING.md) | XCTest inventory (92 tests), CI, agent write-only policy |
-| [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) | Multi-display manual matrix |
-| [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) | Quick modes + menu bar regression |
-| [`PHASE_7A_POWER_REGRESSION.md`](PHASE_7A_POWER_REGRESSION.md) | Power policy manual matrix |
-| Phase regression docs | Historical matrices; release gate is `PRE_RELEASE_CHECKLIST.md` |
-
----
-
-## Reference
-
-| Document | Purpose |
-|----------|---------|
-| [`../DESIGN.md`](../DESIGN.md) | Product shape, tokens, copy catalog |
-| [`UI_REFERENCE.md`](UI_REFERENCE.md) | Tabs, layout, flows |
-| [`VERSION_1_REFERENCE.md`](VERSION_1_REFERENCE.md) | V1 feature inventory |
-| [`WEB_WALLPAPERS.md`](WEB_WALLPAPERS.md) | Web renderer, sandbox, URL allowlist |
-| [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) | CPU benchmarks, suggestion thresholds |
-
----
-
-## Strategy
-
-| Document | Purpose |
-|----------|---------|
-| [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) | App Store vs Direct vs Steam |
-| [`DISTRIBUTION.md`](DISTRIBUTION.md) | Signing, notarization, DMG |
-| [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md) | V2.2 M1/M2 charter |
-| [`V2_2_DIRECT_IMPLEMENTATION.md`](V2_2_DIRECT_IMPLEMENTATION.md) | Direct DMG stub |
-| [`PHASE_10_SUMMARY.md`](PHASE_10_SUMMARY.md) | Phase 10 executive summary |
-| Phase 10 research docs | Lock screen / screensaver feasibility |
-
----
+| [`TESTING.md`](TESTING.md) | XCTest inventory, CI, agent policy |
+| [`archive/regression/`](archive/regression/) | Past manual matrices |
 
 ## Archive
 
-Historical planning and validation: [`archive/`](archive/)
+Historical planning and research: [`archive/`](archive/). Name map is in [`archive/README.md`](archive/README.md).
 
-Knowledge base (Obsidian): sibling folder `Wallpaper Engine KB/` — start at `10 Project Home.md`.
+Knowledge base: sibling folder `Wallpaper Engine KB/` — start at `10 Project Home.md`.

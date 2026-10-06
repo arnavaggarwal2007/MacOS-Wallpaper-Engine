@@ -1,5 +1,7 @@
 # Milestone 1 — Mac App Store Compliance Checklist
 
+**Archived.** Deskface **1.0 (2)** has been live since **October 6, 2026**. See [`../RELEASE_RECORD.md`](../RELEASE_RECORD.md).
+
 **Branch:** `feature/mas-compliance` → merged to **`main`** (2026-08-20)  
 **Tag:** `v1.0` on upload commit is OK; record App Store **approval date** separately in [`V1_SIGNOFF.md`](V1_SIGNOFF.md)  
 **Charter:** [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)  

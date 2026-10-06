@@ -1,6 +1,6 @@
-# Phase 9 — Quick Modes and Menu Bar (9A–9B)
+# Quick modes and menu bar
 
-**Status:** Complete (2026-06-09)
+**Status:** Shipped in Deskface 1.0 (2026-06-09)
 
 ## Delivered
 
@@ -74,4 +74,4 @@ KB: `Wallpaper Engine KB/40 Bugs/Bug-Phase9-Quick-Mode-Hero-And-Menu-Bar.md`
 - Show Main Window / Preferences bring app forward when another app is active
 - Menu bar: apply collection, setup, recent, quick mode still work
 
-Full matrix: [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md)
+Full matrix: [`archive/regression/PHASE_9_REGRESSION.md`](archive/regression/PHASE_9_REGRESSION.md)

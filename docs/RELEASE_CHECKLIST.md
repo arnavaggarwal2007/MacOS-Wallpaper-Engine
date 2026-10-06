@@ -1,15 +1,15 @@
-# Pre-Release Checklist (Phases 1–9 + App Store)
+# Release checklist
 
-**Purpose:** Consolidated gate before public distribution. Supersedes scattered manual rows across phase matrices.
+**Purpose:** Manual and automated gate for a public build. Deskface **1.0 (2)** passed this matrix and has been on the Mac App Store since **October 6, 2026**.
 
 **Platform:** macOS 15.0+ | **Build:** Release recommended for performance sign-off  
-**Channels:** Complete the core sections for any release. Complete the **App Store** section before Mac App Store upload. Complete **Direct** signing rows before public DMG.
+**Channels:** Complete the core sections for any release. Complete the **App Store** section before an App Store upload. Complete **Direct** signing rows before a public DMG.
 
 Legend: **P** Pass · **F** Fail · **N/A** Not applicable
 
 **Owner manual QA sign-off:** 2026-08-29 (full matrix below)
 
-**Related:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) · [`DISTRIBUTION.md`](DISTRIBUTION.md) · [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md)
+**Related:** [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) · [`DISTRIBUTION.md`](DISTRIBUTION.md) · [`MILESTONE_2.md`](MILESTONE_2.md) · [`RELEASE_RECORD.md`](RELEASE_RECORD.md)
 
 ---
 
@@ -25,7 +25,7 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable
 ## Engine core
 
 - [x] App launches; video wallpaper behind desktop icons — **P** (2026-08-29)
-- [x] Multi-display hotplug — [`HOTPLUG_REGRESSION.md`](HOTPLUG_REGRESSION.md) — **P** (2026-08-29; incl. display-bound collections + quit/relaunch)
+- [x] Multi-display hotplug — [`archive/regression/HOTPLUG_REGRESSION.md`](archive/regression/HOTPLUG_REGRESSION.md) — **P** (2026-08-29; incl. display-bound collections + quit/relaunch)
 - [x] Sleep/lock pause and resume — **P** (2026-08-29)
 - [x] Security-scoped bookmarks survive relaunch — **P** (2026-08-29)
 
@@ -35,8 +35,8 @@ Legend: **P** Pass · **F** Fail · **N/A** Not applicable
 
 - [x] Collections CRUD + apply — **P** (2026-08-29; display-bound auto, named display, mixed explicit + auto)
 - [x] Setups save/restore/delete — **P** (2026-08-29)
-- [x] Local library scan + apply — [`PHASE_8_LIBRARY.md`](PHASE_8_LIBRARY.md) — **P** (2026-08-29)
-- [x] Quick modes + menu bar — [`PHASE_9_REGRESSION.md`](PHASE_9_REGRESSION.md) — **P** (2026-08-29)
+- [x] Local library scan + apply — [`LIBRARY.md`](LIBRARY.md) — **P** (2026-08-29)
+- [x] Quick modes + menu bar — [`QUICK_MODES.md`](QUICK_MODES.md); matrix in [`archive/regression/PHASE_9_REGRESSION.md`](archive/regression/PHASE_9_REGRESSION.md) — **P** (2026-08-29)
 - [x] Drag-and-drop MP4/MOV on Home and Library browser — **P** (2026-08-29)
 - [x] Agent mode: dock hidden when window closed; visible when open — **P** (2026-08-29)
 
@@ -51,12 +51,12 @@ Measure on target hardware (record logical core count):
 | 2 disp, same 1080p, coalesced, unfocused, Balanced | ~13.75% (reference) | ~÷ N cores | **P** (2026-08-29) |
 | 1 disp, coalesced, unfocused, Balanced | — | — | **P** (2026-08-29) |
 
-See [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) § CPU scale glossary.
+See [`PERFORMANCE.md`](PERFORMANCE.md) § CPU scale.
 
 ### Suggestion banner — must be checked on real hardware
 
 Thresholds were recalibrated 2026-08-20 against the benchmark envelope
-([`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md) §ADR-009). Unit tests pin the arithmetic, but only a
+([`PERFORMANCE.md`](PERFORMANCE.md)). Unit tests pin the arithmetic, but only a
 live run confirms the banner behaves on this machine. Both directions matter — a banner that never
 fires is as wrong as one that always does.
 
@@ -83,9 +83,9 @@ fires is as wrong as one that always does.
 
 ---
 
-## Distribution — Mac App Store (Milestone 1+)
+## Distribution — Mac App Store
 
-Deskface **1.0 (2)** was submitted **2026-10-01** and is **Waiting for Review**. See [`M1_COMPLIANCE_CHECKLIST.md`](M1_COMPLIANCE_CHECKLIST.md). Approval sign-off stays open until Apple approves.
+Deskface **1.0 (2)** has been **live since October 6, 2026**. The engineering matrix is archived at [`archive/M1_COMPLIANCE_CHECKLIST.md`](archive/M1_COMPLIANCE_CHECKLIST.md).
 
 - [x] Built with **`PWE App Store`** scheme / `APP_STORE_BUILD`
 - [x] `PrivacyInfo.xcprivacy` present in the archived app
@@ -100,10 +100,10 @@ Deskface **1.0 (2)** was submitted **2026-10-01** and is **Waiting for Review**.
 - [x] Privacy Policy and Support URLs resolve over HTTPS — **P** (Pages; Support = `/support/` not Issues — 2026-09-25)
 - [x] Web smoke: local HTML + one **https** URL on Release-AppStore — **P** (2026-08-29)
 - [x] Organizer **Validate App** and upload of build **1.0 (2)** (submitted **2026-10-01**)
-- [ ] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
-- [ ] Review notes pasted in Connect ([`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §5)
-- [ ] Screenshots attached per submission guide (§6)
-- [ ] App Review approval date on [`V1_SIGNOFF.md`](V1_SIGNOFF.md) — currently **Waiting for Review**
+- [x] App Store Connect privacy nutrition labels match [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) — shipped with 1.0
+- [x] Review notes pasted in Connect ([`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md) §5)
+- [x] Screenshots attached per submission guide (§6)
+- [x] App Review approval — **October 6, 2026**, version **1.0 (2)** — [`RELEASE_RECORD.md`](RELEASE_RECORD.md)
 
 ---
 
@@ -122,4 +122,4 @@ Deskface **1.0 (2)** was submitted **2026-10-01** and is **Waiting for Review**.
 - Lock-screen live video (Tier C — Direct only, later)
 - Collection rotation / playlists (V2.1)
 - Sparkle auto-update (Direct Milestone 3)
-- 1-hour soak / stress matrix in legacy [`PRODUCTION_TEST_CHECKLIST.md`](../PRODUCTION_TEST_CHECKLIST.md) — run if Review or soak confidence requires it
+- 1-hour soak / stress matrix in [`archive/PRODUCTION_TEST_CHECKLIST.md`](archive/PRODUCTION_TEST_CHECKLIST.md) — run if a later review or soak check needs it

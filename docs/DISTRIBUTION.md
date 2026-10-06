@@ -2,7 +2,7 @@
 
 **Purpose:** Steps to produce a signed, notarized macOS build of Personal Wallpaper Engine for **direct download** (outside the Mac App Store), and pointers for the **Mac App Store** path.
 
-**Strategy (App Store vs Direct vs Steam):** See [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md). **Launch order (2026-08-20):** App Store first, Direct second. Direct how-to remains in this document; MAS process is in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
+**Channels:** [`CHANNELS.md`](CHANNELS.md). Deskface 1.0 is on the Mac App Store (October 6, 2026). Direct is Milestone 3. This document is the Direct signing how-to; the App Store process is [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
 
 **Prerequisites (Direct):** Apple Developer account, Developer ID Application certificate, Xcode 16+, macOS 15+ build host.  
 **Prerequisites (App Store):** Same membership + Mac App Store distribution certificate / provisioning — see submission guide.
@@ -153,13 +153,13 @@ xcodebuild test \
   CODE_SIGNING_ALLOWED=NO
 ```
 
-Also complete [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md) (including App Store section when shipping MAS).
+Also complete [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) (including the App Store section when shipping an update).
 
 ---
 
 ## 9. Mac App Store path
 
-**Preferred first public channel** (see [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md) §0). Detailed process: [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md). Engineering charter: [`V2_2_APP_STORE_IMPLEMENTATION.md`](V2_2_APP_STORE_IMPLEMENTATION.md).
+The first public channel is the Mac App Store ([`CHANNELS.md`](CHANNELS.md)). Deskface 1.0 (2) has been live since October 6, 2026. Process: [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md). Next features: [`MILESTONE_2.md`](MILESTONE_2.md).
 
 ### Requirements checklist
 
@@ -188,10 +188,10 @@ Milestone 1 is on `main` via **`PWE App Store`** / `Release-AppStore`. Day-to-da
 
 ## References
 
-- [`PRE_RELEASE_CHECKLIST.md`](PRE_RELEASE_CHECKLIST.md)
+- [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)
 - [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md)
-- [`DISTRIBUTION_CHANNELS.md`](DISTRIBUTION_CHANNELS.md)
+- [`CHANNELS.md`](CHANNELS.md)
 - [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
-- [`V1_SIGNOFF.md`](V1_SIGNOFF.md)
-- [`PERFORMANCE_TUNING.md`](PERFORMANCE_TUNING.md)
-- [`V2_2_DIRECT_IMPLEMENTATION.md`](V2_2_DIRECT_IMPLEMENTATION.md)
+- [`RELEASE_RECORD.md`](RELEASE_RECORD.md)
+- [`PERFORMANCE.md`](PERFORMANCE.md)
+- [`DIRECT_PLAN.md`](DIRECT_PLAN.md)

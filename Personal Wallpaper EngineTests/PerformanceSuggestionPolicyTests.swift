@@ -28,7 +28,7 @@ final class PerformanceSuggestionPolicyTests: XCTestCase {
 
     // MARK: - Sustained decision
 
-    /// The heaviest Release scenario in `docs/PERFORMANCE_TUNING.md` measures ~1.18% of system CPU
+    /// The heaviest Release scenario in `docs/PERFORMANCE.md` measures ~1.18% of system CPU
     /// (14.17% per-core on 12 cores). Release thresholds calibrated below that fired the banner on
     /// nearly every launch, which is the regression this pins.
     func testHeaviestMeasuredReleaseScenarioDoesNotSuggest() {

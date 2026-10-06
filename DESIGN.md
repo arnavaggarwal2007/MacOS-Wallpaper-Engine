@@ -3,8 +3,8 @@
 **Document version:** 1.1  
 **Status:** Derived from repository source (June 2026)  
 **Platform:** macOS 15.0+ deployment target (`README.md`); launch-on-login requires macOS 13.2+ at runtime (`LoginItemManager.swift`, Settings copy)  
-**Implementation map:** [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md)  
-**Engine / CPU:** [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md)
+**Implementation map:** [`docs/UI.md`](docs/UI.md)  
+**Engine / CPU:** [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)
 
 ---
 
@@ -14,7 +14,7 @@
 |----------|----------|
 | 1 | Swift UI strings, enums, and `AppViewModel` messages in `Personal Wallpaper Engine/` |
 | 2 | [`README.md`](README.md) for product name, overview, and feature list |
-| 3 | [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) for shell wiring |
+| 3 | [`docs/UI.md`](docs/UI.md) for shell wiring |
 
 This document does not invent labels, placeholder copy, or color hex values. If a string is not in the repo, it is not specified here. Visual values come from `DesignTokens.swift`, `GlassChrome.swift`, and component files.
 
@@ -71,7 +71,7 @@ rename is a single Info.plist change. Historical docs keep the old name; do not 
 
 > Modern UI shell: four tabs with shared live wallpaper background (`AppWallpaperBackground`), glass chrome, and hero-first Home with scroll-reveal display carousel.
 
-**Design intent** ([`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md)):
+**Design intent** ([`docs/UI.md`](docs/UI.md)):
 
 - Edge-to-edge **live wallpaper** as the app background  
 - Minimal chrome; translucent glass overlays  
@@ -117,7 +117,7 @@ The README leads with **local video wallpaper** and **multi-display rendering**.
 3. **Apply** — `Apply Now` / engine apply paths push sources to `WallpaperManager`.  
 4. **Organize** — Collections and Setups tabs sit above the pipeline; Settings holds defaults and engine policy.
 
-Internal persistence always uses per-display sources (`AppViewModel.ensurePerDisplayMode()`, `SavedSetup.usePerDisplay`); the UI exposes “apply to all” as a shortcut, not a separate mode ([`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md)).
+Internal persistence always uses per-display sources (`AppViewModel.ensurePerDisplayMode()`, `SavedSetup.usePerDisplay`); the UI exposes “apply to all” as a shortcut, not a separate mode ([`docs/UI.md`](docs/UI.md)).
 
 ---
 
@@ -139,7 +139,7 @@ The configuration window weights UI and documentation in the same order as [`REA
 | 10 | Launch on login (13.2+) | Settings **System** |
 | 11 | Four-tab shell + live background | `TabbedMainView` |
 
-Phases 7A–7G (performance, power, diagnostics) extend **Settings**; see [`README.md`](README.md) Status and [`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md).
+Phases 7A–7G (performance, power, diagnostics) extend **Settings**; see [`README.md`](README.md) Status and [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
 
 ---
 
@@ -326,7 +326,7 @@ Apply via `.glassChrome(_:)` (`GlassChrome.swift`). Management sections use `Gla
 
 ### 5.10 Thumbnails
 
-16:9 landscape; widths from `DesignTokens.Surfaces`. Generated via `WallpaperThumbnail` / `VideoWallpaperThumbnail` with bookmark-aware URL resolution on MainActor ([`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md)).
+16:9 landscape; widths from `DesignTokens.Surfaces`. Generated via `WallpaperThumbnail` / `VideoWallpaperThumbnail` with bookmark-aware URL resolution on MainActor ([`docs/UI.md`](docs/UI.md)).
 
 ---
 
@@ -535,7 +535,7 @@ Uses emoji prefixes in `SetupPreviewCard.swift`: `🌐 Web` / `🎬 Video`, `�
 Dynamic message from `AppViewModel`: `Wallpaper playback has averaged {percent}% of your Mac's CPU recently. Switch to {profile.displayName} to reduce usage.`
 
 `{percent}` is **system-wide** share (one decimal), matching the `System CPU share` diagnostics row.
-It is not the per-core figure the other CPU rows show — see repo `docs/PERFORMANCE_TUNING.md` §ADR-009.
+It is not the per-core figure the other CPU rows show — see repo `docs/PERFORMANCE.md` §ADR-009.
 
 ### 7.11 Global pause overlay
 
@@ -628,7 +628,7 @@ Scroll thresholds: reveal ≥ `homeDisplaysRevealThreshold` (48 pt); hide ≤ `h
 
 ### 8.3 Display carousel
 
-Mounted only when `isDisplaysPanelVisible` to avoid off-screen decode ([`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md)). `isGloballyPaused` passed from `shouldShowPausedChrome`.
+Mounted only when `isDisplaysPanelVisible` to avoid off-screen decode ([`docs/UI.md`](docs/UI.md)). `isGloballyPaused` passed from `shouldShowPausedChrome`.
 
 ### 8.4 Sidebar
 
@@ -674,7 +674,7 @@ Full snapshot: `SavedSetup` via `saveCurrentStateAsSetup` / `restoreSetup`.
 
 **Active label:** `Active: {selectedSetupName}` (glass card) and `Active` / name in Saved Setups header.
 
-Launch restores per-display persistence, not automatic setup restore ([`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md)).
+Launch restores per-display persistence, not automatic setup restore ([`docs/archive/VERSION_1_REFERENCE.md`](docs/archive/VERSION_1_REFERENCE.md)).
 
 ---
 
@@ -697,7 +697,7 @@ Defaults and engine policy—subordinate to Home pipeline.
 
 ## 12. Menu bar
 
-Phase 9B **menu bar control center** — see [`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md) (display-aware thumbnail, Quick Mode / Apply Saved / Recents, power shortcuts, Show Main Window, Preferences). Implementation: `MenuBarController.swift`.
+Phase 9B **menu bar control center** — see [`docs/UI.md`](docs/UI.md) (display-aware thumbnail, Quick Mode / Apply Saved / Recents, power shortcuts, Show Main Window, Preferences). Implementation: `MenuBarController.swift`.
 
 Legacy minimal items (superseded by control center for primary UX):
 
@@ -781,7 +781,7 @@ From SwiftUI usage in shell components:
 |-------------|--------|
 | Scroll-reveal display panel | `ModernHomeView` thresholds §5.2 |
 | Preview pause while scrolling | `wallpaperPreviewPause` / `onWallpaperPreviewPauseChange` |
-| Hero live vs thumbnail | `AppWallpaperBackground` + `PerformanceProfile` ([`docs/PERFORMANCE_TUNING.md`](docs/PERFORMANCE_TUNING.md)) |
+| Hero live vs thumbnail | `AppWallpaperBackground` + `PerformanceProfile` ([`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)) |
 | Suggestion banner | `PerformanceSuggestionBanner` + `AppViewModel` CPU thresholds |
 | Diagnostics sampling | `setDiagnosticsPanelVisible` while Settings diagnostics visible |
 | Heavy scenario callout | `EngineDiagnosticsSection.heavyScenarioCallout` §7.9 |
@@ -790,7 +790,7 @@ From SwiftUI usage in shell components:
 
 ## 16. Persistence vs UI state
 
-From [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md):
+From [`docs/archive/VERSION_1_REFERENCE.md`](docs/archive/VERSION_1_REFERENCE.md):
 
 | Data | Restored on launch? |
 |------|---------------------|
@@ -817,7 +817,7 @@ From [`docs/VERSION_1_REFERENCE.md`](docs/VERSION_1_REFERENCE.md):
 | Models | `WallpaperCollection.swift`, `SavedSetup.swift` |
 | Menu bar | `MenuBarController.swift` |
 
-**Removed legacy UI** (do not restore): `ContentView.swift`, `HomeTabView.swift`, `TransparentTabSwitcher.swift` ([`docs/UI_REFERENCE.md`](docs/UI_REFERENCE.md)).
+**Removed legacy UI** (do not restore): `ContentView.swift`, `HomeTabView.swift`, `TransparentTabSwitcher.swift` ([`docs/UI.md`](docs/UI.md)).
 
 ---
 
