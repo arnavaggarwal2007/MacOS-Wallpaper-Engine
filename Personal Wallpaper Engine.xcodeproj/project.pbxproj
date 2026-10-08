@@ -14,24 +14,79 @@
 			remoteGlobalIDString = 45E108E22FA41DE5000426C4;
 			remoteInfo = "Personal Wallpaper Engine";
 		};
+		A7E200072FA41DE5000426C4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 45E108DB2FA41DE5000426C4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A7E200012FA41DE5000426C4;
+			remoteInfo = DeskfaceSaver;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A7E200092FA41DE5000426C4 /* Embed Screen Savers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "Contents/Library/Screen Savers";
+			dstSubfolderSpec = 1;
+			files = (
+				A7E2000A2FA41DE5000426C4 /* Deskface.saver in Embed Screen Savers */,
+			);
+			name = "Embed Screen Savers";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXBuildFile section */
+		A7E2000A2FA41DE5000426C4 /* Deskface.saver in Embed Screen Savers */ = {isa = PBXBuildFile; fileRef = A7E200022FA41DE5000426C4 /* Deskface.saver */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		45E108E32FA41DE5000426C4 /* Personal Wallpaper Engine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Personal Wallpaper Engine.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		45E109002FA41DE5000426C4 /* Personal Wallpaper EngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Personal Wallpaper EngineTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		45E109102FA41DE5000426C4 /* Direct.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Direct.xcconfig; sourceTree = "<group>"; };
 		45E109112FA41DE5000426C4 /* AppStore.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppStore.xcconfig; sourceTree = "<group>"; };
+		A7E200022FA41DE5000426C4 /* Deskface.saver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Deskface.saver; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A7E2000B2FA41DE5000426C4 /* Exceptions for "DeskfaceSaver" target in "DeskfaceSaver" folder */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				DeskfaceSaver.entitlements,
+			);
+			target = A7E200012FA41DE5000426C4 /* DeskfaceSaver */;
+		};
+		A7E2001B2FA41DE5000426C4 /* Exceptions for "DeskfaceSaver" target in "Personal Wallpaper Engine" folder */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Screensaver/ScreensaverConfig.swift,
+			);
+			target = A7E200012FA41DE5000426C4 /* DeskfaceSaver */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		45E108E52FA41DE5000426C4 /* Personal Wallpaper Engine */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A7E2001B2FA41DE5000426C4 /* Exceptions for "DeskfaceSaver" target in "Personal Wallpaper Engine" folder */,
+			);
 			path = "Personal Wallpaper Engine";
 			sourceTree = "<group>";
 		};
 		45E109022FA41DE5000426C4 /* Personal Wallpaper EngineTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Personal Wallpaper EngineTests";
+			sourceTree = "<group>";
+		};
+		A7E200032FA41DE5000426C4 /* DeskfaceSaver */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A7E2000B2FA41DE5000426C4 /* Exceptions for "DeskfaceSaver" target in "DeskfaceSaver" folder */,
+			);
+			path = DeskfaceSaver;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -51,6 +106,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A7E200052FA41DE5000426C4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -59,6 +121,7 @@
 			children = (
 				45E109122FA41DE5000426C4 /* Configurations */,
 				45E108E52FA41DE5000426C4 /* Personal Wallpaper Engine */,
+				A7E200032FA41DE5000426C4 /* DeskfaceSaver */,
 				45E109022FA41DE5000426C4 /* Personal Wallpaper EngineTests */,
 				45E108E42FA41DE5000426C4 /* Products */,
 			);
@@ -68,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				45E108E32FA41DE5000426C4 /* Personal Wallpaper Engine.app */,
+				A7E200022FA41DE5000426C4 /* Deskface.saver */,
 				45E109002FA41DE5000426C4 /* Personal Wallpaper EngineTests.xctest */,
 			);
 			name = Products;
@@ -92,10 +156,12 @@
 				45E108DF2FA41DE5000426C4 /* Sources */,
 				45E108E02FA41DE5000426C4 /* Frameworks */,
 				45E108E12FA41DE5000426C4 /* Resources */,
+				A7E200092FA41DE5000426C4 /* Embed Screen Savers */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A7E200082FA41DE5000426C4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				45E108E52FA41DE5000426C4 /* Personal Wallpaper Engine */,
@@ -130,6 +196,28 @@
 			productReference = 45E109002FA41DE5000426C4 /* Personal Wallpaper EngineTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		A7E200012FA41DE5000426C4 /* DeskfaceSaver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A7E2000C2FA41DE5000426C4 /* Build configuration list for PBXNativeTarget "DeskfaceSaver" */;
+			buildPhases = (
+				A7E200042FA41DE5000426C4 /* Sources */,
+				A7E200052FA41DE5000426C4 /* Frameworks */,
+				A7E200062FA41DE5000426C4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A7E200032FA41DE5000426C4 /* DeskfaceSaver */,
+			);
+			name = DeskfaceSaver;
+			packageProductDependencies = (
+			);
+			productName = DeskfaceSaver;
+			productReference = A7E200022FA41DE5000426C4 /* Deskface.saver */;
+			productType = "com.apple.product-type.bundle";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -146,6 +234,9 @@
 					45E109042FA41DE5000426C4 = {
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 45E108E22FA41DE5000426C4;
+					};
+					A7E200012FA41DE5000426C4 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -164,6 +255,7 @@
 			projectRoot = "";
 			targets = (
 				45E108E22FA41DE5000426C4 /* Personal Wallpaper Engine */,
+				A7E200012FA41DE5000426C4 /* DeskfaceSaver */,
 				45E109042FA41DE5000426C4 /* Personal Wallpaper EngineTests */,
 			);
 		};
@@ -178,6 +270,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		45E109062FA41DE5000426C4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A7E200062FA41DE5000426C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -201,6 +300,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A7E200042FA41DE5000426C4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -208,6 +314,11 @@
 			isa = PBXTargetDependency;
 			target = 45E108E22FA41DE5000426C4 /* Personal Wallpaper Engine */;
 			targetProxy = 45E109012FA41DE5000426C4 /* PBXContainerItemProxy */;
+		};
+		A7E200082FA41DE5000426C4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A7E200012FA41DE5000426C4 /* DeskfaceSaver */;
+			targetProxy = A7E200072FA41DE5000426C4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -569,6 +680,99 @@
 			};
 			name = "Release-AppStore";
 		};
+		A7E2000D2FA41DE5000426C4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeskfaceSaver/DeskfaceSaver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = W2A9J24774;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeskfaceSaver/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					ScreenSaver,
+					"-framework",
+					AVFoundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "Personal.Personal-Wallpaper-Engine.DeskfaceSaver";
+				PRODUCT_MODULE_NAME = DeskfaceSaver;
+				PRODUCT_NAME = Deskface;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				WRAPPER_EXTENSION = saver;
+			};
+			name = Debug;
+		};
+		A7E2000E2FA41DE5000426C4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeskfaceSaver/DeskfaceSaver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = W2A9J24774;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeskfaceSaver/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					ScreenSaver,
+					"-framework",
+					AVFoundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "Personal.Personal-Wallpaper-Engine.DeskfaceSaver";
+				PRODUCT_MODULE_NAME = DeskfaceSaver;
+				PRODUCT_NAME = Deskface;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				WRAPPER_EXTENSION = saver;
+			};
+			name = Release;
+		};
+		A7E2000F2FA41DE5000426C4 /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeskfaceSaver/DeskfaceSaver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = W2A9J24774;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeskfaceSaver/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					ScreenSaver,
+					"-framework",
+					AVFoundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "Personal.Personal-Wallpaper-Engine.DeskfaceSaver";
+				PRODUCT_MODULE_NAME = DeskfaceSaver;
+				PRODUCT_NAME = Deskface;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				WRAPPER_EXTENSION = saver;
+			};
+			name = "Release-AppStore";
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -598,6 +802,16 @@
 				45E109092FA41DE5000426C4 /* Debug */,
 				45E1090A2FA41DE5000426C4 /* Release */,
 				45E1090B2FA41DE5000426C4 /* Release-AppStore */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A7E2000C2FA41DE5000426C4 /* Build configuration list for PBXNativeTarget "DeskfaceSaver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A7E2000D2FA41DE5000426C4 /* Debug */,
+				A7E2000E2FA41DE5000426C4 /* Release */,
+				A7E2000F2FA41DE5000426C4 /* Release-AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

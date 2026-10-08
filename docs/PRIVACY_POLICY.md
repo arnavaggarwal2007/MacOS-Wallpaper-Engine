@@ -1,6 +1,6 @@
 # Privacy Policy — Deskface
 
-**Last updated:** 2026-09-01  
+**Last updated:** 2026-10-07  
 **Product:** Deskface (macOS)  
 **Applies to:** Mac App Store and any future direct-download builds unless a superseding policy is published
 
@@ -59,9 +59,11 @@ This data stays on your device unless you choose to back up your Mac with your o
 
 ---
 
-## Screen Saver and lock-screen helpers (future)
+## Screen Saver
 
-When Screen Saver or lock-screen export features ship, they will use local media and system settings you control. Shared preferences between the main app and a Screen Saver extension may use an **App Group** container on your Mac — still local, not uploaded to us.
+Deskface can copy a video you choose into an **App Group** container on your Mac so the Deskface screen saver can play it when the Mac is idle. That copy and the saved screen-saver settings stay on your Mac. They are not uploaded.
+
+Lock-screen image export is not in the app yet. When it ships, it will write a still image to a folder you choose and will not upload that image.
 
 ---
 
@@ -82,7 +84,7 @@ The app is not directed at children under 13. We do not knowingly collect person
 
 - Remove library folders, clear caches, and delete the app to remove local preferences (standard macOS app data locations).
 - Revoke file access via macOS System Settings → Privacy & Security where applicable.
-- Uninstall the Screen Saver module (when shipped) via System Settings → Screen Saver.
+- Uninstall the Screen Saver in System Settings → Screen Saver, or by deleting Deskface. The App Group copy is removed with the app’s shared container.
 
 ---
 

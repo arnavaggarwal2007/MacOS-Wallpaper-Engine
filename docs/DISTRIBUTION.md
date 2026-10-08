@@ -35,7 +35,16 @@ Entitlements file: [`Personal Wallpaper Engine/Personal Wallpaper Engine.entitle
 
 **Network:** Local video wallpapers do not need network. **Web wallpapers** (`WebRenderer` / WKWebView loading `http`/`https` URLs) require `com.apple.security.network.client` under App Sandbox — add for Mac App Store (and any sandboxed Direct build that ships remote web wallpapers). Add outbound network for Sparkle only when Direct auto-update is implemented (Milestone 3).
 
-**App Group:** Required when Tier B screensaver ships (Milestone 2); not present in current entitlements plist.
+**App Group:** `group.Personal.Personal-Wallpaper-Engine` is in both app entitlements files and in `DeskfaceSaver/DeskfaceSaver.entitlements`.
+
+Before a signed archive, register that group on team `W2A9J24774` and enable it on both App IDs:
+
+1. [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list) → Identifiers → **+** → App Groups → `group.Personal.Personal-Wallpaper-Engine`.
+2. Edit App ID `Personal.Personal-Wallpaper-Engine` and turn the group on.
+3. Create App ID `Personal.Personal-Wallpaper-Engine.DeskfaceSaver` (bundle) and turn the same group on.
+4. Xcode → Signing & Capabilities → download the updated profiles.
+
+The App Store build embeds the saver at `Deskface.app/Contents/Library/Screen Savers/Deskface.saver`. Direct builds (`DIRECT_BUILD`) also try to copy that bundle to `~/Library/Screen Savers/`. There is no temporary sandbox exception for that copy. The user’s video is copied into the App Group container; the saver does not receive app-scoped bookmarks.
 
 ---
 

@@ -21,6 +21,20 @@
                ReferencedContainer = "container:Personal Wallpaper Engine.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A7E200012FA41DE5000426C4"
+               BuildableName = "Deskface.saver"
+               BlueprintName = "DeskfaceSaver"
+               ReferencedContainer = "container:Personal Wallpaper Engine.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

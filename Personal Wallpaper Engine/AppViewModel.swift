@@ -13,6 +13,10 @@ final class AppViewModel: ObservableObject {
     @Published var webURLString: String
     @Published var isMuted: Bool
     @Published var scalingMode: VideoScalingMode
+    @Published private(set) var screensaverSyncWithDesktop = false
+    @Published private(set) var screensaverStatusMessage = "No screen saver video yet. Choose a video, or use the desktop wallpaper."
+    @Published private(set) var screensaverErrorMessage: String?
+    @Published private(set) var isUpdatingScreensaver = false
     @Published var isApplyingWallpaper = false
     /// Transient confirmation ("Wallpaper applied…"). Expires on its own; see `scheduleBannerExpiry`.
     @Published var statusMessage: String? {
@@ -123,6 +127,7 @@ final class AppViewModel: ObservableObject {
     private var quickModeHeroRecoveryTask: Task<Void, Never>?
     private var shellHeroLayoutRecoveryTask: Task<Void, Never>?
     private(set) var isMainShellOnHomeTab = true
+    private var screensaverPublishTask: Task<Void, Never>?
 
     init() {
         self.wallpaperManager = WallpaperManager()
@@ -143,6 +148,7 @@ final class AppViewModel: ObservableObject {
         self.isHomeSidebarVisible = settings.homeSidebarVisible
         ensurePerDisplayMode()
         reconcileQuickModeOnLaunch()
+        refreshScreensaverStatus()
     }
 
     init(
@@ -167,6 +173,7 @@ final class AppViewModel: ObservableObject {
         self.isHomeSidebarVisible = settings.homeSidebarVisible
         ensurePerDisplayMode()
         reconcileQuickModeOnLaunch()
+        refreshScreensaverStatus()
     }
 
     /// Per-display is the only mode; migrates legacy unified preference on load.
@@ -551,6 +558,7 @@ final class AppViewModel: ObservableObject {
                 if url.isFileURL {
                     persistPerDisplayBookmark(displayID: displayID, url: url)
                 }
+                noteScreensaverVideoApplied(url: url, displayID: displayID, scaling: scaling)
                 statusMessage = "Applied to \(displayStatusLabel(for: displayID)): \(url.lastPathComponent)"
                 errorMessage = nil
                 notifyDisplaySourcesChanged()
@@ -778,6 +786,7 @@ final class AppViewModel: ObservableObject {
         Task { @MainActor in
             logger.debug("Requesting scaling update for display \(displayID): \(mode.rawValue)")
             await wallpaperManager.setScalingModeForDisplay(displayID: displayID, mode: mode)
+            await syncScreensaverFromPrimaryDesktop()
         }
     }
 
@@ -1379,6 +1388,124 @@ final class AppViewModel: ObservableObject {
 
         Task {
             await wallpaperManager.setScalingMode(mode)
+            await syncScreensaverFromPrimaryDesktop()
+        }
+    }
+
+    // MARK: - Screen saver
+
+    func refreshScreensaverStatus() {
+        let snapshot = ScreensaverCoordinator.snapshot()
+        screensaverSyncWithDesktop = snapshot.syncWithDesktop
+        let fileName = snapshot.videoPath.map { URL(fileURLWithPath: $0).lastPathComponent }
+        screensaverStatusMessage = ScreensaverConfig.statusMessage(
+            fileName: fileName,
+            mediaExists: ScreensaverCoordinator.mediaExists(),
+            lastUpdated: snapshot.lastUpdated,
+            syncWithDesktop: snapshot.syncWithDesktop,
+            desktopVideoAvailable: primaryDesktopVideoIsAvailable()
+        )
+    }
+
+    func updateScreensaverSyncWithDesktop(_ enabled: Bool) {
+        screensaverSyncWithDesktop = enabled
+        ScreensaverCoordinator.setSyncWithDesktop(enabled)
+        if enabled {
+            Task { await syncScreensaverFromPrimaryDesktop() }
+        } else {
+            refreshScreensaverStatus()
+        }
+    }
+
+    func chooseScreensaverVideo(at url: URL) async {
+        screensaverSyncWithDesktop = false
+        ScreensaverCoordinator.setSyncWithDesktop(false)
+        await publishScreensaverVideo(url, scaling: scalingMode, syncWithDesktop: false)
+    }
+
+    func openScreenSaverSettings() {
+        if let message = ScreensaverCoordinator.installUserLibrarySaverIfNeeded() {
+            screensaverErrorMessage = message
+        }
+        ScreensaverCoordinator.openSystemSettings()
+    }
+
+    private func primaryDisplayID() -> CGDirectDisplayID? {
+        NSScreen.screens.first?.displayID
+    }
+
+    private func primaryDesktopVideoIsAvailable() -> Bool {
+        guard let displayID = primaryDisplayID() else { return false }
+        guard perDisplayRendererMode(for: displayID) == .video else { return false }
+        guard let url = resolvePlaybackURL(for: displayID) else { return false }
+        return ScreensaverConfig.isVideoFile(url)
+    }
+
+    private func noteScreensaverVideoApplied(url: URL, displayID: CGDirectDisplayID, scaling: VideoScalingMode) {
+        guard screensaverSyncWithDesktop else { return }
+        guard primaryDisplayID() == displayID else { return }
+        guard ScreensaverConfig.isVideoFile(url) else { return }
+        enqueueScreensaverPublish(url: url, scaling: scaling, syncWithDesktop: true)
+    }
+
+    private func syncScreensaverFromPrimaryDesktop() async {
+        guard screensaverSyncWithDesktop else { return }
+        guard let displayID = primaryDisplayID() else {
+            refreshScreensaverStatus()
+            return
+        }
+        guard perDisplayRendererMode(for: displayID) == .video,
+              let url = resolvePlaybackURL(for: displayID),
+              ScreensaverConfig.isVideoFile(url) else {
+            refreshScreensaverStatus()
+            return
+        }
+        await publishScreensaverVideo(
+            url,
+            scaling: perDisplayScalingMode(for: displayID),
+            syncWithDesktop: true
+        )
+    }
+
+    private func enqueueScreensaverPublish(url: URL, scaling: VideoScalingMode, syncWithDesktop: Bool) {
+        let previous = screensaverPublishTask
+        screensaverPublishTask = Task { @MainActor [weak self] in
+            await previous?.value
+            await self?.publishScreensaverVideo(url, scaling: scaling, syncWithDesktop: syncWithDesktop)
+        }
+    }
+
+    private func publishScreensaverVideo(_ url: URL, scaling: VideoScalingMode, syncWithDesktop: Bool) async {
+        isUpdatingScreensaver = true
+        screensaverErrorMessage = nil
+        defer {
+            isUpdatingScreensaver = false
+            refreshScreensaverStatus()
+        }
+
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let identity = ScreensaverConfig.makeSourceIdentity(for: url) ?? url.standardizedFileURL.path
+        let scalingRaw = scaling.rawValue
+        let result = await Task.detached(priority: .utility) {
+            ScreensaverCoordinator.publish(
+                source: url,
+                scalingRaw: scalingRaw,
+                syncWithDesktop: syncWithDesktop,
+                sourceIdentity: identity
+            )
+        }.value
+
+        switch result {
+        case .success:
+            screensaverErrorMessage = nil
+        case .failure(let failure):
+            screensaverErrorMessage = ScreensaverCoordinator.message(for: failure)
         }
     }
 
@@ -1548,6 +1675,9 @@ final class AppViewModel: ObservableObject {
         case .success:
             statusMessage = "Wallpaper applied: \(url.lastPathComponent)"
             errorMessage = nil
+            if let primary = primaryDisplayID() {
+                noteScreensaverVideoApplied(url: url, displayID: primary, scaling: scalingMode)
+            }
         case .failure(let error):
             errorMessage = error.errorDescription ?? "Unable to apply wallpaper."
             statusMessage = nil
@@ -1995,6 +2125,9 @@ final class AppViewModel: ObservableObject {
 
             if case .success = result {
                 appliedCount += 1
+                if mode == .video {
+                    noteScreensaverVideoApplied(url: sourceURL, displayID: displayID, scaling: scaling)
+                }
             }
         }
 
@@ -2198,7 +2331,12 @@ final class AppViewModel: ObservableObject {
             rendererMode: rendererMode,
             scalingMode: scalingMode
         )
-        if case .success = result { return true }
+        if case .success = result {
+            if rendererMode == .video {
+                noteScreensaverVideoApplied(url: url, displayID: displayID, scaling: scalingMode)
+            }
+            return true
+        }
         return false
     }
 
@@ -2629,6 +2767,9 @@ final class AppViewModel: ObservableObject {
         notifyDisplaySourcesChanged()
         evaluateQuickModeDrift(trigger: .perDisplaySourceChanged)
         statusMessage = "Wallpaper applied to \(displayIDs.count) display\(displayIDs.count == 1 ? "" : "s")"
+        if let primary = primaryDisplayID(), displayIDs.contains(primary) {
+            noteScreensaverVideoApplied(url: resolvedApplyURL, displayID: primary, scaling: scalingMode)
+        }
         return .success(())
     }
     

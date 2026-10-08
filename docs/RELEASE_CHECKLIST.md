@@ -111,8 +111,15 @@ Deskface **1.0 (2)** has been **live since October 6, 2026**. The engineering ma
 
 **N/A** for MAS v1.0 desktop-only launch.
 
-- [ ] Static lock export flow (Tier A)
-- [ ] Screensaver install / App Group sync (Tier B)
+- [ ] Static lock export flow (Tier A) — Part 2, not in this build
+- [ ] `Deskface.app/Contents/Library/Screen Savers/Deskface.saver` is present in the App Store build
+- [ ] App Group `group.Personal.Personal-Wallpaper-Engine` is enabled on the app and the saver in the developer account, and a signed archive carries it
+- [ ] Sync on, apply an MP4, quit and relaunch Deskface, System Settings preview shows that video
+- [ ] Idle or a Hot Corner plays muted, full screen, one view per display
+- [ ] A missing video shows “Open Deskface and choose a video”, not a hang
+- [ ] A web wallpaper does not replace the screen saver video
+- [ ] Preview is lighter than full-screen idle
+- [ ] App Store binary has no Sparkle URL and no live lock-screen API
 - [ ] MAS listing does not claim lock-screen live video
 
 ---

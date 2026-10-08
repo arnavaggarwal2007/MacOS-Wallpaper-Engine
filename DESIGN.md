@@ -689,7 +689,10 @@ Defaults and engine policy—subordinate to Home pipeline.
 | Performance | `PerformanceProfile` segmented control |
 | Diagnostics | `EngineDiagnosticsSection` |
 | Battery & Power | Pause on battery / low battery; threshold stepper 5…50 step 5 |
+| Screen Saver | **Use the desktop wallpaper**; status line; **Choose Screen Saver Video** when sync is off; **Open Screen Saver Settings** |
 | System | Launch on Login |
+
+Screen Saver card copy (always visible): “Muted. Plays when the Mac is idle. Does not replace the lock screen.” The card does not mention live video on the lock screen. Part 2 renames the card to “Lock Screen & Screen Saver”.
 
 `EngineDiagnosticsSection` sets `setDiagnosticsPanelVisible(true/false)` on appear/disappear.
 

@@ -4,7 +4,7 @@ A macOS desktop wallpaper engine built in Swift that renders local video and web
 
 ## Overview
 
-Personal Wallpaper Engine — shipping on the Mac App Store as **Deskface** — plays local video files (and optional web sources) as animated macOS wallpapers. **Deskface 1.0** includes the desktop engine, collections, setups, the four-tab UI, performance profiles, the local library, and quick modes with a menu bar. **Next:** [Milestone 2](ROADMAP.md) (video screensaver and static lock-screen export).
+Personal Wallpaper Engine — shipping on the Mac App Store as **Deskface** — plays local video files (and optional web sources) as animated macOS wallpapers. **Deskface 1.0** includes the desktop engine, collections, setups, the four-tab UI, performance profiles, the local library, and quick modes with a menu bar. **Next:** [Milestone 2](ROADMAP.md) Part 2 (static lock-screen export). The video screensaver (Part 1) is implemented and waiting on owner QA.
 
 ## Features
 
@@ -101,7 +101,8 @@ Coding standards live in [`DESIGN.md`](DESIGN.md) (UI, copy, naming) and the doc
 | Area | Status |
 |------|--------|
 | Deskface 1.0 (desktop engine, collections, setups, UI, performance, library, quick modes, menu bar) | **Live** on the Mac App Store since October 6, 2026 — version **1.0 (2)** |
-| Milestone 2 (screensaver and static lock export) | **Next** — [`docs/MILESTONE_2.md`](docs/MILESTONE_2.md) |
+| Milestone 2 Part 1 (screensaver) | **Implemented**, not on the store — owner QA in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) |
+| Milestone 2 Part 2 (static lock export) | **Next** — [`docs/MILESTONE_2.md`](docs/MILESTONE_2.md) |
 | Milestone 3 (Direct download, Sparkle, live lock video) | Later — [`docs/DIRECT_PLAN.md`](docs/DIRECT_PLAN.md) |
 | Backlog (view-model split, accessibility, localization, tests) | After launch — knowledge base `POST_LAUNCH_BACKLOG.md` |
 

@@ -7,13 +7,14 @@ struct SettingsTabView: View {
     @State private var isFileImporterPresented = false
     @State private var isWebFileImporterPresented = false
     @State private var isLibraryFolderImporterPresented = false
+    @State private var isScreensaverFileImporterPresented = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.large) {
                 TabHeaderView(
                     title: "Settings",
-                    subtitle: "Renderer, scaling, audio, and startup preferences.",
+                    subtitle: "Renderer, scaling, audio, screen saver, and startup preferences.",
                     systemImage: "gearshape.fill"
                 )
 
@@ -107,6 +108,8 @@ struct SettingsTabView: View {
                 }
 
                 librarySettingsSection
+
+                screenSaverSettingsSection
 
                 GlassCardView(title: "Performance") {
                     VStack(alignment: .leading, spacing: 14) {
@@ -277,6 +280,19 @@ struct SettingsTabView: View {
             }
         }
         .fileImporter(
+            isPresented: $isScreensaverFileImporterPresented,
+            allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                Task { await appModel.chooseScreensaverVideo(at: url) }
+            case .failure(let error):
+                appModel.errorMessage = "File selection failed: \(error.localizedDescription)"
+            }
+        }
+        .fileImporter(
             isPresented: $isLibraryFolderImporterPresented,
             allowedContentTypes: [.folder],
             allowsMultipleSelection: false
@@ -287,6 +303,67 @@ struct SettingsTabView: View {
                 Task { await appModel.addLibraryRoot(at: url) }
             case .failure(let error):
                 appModel.errorMessage = "Folder selection failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private var screenSaverSettingsSection: some View {
+        GlassCardView(title: "Screen Saver") {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Muted. Plays when the Mac is idle. Does not replace the lock screen.")
+                    .font(.caption)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+
+                Toggle(
+                    isOn: Binding(
+                        get: { appModel.screensaverSyncWithDesktop },
+                        set: { appModel.updateScreensaverSyncWithDesktop($0) }
+                    )
+                ) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Use the desktop wallpaper", systemImage: "display")
+                            .font(DesignTokens.Typography.subtitle)
+                        Text("Copies the video on your main display into the screen saver when you apply it.")
+                            .font(.caption)
+                            .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    }
+                }
+                .disabled(appModel.isUpdatingScreensaver)
+
+                Text(appModel.screensaverStatusMessage)
+                    .font(DesignTokens.Typography.subtitle)
+                    .foregroundStyle(DesignTokens.Colors.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if appModel.isUpdatingScreensaver {
+                    Text("Copying video…")
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.Colors.textSecondary)
+                }
+
+                if let error = appModel.screensaverErrorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: 10) {
+                    if !appModel.screensaverSyncWithDesktop {
+                        Button {
+                            isScreensaverFileImporterPresented = true
+                        } label: {
+                            Label("Choose Screen Saver Video", systemImage: "film")
+                        }
+                        .disabled(appModel.isUpdatingScreensaver)
+                    }
+
+                    Button {
+                        appModel.openScreenSaverSettings()
+                    } label: {
+                        Label("Open Screen Saver Settings", systemImage: "gearshape")
+                    }
+                }
             }
         }
     }

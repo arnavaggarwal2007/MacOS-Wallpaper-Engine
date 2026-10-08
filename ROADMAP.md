@@ -1,7 +1,7 @@
 # Roadmap
 
 **Status:** Deskface **1.0 (2)** has been on the Mac App Store since **October 6, 2026**.  
-**Next:** [Milestone 2](docs/MILESTONE_2.md) — video screensaver and static lock-screen export.  
+**Next:** [Milestone 2](docs/MILESTONE_2.md) Part 2 — static lock-screen export. Part 1 (video screensaver) is implemented and waiting on owner QA.  
 **Record:** [docs/RELEASE_RECORD.md](docs/RELEASE_RECORD.md)
 
 Living names only. Older phase numbers stay in [docs/archive/](docs/archive/).
@@ -10,7 +10,7 @@ Living names only. Older phase numbers stay in [docs/archive/](docs/archive/).
 |------|---------|
 | **Deskface 1.0** | What is on the store: desktop engine through quick modes and the menu bar |
 | **Milestone 1** | App Store compliance. Done |
-| **Milestone 2** | Screensaver and static lock export. Next |
+| **Milestone 2** | Screensaver implemented (Part 1, not yet on the store). Static lock export is Part 2 |
 | **Milestone 3** | Direct download. Later |
 | **Backlog** | Technical debt. Not the next milestone |
 
@@ -18,9 +18,9 @@ Living names only. Older phase numbers stay in [docs/archive/](docs/archive/).
 
 Ship on every flavor, then submit an App Store update (planned tag `v1.1`).
 
-- Video screensaver (`.saver`) that reads the chosen wallpaper from an App Group
-- Static lock-screen image export with a guide into System Settings
-- Settings section “Lock Screen & Screen Saver”
+- Video screensaver (`.saver`) that reads a video copied into the App Group — **Part 1 implemented**, owner QA still open
+- Static lock-screen image export with a guide into System Settings — **Part 2, not started**
+- Settings section “Screen Saver” today; Part 2 renames it to “Lock Screen & Screen Saver”
 - Optional tip in-app purchase only in the App Store build
 
 Spec: [docs/MILESTONE_2.md](docs/MILESTONE_2.md). Branch: short-lived `feature/tier-a-b`, then merge to `main`.

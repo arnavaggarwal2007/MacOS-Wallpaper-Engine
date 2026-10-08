@@ -1,6 +1,6 @@
 # Milestone 2 — Screensaver and static lock export
 
-**Status:** Not started. Next engineering track after Deskface 1.0.  
+**Status:** Part 1 (screensaver) is implemented on `feature/tier-a-b` and still needs owner QA. Part 2 (static lock export) is not started. Do not tag `v1.1` until Part 2 ships, unless you intentionally release the saver alone.  
 **Tag (planned):** `v1.1`  
 **Branch:** `feature/tier-a-b` → `main` (delete the branch after merge)  
 **Estimate:** about 15–20 days  
@@ -25,7 +25,9 @@ Store copy must not claim live video on the lock screen.
 
 The saver runs in the system screen-saver host. It does not load `WallpaperManager` and it does not inherit the main app’s sandbox. The main app writes the chosen video into an App Group; the saver reads it.
 
-**App Group ID** is a placeholder until implementation: `group.com.local.wallpaper.engine`. It must match the team id in both the app and the `.saver` entitlements.
+**App Group ID:** `group.Personal.Personal-Wallpaper-Engine` (team `W2A9J24774`). The same string is in the app entitlements and `DeskfaceSaver.entitlements`. Register that group in the Apple Developer account and enable it on App ID `Personal.Personal-Wallpaper-Engine` and on `Personal.Personal-Wallpaper-Engine.DeskfaceSaver` before a signed archive.
+
+The saver cannot use the main app’s app-scoped bookmarks. Part 1 copies the chosen video into the App Group container (`Screensaver/<original filename>`) and stores that relative path in `saver.videoPath`. A repeat apply with the same source identity refreshes settings and does not copy again. A failed copy leaves the previous file in place.
 
 | Key | Type | Purpose |
 |-----|------|---------|

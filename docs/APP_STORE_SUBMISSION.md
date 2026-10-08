@@ -439,6 +439,50 @@ Capture per **§6** on clean macOS 15+, Release **PWE App Store** build. Recomme
 
 ---
 
+## 9. Version 1.1 draft — do not upload yet
+
+Part 1 (screensaver) is in the tree. **Do not bump the version, archive, or submit** until Product → Test (`Cmd+U`) is green and the screensaver rows in [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) are signed off. The milestone tag `v1.1` also includes static lock export (Part 2). Prefer one review after Part 2. If you ship the saver alone, use the copy below and do not mention lock-screen export.
+
+The live listing is still **1.0 (2)**. Marketing version in the project stays **1.0** and build stays **2** until that upload.
+
+### Before the archive
+
+1. Register App Group `group.Personal.Personal-Wallpaper-Engine` and saver App ID `Personal.Personal-Wallpaper-Engine.DeskfaceSaver` on team `W2A9J24774`. See [`DISTRIBUTION.md`](DISTRIBUTION.md).
+2. Set marketing version **1.1** and build **3** (`CURRENT_PROJECT_VERSION` must be higher than **2**).
+3. Publish this privacy-policy edit to GitHub Pages (`docs/privacy/index.html`). App Privacy stays **Data Not Collected**. Age rating stays **16+**.
+
+### Archive
+
+Scheme **PWE App Store**, destination **My Mac**, Product → Archive. In the archive confirm `Deskface.app`, display name Deskface, bundle id `Personal.Personal-Wallpaper-Engine`, `Contents/Library/Screen Savers/Deskface.saver`, and the app group entitlement on the app and the saver. Organizer → Validate App → Distribute App → Upload.
+
+### What’s New (1.1, saver only)
+
+```text
+Deskface can now play a video you choose as your screen saver when the Mac is idle.
+Pick it in Settings, then select Deskface under System Settings → Screen Saver.
+```
+
+### Description note to add
+
+The desktop wallpaper sentence can stay. You may add that Deskface includes an idle video screen saver. Do not say the lock screen plays video.
+
+### Review notes — replace the screen-saver sentence
+
+The 1.0 notes say the app does not modify the screen saver. For 1.1, replace that bullet with:
+
+```text
+- No private APIs. The app does not set the macOS lock-screen image and does not play video on the lock screen.
+- Screen saver: Settings → Screen Saver → Use the desktop wallpaper (or Choose Screen Saver Video). Then System Settings → Screen Saver → select Deskface. The module is inside the app at Contents/Library/Screen Savers/Deskface.saver. Playback is muted.
+```
+
+Add a screenshot of the Screen Saver card. The lock-export screenshot waits for Part 2.
+
+### After approval
+
+Fill the Milestone 2 row in [`RELEASE_RECORD.md`](RELEASE_RECORD.md) only if Part 2 shipped in the same version. Tag `v1.1` on the uploaded commit and delete `feature/tier-a-b` only when the milestone acceptance list is complete.
+
+---
+
 ## References
 
 - [`archive/V2_2_APP_STORE_IMPLEMENTATION.md`](archive/V2_2_APP_STORE_IMPLEMENTATION.md)
